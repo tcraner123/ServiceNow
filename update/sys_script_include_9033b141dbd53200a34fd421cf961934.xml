@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersEventExtended</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersEventExtended</name>
+        <script><![CDATA[gs.include( 'xMattersEvent' );
+
+var xMattersEventExtended = Class.create();
+xMattersEventExtended.prototype = Object.extend( new xMattersEvent(), {
+    initialize: function( config, dataHelper ) {
+		
+		// The parent xMatterEvent initialize gets called
+		// before this child one, so we are confident in 
+		// overwritting any values set in there. 
+		if( config ) 
+			this.config = config;
+		
+		if( dataHelper ) 
+			this.dataHelper = dataHelper;
+		
+		this.priority = 'medium';
+		
+		this.log = new xMattersLogger( this.config.LOGLEVEL, 'xMattersEventExtended' );
+    },
+
+	// Methods that interact with xMatters syste via the Data Helper
+	/**
+	 * Sends the event -- will attempt a set number of times based on configured
+	 * maximum attempts.
+	 * @return {string} The event id or requestId of the request to xMatters
+	 */
+	send: function() {
+		
+		this.log.info( 'xMattersEventExtended: Starting send...' );
+		var attempts = 0;
+		var isSuccess = false;
+		var message = '';
+		var id = null;
+		
+		while( !isSuccess && attempts < this.config.EVENTS.MAX_ATTEMPTS ) {
+			attempts += 1;
+			try {
+				var resp = this.dataHelper.sendRequest( {
+					"method": "POST",
+					"endpoint": this.webserviceURL,
+					"path": this.webserviceURL, //added for logging
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": this.getEventBody()
+				} );
+				this.response = resp;
+				if( resp.status >= 200 && resp.status < 300 ) {
+					isSuccess = true;
+					body = this.json.decode( resp.body );
+					
+					if( body.id ) {
+						id = body.id;
+					}
+					else if ( body.requestId )
+						id = body.requestId;
+					
+					message = "[xMatters] - created xMatters event with eventID " + id + " " + this.getTargetDescription();
+				} else {
+					if( this.recipients.length <= 0 && resp.status === 400 ) {
+						if( this.isResponseMissingRecipients( resp ) ) {
+							// there was no default recipient.
+							this.log.error( "[xMatters] - failed to create event " + this.getTargetDescription() + 
+								" | status: " + resp.status + " | body: " + resp.body );
+							message = "[xMatters] - creation of xMatters event FAILED " + this.getTargetDescription() + 
+								" after " + attempts + " attempts, no recipients were specified. To avoid this error, set default recipients" +
+								" within xmatters. please refer to logs for more details";
+							break;
+						}
+					}
+					// if didn't break, catch errors through regular error handling
+					this.log.error( "[xMatters] - failed to create event " + this.getTargetDescription() + 
+						" | status: " + resp.status + " | body: " + resp.body );
+					
+				}
+			} catch( e ) {
+				this.log.error( "[xMatters] - failed to create event " + this.getTargetDescription() + 
+					" | error: " + String( e ) );
+			}
+		}
+		if( !isSuccess && message === '' ) {
+			message = "[xMatters] - creation of xMatters event FAILED " + this.getTargetDescription() + 
+				" after " + attempts + " attempts, please refer to logs for more details";
+		}
+		this.log.info( message );
+		this.xMattersId = id;
+		return id;
+	},
+
+
+    type: 'xMattersEventExtended'
+});
+
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-02 20:18:57</sys_created_on>
+        <sys_id>9033b141dbd53200a34fd421cf961934</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>xMattersEventExtended</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_9033b141dbd53200a34fd421cf961934</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-03-07 18:58:17</sys_updated_on>
+    </sys_script_include>
+</record_update>

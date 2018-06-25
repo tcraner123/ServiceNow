@@ -1,0 +1,1265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersPerson</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersPerson</name>
+        <script><![CDATA[gs.include('xMattersLogger');
+gs.include('xMattersConfig');
+gs.include('xMattersDataEvent');
+gs.include('xMattersDataHelper');
+gs.include('xMattersDevice');
+gs.include('xMattersGroupCollection');
+gs.include('xMattersSite');
+
+
+/**
+ * Format roles into a shape usable by xM-API
+ *
+ * @param {{}} initialRoles the roles object that would be returned in GET from xM-API
+ * @return Array an array of role names to use in subsequent submissions to xM-API
+ */
+function formatReceivedRoles(initialRoles) {
+    var roles = [];
+    if (initialRoles && initialRoles.data) {
+        for (var i = 0; i < initialRoles.data.length; i++) {
+            roles.push(initialRoles.data[i].name);
+        }
+    }
+    return roles;
+}
+
+/**
+ * xMattersPerson model for mapping xMatters person objects with ServiceNow users
+ *
+ * @type {Object}
+ */
+var xMattersPerson = Class.create();
+
+xMattersPerson.prototype = {
+
+    /**
+     * Initialize the xMattersPerson object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        this.cachedSupervisors = {};
+
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersPerson', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Insert/Update user in xMatters asynchronously (in the background)
+     *
+     * @param {Object} userRec sys_user record to sync, or the username of the user to sync.
+     * @param {null|Object} previousRec previous sys_user record of user to sync, or the previous username
+     * @param {null|Array} args optional array of name/value pairs to add to the user body
+     * @returns {string} the process ID of the backgroup worker
+     */
+    syncUserAsync: function (userRec, previousRec, args) {
+		var username = this.getxMattersUsername(userRec);
+		var previousUser = previousRec ? this.getxMattersUsername(previousRec) : '';
+		var parentLogTraceId = this.log.getLogTraceId();
+		var stringArgs = args ? new global.JSON().encode(args) : '';
+		if (this.config.USE_PROGRESS_WORKERS) {
+			var worker = new GlideScriptedHierarchicalWorker();
+			worker.setProgressName("x_xma_xmatters.xMattersPerson syncUser: " + username);
+
+			worker.setBackground(true);
+			worker.setScriptIncludeName("x_xma_xmatters.xMattersPerson");
+			worker.setScriptIncludeMethod("syncUser");
+			worker.putMethodArg("user", username);
+
+			worker.putMethodArg("previousUser", previousUser);
+
+			// The putMethodArg doesn't pass arrays nicely,
+			// so we'll turn this into a string and then decode
+			// on the other side
+			worker.putMethodArg('args', stringArgs);
+
+			worker.putMethodArg('parentLogTraceId', parentLogTraceId);
+
+			worker.start();
+
+			return worker.getProgressID();
+		} else {
+			var xde = new xMattersDataEvent(this.config, parentLogTraceId);
+			xde.queueSyncPersonEvent(userRec, username, previousUser, stringArgs);
+		}
+    },
+
+    /**
+     * Remove a user from xMatters asynchronously
+     *
+     * @param {GlideRecord} userRec the user to remove
+     * @returns {Integer} the progress ID for tracking the background worker
+     */
+    removeUserAsync: function (userRec) {
+		var username = this.getxMattersUsername(userRec);
+		var parentLogTraceId = this.log.getLogTraceId();
+		if (this.config.USE_PROGRESS_WORKER) {
+			var worker = new GlideScriptedHierarchicalWorker();
+			worker.setProgressName('x_xma_xmatters.xMattersPerson removeUser: ' + username);
+
+			worker.setBackground(true);
+			worker.setScriptIncludeName('x_xma_xmatters.xMattersPerson');
+			worker.setScriptIncludeMethod('removeUser');
+			worker.putMethodArg('userRec', username);
+			worker.putMethodArg('parentLogTraceId', parentLogTraceId);
+			worker.start();
+
+			return worker.getProgressID();	
+		} else {
+			var xde = new xMattersDataEvent(this.config, parentLogTraceId);
+			xde.queueRemovePersonEvent(userRec, username);
+		}
+    },
+
+    /**
+     * Send a user sync request to the API
+     *
+     * @param {Object} xMUser object to send in payload
+     * @returns {Object} response object from XMAPI
+     */
+    syncUserRequest: function (xMUser) {
+        if (!xMUser) {
+            this.log.warn('syncUserRequest: No user to sync');
+            return null;
+        } else if (!xMUser.targetName) {
+            this.log.warn('syncUserRequest: No user targetName to sync: ' + (new global.JSON().encode(xMUser)));
+            return null;
+        }
+
+        this.log.debug('syncUserRequest: Syncing user: "' + xMUser.targetName + '"');
+        var response = this.dataHelper.post('/people/', xMUser);
+
+        // fall-back to default time zone if user's time zone not found
+        if (response.status == 400 && response.body.indexOf('specified timezone is invalid') != -1) {
+            this.log.warn('syncUserRequest: User: "' + xMUser.targetName + '" has unknown timezone: "' +
+                xMUser.timezone + '". Using configuration default: "' + this.config.DEFAULTTMEZONE + '"');
+
+            xMUser.timezone = this.config.DEFAULTTMEZONE;
+
+            response = this.dataHelper.post('/people/', xMUser);
+        }
+
+        // allow for possibility that this person was just created in a parallel execution thread
+        if (response.status == 409 && response.body.indexOf('already exists') != -1) {
+            this.log.debug('syncUserRequest: User: "' + xMUser.targetName + '" already exists. Performing GET');
+            return this.getPersonFromxM(xMUser.targetName);
+        }
+
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('syncUserRequest: Failed syncing user: "' + xMUser.targetName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return null;
+        }
+
+        this.log.debug('syncUserRequest: Successfully synced user: "' + xMUser.targetName + '"');
+        return (new global.JSON()).decode(response.body);
+    },
+
+    /**
+     * Insert/Update user in xMatters synchronously (in the current "ground")
+     *
+     * @param {string|Object} user sys_user record to sync, or the username of the user to sync.
+     * @param {null|Object} previousUser previous sys_user record or username of the user to sync.
+     * @param {null|Object} args optional array of name/value pairs to add to the user body
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns {Object} the synced user
+     */
+    syncUser: function (user, previousUser, args, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            var userRec = user;
+
+            // If a string is passed, then we'll help out and
+            // go get the user record.
+            if (typeof user === 'string') {
+                if (user.trim() === '') {
+                    this.log.warn('syncUser: Skipping on empty user value.');
+                    return null;
+                }
+
+                userRec = new GlideRecord('sys_user');
+                if (!(userRec.get(this.config.USERNAMEFIELD, user))) {
+                    this.log.warn('syncUser: User: "' + user + '" not found.');
+                    return null;
+                }
+            }
+
+            var username = this.getxMattersUsername(userRec);
+            var newUsername = username;
+
+            if (username.trim() === '') {
+                this.log.warn('syncUser: Cannot sync user: "' + userRec.sys_id + '" with empty ' + this.config.USERNAMEFIELD);
+                return null;
+            }
+
+            this.log.debug('syncUser: Syncing user: "' + username + '"');
+
+            // If this user has a previous record, use username from that instead
+            if (previousUser) {
+                username = (typeof previousUser !== 'string') ? this.getxMattersUsername(previousUser) : previousUser;
+            }
+
+            var xMUser = this.getPersonFromxM(username);
+
+            if (username !== newUsername) {
+                this.log.warn('syncUser: Username changes from: "' + username + '" to: "' + newUsername + '"');
+            }
+            xMUser = this.buildPersonObject(userRec, xMUser, args);
+
+            /*
+             * If any additional elements are needed,
+             * such as supervisor or roles, then add them.
+             * Only args passed in that match existing keys in
+             * the xMUser object will get set; anythings else
+             * will be ignored.
+             * Oh, and because the putMethodArg doesn't handle
+             * JSON very well, we had to string it there, so
+             * check for that.
+             */
+            if (!!args) {
+                if (typeof args === 'string') {
+                    args = new global.JSON().decode(args);
+                }
+
+                for (var name in xMUser) {
+                    // ignore propertes/methods inherited through prototype
+                    if (Object.prototype.hasOwnProperty.call(xMUser, name) &&
+                        Object.prototype.hasOwnProperty.call(args, name)) {
+                        // We concatentate arrays, not overwrite
+                        if (xMUser[name].constructor === Array) {
+                            if (args[name].constructor === Array) {
+                                xMUser[name] = new global.ArrayUtil().concat(xMUser[name], args[name]);
+                            } else {
+                                xMUser[name] = new global.ArrayUtil().concat(xMUser[name], [args[name]]);
+                            }
+                        } else {
+                            xMUser[name] = args[name];
+                        }
+                    }
+                }
+            }
+
+            xMUser = this.syncUserRequest(xMUser);
+            if (!xMUser) {
+                return null;
+            }
+
+            var ownerID = xMUser.id;
+
+            // sync devices
+            var devices = this.getUsersDevicesFromxM(ownerID);
+
+            this.syncWorkEmailDevice(userRec, ownerID, devices);
+            if (userRec.phone) {
+                this.syncWorkPhoneDevice(userRec, ownerID, devices);
+            }
+            if (userRec.mobile_phone) {
+                this.syncMobilePhoneDevice(userRec, ownerID, devices);
+                this.syncSMSPhoneDevice(userRec, ownerID, devices);
+            }
+
+            // need to remove a device?
+            if (devices) {
+                var device = new xMattersDevice(this.config, this.dataHelper, this.log.getLogTraceId());
+                for (var j = 0; j < devices.data.length; ++j) {
+                    if (device.isRemoveRequired(devices.data[j])) {
+                        device.removeDevice(devices.data[j].id);
+                    }
+                }
+            }
+
+            this.log.debug('syncUser: Finished syncing ' + username + ' (' + this.log.timer(start) + 'ms elapsed)');
+
+            return xMUser;
+
+        } catch (e) {
+            this.log.logException('syncUser', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Map the fields from the sys_user rec to an xMatters person Obj
+     *
+     * If xMUser is passed, it is used as a template and values are
+     * overwritten with the values from the sys_user rec.
+     *
+     * @param {Object} userRec The sys_user record representing the user to get info from
+     * @param {null|Object} xMUser [optional] - the xMatters Person Object retrieved from xMatters
+     * @param {null|Object} args [optional] - inject any other dependency arguments
+     * @returns {Object}
+     */
+    buildPersonObject: function (userRec, xMUser, args) {
+        args = args || {};
+        var username = this.getxMattersUsername(userRec);
+        if (username === null) {
+            this.log.debug('buildPersonObject: Cannot build person, "null"');
+            return null;
+        }
+        this.log.debug('buildPersonObject: entering for ' + username);
+
+        var user = {};
+
+        // Set the values from xM, then we'll overlay with the
+        // values from SN
+        var setExternalKey = args.setExternalKey || false;
+        if (xMUser) {
+            user = new global.JSON().decode(new global.JSON().encode(xMUser));
+
+        } else {
+            this.log.debug('buildPersonObject: no user from xMatters');
+
+            user.externallyOwned = this.config.EXTERNALLYOWNED;
+            setExternalKey = true;
+        }
+
+        // populate externalKey only if we are creating a new person
+        // or if explicitly requested
+        if (setExternalKey) {
+            user.externalKey = username;
+        }
+
+        user.targetName = username;
+        user.webLogin = username;
+
+        user.firstName = userRec.first_name.getDisplayValue().trim();
+        user.firstName = (user.firstName === '') ? 'NoFirstName' : user.firstName;
+
+        user.lastName = userRec.last_name.getDisplayValue().trim();
+        user.lastName = (user.lastName === '') ? 'NoLastName' : user.lastName;
+
+        user.timezone = userRec.time_zone.getDisplayValue().trim();
+        user.timezone = (user.timezone === '') ? this.config.DEFAULTTMEZONE : user.timezone;
+
+        user.properties = user.properties || {};
+
+        /*
+         * Custom properties
+         *
+         * Add any custom properties to sync across to xMatters
+         * to the user.properties object.
+         *
+         * Note: Be sure to also update isChanged() to track if these
+         *       properties have changed in ServiceNow if dynamic sync
+         *       is enabled.
+         *
+         * Examples: Uncomment and/or customize the following lines to
+         *           sync to xMatters
+         */
+        //user.properties['Title'] = userRec.title.getDisplayValue().trim();
+        //user.properties['Cost Center'] = userRec.cost_center.code.getDisplayValue().trim();
+
+        if (!user.site) {
+            var xMSite = new xMattersSite(this.config, this.dataHelper, this.log.getLogTraceId());
+            user.site = xMSite.getSiteId();
+        }
+
+        // set any received roles in format supported in POST
+        user.roles = formatReceivedRoles(user.roles);
+
+        // determine if we need to set them as a group supervisor
+        if (username == this.config.DEFAULTSUPERVISOR) {
+            this.log.debug('buildPersonObject: ' + username + ' is the default supervisor. Adding ' + this.config.ROLE_GROUP_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_GROUP_SUPERVISOR);
+
+        } else if (this.isManagerOfSyncableGroup(userRec.sys_id)) {
+            this.log.debug('buildPersonObject: ' + username + ' is the manager of a syncable group. Adding ' + this.config.ROLE_GROUP_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_GROUP_SUPERVISOR);
+
+        } else {
+            this.log.debug(username + ' is neither the manager of a syncable group nor the default supervisor');
+        }
+
+        // determine if we need to set them as a person supervisor
+        if (username == this.config.DEFAULTSUPERVISOR) {
+            this.log.debug('buildPersonObject: ' + username + ' is the default supervisor. Adding ' + this.config.ROLE_PERSON_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_PERSON_SUPERVISOR);
+
+        } else if (this.isManagerOfSyncableUser(userRec.sys_id)) {
+            this.log.debug('buildPersonObject: ' + username + ' is the manager of a syncable user. Adding ' + this.config.ROLE_PERSON_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_PERSON_SUPERVISOR);
+
+        } else {
+            this.log.debug('buildPersonObject: ' + username + ' is neither the manager of a syncable user nor the default supervisor');
+        }
+
+        var arrUtil = new global.ArrayUtil();
+        if (this.config.DEFAULTUSERROLES && this.config.DEFAULTUSERROLES[0] !== '') {
+            user.roles = arrUtil.concat(user.roles, this.config.DEFAULTUSERROLES);
+        }
+
+        // sync supervisors unless we explicitly want to skip them
+        if ('ignoreSupervisors' in args && args.ignoreSupervisors) {
+            if ('supervisors' in user) {
+                delete user.supervisors;
+            }
+        } else {
+            // sync this user's supervisors
+            if (!user.supervisors) {
+                user.supervisors = [];
+            }
+
+            var snSupervisors = this.buildSupervisors(userRec, user.id);
+            for (var i = 0; i < snSupervisors.length; ++i) {
+                user.supervisors.push(snSupervisors[i].id);
+
+                // if we ended up creating the user as part of building the supervisors
+                // list (i.e. user is own supervisor), update the object with the retrieved ID
+                if (snSupervisors[i].username == username) {
+                    user.id = snSupervisors[i].id;
+                }
+            }
+        }
+
+        return user;
+    },
+
+    /**
+     * Build a list of supervisor Ids for a given user
+     *
+     * @param {Object} userRec - user for whom to build the supervisors list
+     * @param {string} xMattersId - id of the xMatters person
+     * @returns {Array} An array of supervisor objects ({id, username}) for a given user
+     */
+    buildSupervisors: function (userRec, xMattersId) {
+        var supervisorNames = [],
+            supervisors = [],
+            managerId = userRec.manager,
+            managerName = '',
+            username = this.getxMattersUsername(userRec);
+
+        var debugSupervisors = [];
+        if (managerId) {
+            var managerRec = new GlideRecord('sys_user');
+            if (managerRec.get('sys_id', managerId)) {
+                managerName = this.getxMattersUsername(managerRec);
+
+                // only if not the default; otherwise we do this below
+                if (managerName !== this.config.DEFAULTSUPERVISOR) {
+                    /*
+                     if this user is to be it's own supervisor and already
+                     has an xM ID, just update the supervisors list directly
+                     */
+                    if (managerName == username && xMattersId) {
+                        debugSupervisors.push(username);
+                        supervisors.push({
+                            id: xMattersId,
+                            username: username
+                        });
+
+                    } else {
+                        debugSupervisors.push(managerName);
+                        supervisorNames.push(managerName);
+                    }
+                }
+            } else {
+                this.log.error('buildSupervisors: Failed retrieving manger, "' + managerId + '" for user, ' + username);
+            }
+        }
+
+        // default to supervisor from config when no manager found above
+        if (this.config.DEFAULTSUPERVISOR !== '') {
+            /*
+             if this user is the default supervisor and already
+             has an xM ID, just update the supervisors list directly
+             */
+            if (this.config.DEFAULTSUPERVISOR == username && xMattersId) {
+                debugSupervisors.push(username);
+                supervisors.push({
+                    id: xMattersId,
+                    username: username
+                });
+
+            } else {
+                debugSupervisors.push(this.config.DEFAULTSUPERVISOR);
+                supervisorNames.push(this.config.DEFAULTSUPERVISOR);
+            }
+        }
+
+        this.log.debug('buildSupervisors: Supervisors for user: "' + username + '": [' + global.JSON.stringify(debugSupervisors) + ']');
+        for (var i = 0; i < supervisorNames.length; ++i) {
+            var supervisorId = this.getSyncableSupervisorId(supervisorNames[i]);
+            if (supervisorId) {
+                supervisors.push({
+                    id: supervisorId,
+                    username: supervisorNames[i]
+                });
+
+            } else if (supervisorNames[i] !== '') {
+                this.log.warn('buildSupervisors: Supervisor: "' + supervisorNames[i] +
+                    '" is not syncable and will not be set for user: "' + username + '"');
+            }
+        }
+
+        return supervisors;
+    },
+
+    /**
+     * Gets the user from xMatters and returns the Person Object
+     *
+     * @param username the is or targetName of the person to retrieve
+     * @returns {Object}
+     */
+    getPersonFromxM: function (username) {
+        var response = this.dataHelper.get('/people/' + encodeURIComponent(username) + '?embed=roles');
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            if (response.status === 404) {
+                this.log.debug('getPersonFromxM: User: "' + username + '" not found (404)');
+
+            } else {
+                this.log.error('getPersonFromxM: Failed retrieving user: "' + username + '"' + "\n" +
+                    this.dataHelper.formatErrorMessage(response));
+            }
+            return null;
+        }
+
+        this.log.debug('getPersonFromxM: Successfully retrieved user: "' + username + '"');
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * Gets the user's devices from xMatters
+     *
+     * @param username the id or targetName of the device owner
+     * @returns {Object}
+     */
+    getUsersDevicesFromxM: function (username) {
+        var response = this.dataHelper.get('/people/' + encodeURIComponent(username) + '/devices');
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('getUsersDevicesFromxM: Failed retrieving devices for user: "' + username + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return null;
+        }
+
+        this.log.debug('getUsersDevicesFromxM: Successfully retrieved devices for user: "' + username + '"');
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * sync the person's email device to xMatters
+     *
+     * This function will attempt to extract the Work Email device from
+     * the devices list passed in, and will build/update from that.
+     * Otherwise, a new device will be crafted and created in xM.
+     *
+     * @param userRec The sys_user record of the SN user
+     * @param ownerID The xMatters Person id value for attaching the device to.
+     * @param devices [optional] A list of existing devices, returned from getUsersDevicesFromxM
+     */
+    syncWorkEmailDevice: function (userRec, ownerID, devices) {
+        var xmDevice = new xMattersDevice(this.config, this.dataHelper, this.log.getLogTraceId()),
+            deviceName = this.config.EMAILDEVICE,
+            device;
+
+        var username = this.getxMattersUsername(userRec);
+
+        if (userRec.email.nil()) {
+            this.log.debug('syncWorkEmailDevice: Not syncing blank email value for ' + username);
+            return;
+
+        } else if (deviceName === null || deviceName === '') {
+            this.log.warn('syncWorkEmailDevice: ' +
+                '"x_xma_xmatters.xmatters.user.sync.email.device.name" ' +
+                'property is empty');
+            return;
+        }
+
+        // If a list of devices has been passed,
+        // search this to get the device
+        if (devices) {
+            device = xmDevice.extractDeviceByName(deviceName, devices);
+        }
+
+        if (!device) {
+            device = xmDevice.createDevice(deviceName, "EMAIL", ownerID);
+        }
+
+        var email = userRec.email.getDisplayValue();
+        if ('' + device.emailAddress != email) {
+            device.emailAddress = email;
+            xmDevice.syncDevice(device);
+
+        } else {
+            this.log.debug('syncWorkEmailDevice: Sync not required for email device');
+        }
+
+        xmDevice.flagToKeep(device);
+    },
+
+    /**
+     * sync the person's work phone device to xMatters
+     *
+     * @param userRec The sys_user record of the SN user
+     * @param ownerID The xMatters Person id value for attaching the device to.
+     * @param devices [optional] A list of existing devices, returned from getUsersDevicesFromxM
+     */
+    syncWorkPhoneDevice: function (userRec, ownerID, devices) {
+        var xmDevice = new xMattersDevice(this.config, this.dataHelper, this.log.getLogTraceId()),
+            deviceName = this.config.PHONEDEVICE,
+            device;
+
+        var username = this.getxMattersUsername(userRec);
+
+        if (userRec.phone.nil()) {
+            this.log.debug('syncWorkPhoneDevice: Not syncing blank phone value for ' + username);
+            return;
+
+        } else if (deviceName === null || deviceName === '') {
+            this.log.error('syncWorkPhoneDevice: ' +
+                '"x_xma_xmatters.xmatters.user.sync.work.phone.device.name" ' +
+                'property is empty');
+            return;
+        }
+
+        if (devices) {
+            device = xmDevice.extractDeviceByName(deviceName, devices);
+        }
+
+        if (!device) {
+            device = xmDevice.createDevice(deviceName, "VOICE", ownerID);
+        }
+
+        var newPhoneNumber = xmDevice.cleanPhoneNumber(userRec.phone.getDisplayValue()),
+            devicePhoneNumber = xmDevice.cleanPhoneNumber(device.phoneNumber);
+        if (devicePhoneNumber != newPhoneNumber) {
+            device.phoneNumber = newPhoneNumber;
+            xmDevice.syncDevice(device);
+
+        } else {
+            this.log.debug('syncWorkPhoneDevice: Sync not required for work phone device');
+        }
+
+        xmDevice.flagToKeep(device);
+    },
+
+    /**
+     * sync the person's mobile phone device to xMatters
+     *
+     * @param userRec The sys_user record of the SN user
+     * @param ownerID The xMatters Person id value for attaching the device to.
+     * @param devices [optional] A list of existing devices, returned from getUsersDevicesFromxM
+     */
+    syncMobilePhoneDevice: function (userRec, ownerID, devices) {
+        var xmDevice = new xMattersDevice(this.config, this.dataHelper, this.log.getLogTraceId()),
+            deviceName = this.config.MOBILEDEVICE,
+            device;
+
+        var username = this.getxMattersUsername(userRec);
+
+        if (userRec.mobile_phone.nil()) {
+            this.log.debug('syncMobilePhoneDevice: Not syncing blank mobile device value for ' + username);
+            return;
+
+        } else if (deviceName === null || deviceName === '') {
+            this.log.error('syncMobilePhoneDevice: ' +
+                '"x_xma_xmatters.xmatters.user.sync.mobile.phone.device.name" ' +
+                'property is empty');
+            return;
+        }
+
+        if (devices) {
+            device = xmDevice.extractDeviceByName(deviceName, devices);
+        }
+
+        if (!device) {
+            device = xmDevice.createDevice(deviceName, "VOICE", ownerID);
+        }
+
+        var newPhoneNumber = xmDevice.cleanPhoneNumber(userRec.mobile_phone.getDisplayValue()),
+            devicePhoneNumber = xmDevice.cleanPhoneNumber(device.phoneNumber);
+        if (devicePhoneNumber != newPhoneNumber) {
+            device.phoneNumber = newPhoneNumber;
+            xmDevice.syncDevice(device);
+
+        } else {
+            this.log.debug('syncMobilePhoneDevice: Sync not required for mobile phone device');
+        }
+
+        xmDevice.flagToKeep(device);
+    },
+
+    /**
+     * sync the person's SMS device to xMatters
+     *
+     * @param userRec The sys_user record of the SN user
+     * @param ownerID The xMatters Person id value for attaching the device to.
+     * @param devices [optional] A list of existing devices, returned from getUsersDevicesFromxM
+     */
+    syncSMSPhoneDevice: function (userRec, ownerID, devices) {
+        var xmDevice = new xMattersDevice(this.config, this.dataHelper, this.log.getLogTraceId()),
+            deviceName = this.config.SMSDEVICE,
+            device;
+
+        var username = this.getxMattersUsername(userRec);
+
+        if (userRec.mobile_phone.nil()) {
+            this.log.debug('syncSMSPhoneDevice: Not syncing blank SMS device value for ' + username);
+            return;
+
+        } else if (deviceName === null || deviceName === '') {
+            this.log.error('syncSMSPhoneDevice: ' +
+                '"x_xma_xmatters.xmatters.user.sync.sms.device.name" ' +
+                'property is empty');
+            return;
+        }
+
+        if (devices) {
+            device = xmDevice.extractDeviceByName(deviceName, devices);
+        }
+
+        if (!device) {
+            device = xmDevice.createDevice(deviceName, "TEXT_PHONE", ownerID);
+        }
+
+        var newPhoneNumber = xmDevice.cleanPhoneNumber(userRec.mobile_phone.getDisplayValue()),
+            devicePhoneNumber = xmDevice.cleanPhoneNumber(device.phoneNumber);
+        if (devicePhoneNumber != newPhoneNumber) {
+            device.phoneNumber = newPhoneNumber;
+            xmDevice.syncDevice(device);
+
+        } else {
+            this.log.debug('syncSMSPhoneDevice: Sync not required for SMS phone device');
+        }
+
+        xmDevice.flagToKeep(device);
+    },
+
+    /**
+     * Check if the user should be removed.
+     *
+     * The userRec arguments should only be used when dealing directly
+     * with the sys_user record, while the userRoleRec arguments should
+     * be used only when dealing directly with the sys_user_has_role
+     * record.
+     *
+     * In determining if the user should be deleted, we check to see if
+     * the user was originally created in ServiceNow
+     *
+     * @param userRec the "current" sys_user record
+     * @param userRec_prev the "previous" sys_user record
+     * @param userRoleRec the "current" sys_user_has_role record
+     * @param userRoleRec_prev the "previous" sys_user_has_role record
+     * @returns {boolean}
+     */
+    isRemoveRequired: function (userRec, userRec_prev, userRoleRec, userRoleRec_prev) {
+        var username;
+        if (userRec) {
+            username = this.getxMattersUsername(userRec);
+            if (username.trim() === '') {
+                this.log.warn('isRemoveRequired: User "' + userRec.sys_id +
+                    '" does not have a ' + this.config.USERNAMEFIELD +
+                    ' and cannot be checked for removal');
+                return false;
+            }
+
+            if (username == this.config.XMAPI.user) {
+                this.log.debug('isRemoveRequired: Removal not required for user: "' + username + '" (xM-API REST user)');
+                return false;
+            }
+
+            if (this.isManagerSyncEnabled() && this.isManagerOfSyncableGroup(userRec.sys_id)) {
+                this.log.debug('isRemoveRequired: Removal not required for user: "' + username + '" (manager of syncable group)');
+                return false;
+            }
+
+            if (userRec.active.changesTo(false)) {
+                this.log.debug('isRemoveRequired: Removal required for user: "' + username + '" (user is not active)');
+                return true;
+            }
+
+            if (!this.hasRole(userRec.sys_id)) {
+                this.log.debug('isRemoveRequired: Removal required for user: "' + username + '" (no syncable role)');
+                return true;
+            }
+
+        } else if (userRoleRec && userRoleRec.operation() == "delete") {
+            this.log.debug('isRemoveRequired: Checking role removal');
+
+            username = this.getxMattersUsername(userRoleRec.user);
+            if (username.trim() === '') {
+                this.log.debug('isRemoveRequired: User: "' + userRoleRec.user.sys_id +
+                    '" does not have a ' + this.config.USERNAMEFIELD +
+                    ' and cannot be checked for removal');
+                return false;
+            }
+
+            if (username == this.config.XMAPI.user) {
+                this.log.debug('isRemoveRequired: Removal not required for user: "' + username + '" (xM-API REST user)');
+                return false;
+            }
+
+            if (this.isManagerSyncEnabled() && this.isManagerOfSyncableGroup(userRoleRec.user.sys_id)) {
+                this.log.debug('isRemoveRequired: Removal not required for user: "' + username + '" (manager of syncable group)');
+                return false;
+            }
+
+            // check to see if the user still has a syncable role
+            if (!this.hasRole(userRoleRec.user)) {
+                this.log.debug('isRemoveRequired: Removal required for user: "' + username + '" (no syncable role)');
+                return true;
+            }
+        }
+
+        if (username) {
+            this.log.debug('isRemoveRequired: No relevant change detected for user: "' + username + '"');
+        }
+
+        return false;
+    },
+
+    /**
+     * remove a user from xMatters
+     *
+     * @param {GlideRecord|string} user sys_user record to sync, or the username of the user to sync.
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns null|{{}} either null on error or the response from xM-API
+     */
+    removeUser: function (user, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var isGlide = (typeof user !== 'string');
+            var username = isGlide ? this.getxMattersUsername(user) : user;
+            username = username || '';
+
+            // ensure there is a valid username
+            if (username.trim() === '') {
+                var msg = 'removeUser: Cannot remove user with empty ' + this.config.USERNAMEFIELD;
+                if (isGlide) {
+                    msg += ' (sys_id: "' + user.sys_id + '")';
+                }
+                this.log.warn(msg);
+                return null;
+            }
+
+            // ensure there is a user that was created through a sync
+            var xMUser = this.getPersonFromxM(username);
+            if (!xMUser) {
+                this.log.warn('removeUser: User: "' + username + '" does not exist in xMatters.');
+                return null;
+            }
+
+            if (!xMUser.externalKey) {
+                this.log.warn('removeUser: User: "' + username + '" was not created by sync');
+                return null;
+            }
+
+            var response = this.dataHelper.remove('/people/' + encodeURIComponent(username));
+
+            if (this.dataHelper.isSucessfulResponse(response)) {
+                this.log.debug('removeUser: Successfully removed user: "' + username + '"');
+            } else {
+                this.log.error('removeUser: Failed removing user: "' + username + '"' + "\n" +
+                    this.log.formatMessage(response));
+            }
+
+            return response;
+
+        } catch (e) {
+            this.log.logException('removeUser', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Check to see if this is a user we care about
+     *
+     * This method will always return false if the user in
+     * question is the XMAPI REST user from the config.
+     *
+     * @param user the "current" sys_user record. Or the username to check.
+     * @param userRec_prev the "previous" sys_user record
+     * @param userRoleRec the "current" sys_user_has_role record
+     * @param userRoleRec_prev the "previous" sys_user_has_role record
+     * @returns {boolean}
+     */
+    isSyncableUser: function (user, userRec_prev, userRoleRec, userRoleRec_prev) {
+        if (!user && !userRoleRec) {
+            this.log.debug('isSyncableUser: Missing required arguments');
+            return false;
+        }
+
+        var userRec = user;
+
+        // If a string is passed, then we'll help out and
+        // go get the user record.
+        if (typeof user === 'string') {
+            if (user.trim() === '') {
+                this.log.warn('isSyncableUser: Skipping on empty user value.');
+                return false;
+            }
+
+            userRec = new GlideRecord('sys_user');
+            if (!(userRec.get(this.config.USERNAMEFIELD, user))) {
+                this.log.error('isSyncableUser: User: "' + user + '" not found.');
+                return false;
+            }
+        }
+
+        var username;
+        if (userRec) {
+            username = this.getxMattersUsername(userRec);
+            if (username.trim() === '') {
+                this.log.warn('isSyncableUser: User: "' + userRec.sys_id + '" has empty ' + this.config.USERNAMEFIELD);
+                return false;
+            }
+
+            if (username == this.config.XMAPI.user) {
+                this.log.debug('isSyncableUser: Non-syncable xmapi REST user: "' + username + '"');
+                return false;
+            }
+
+            if (!userRec.active) {
+                this.log.debug('isSyncableUser: User: "' + username + '" is not active');
+                return false;
+            }
+
+            if (this.hasRole(userRec.sys_id)) {
+                this.log.debug('isSyncableUser: User: "' + username + '" has a syncable role');
+                return true;
+            }
+
+            if (this.isManagerSyncEnabled() && this.isManagerOfSyncableGroup(userRec.sys_id)) {
+                this.log.debug('isSyncableUser: User: "' + username + '" is a group manager');
+                return true;
+            }
+
+        } else if (userRoleRec) {
+            username = this.getxMattersUsername(userRoleRec.user);
+            if (username.trim() === '') {
+                this.log.warn('isSyncableUser: User: "' + userRoleRec.user + '" has empty ' + this.config.USERNAMEFIELD);
+                return false;
+            }
+
+            if (username == this.config.XMAPI.user) {
+                this.log.debug('sSyncableUser: Non-syncable xmapi REST user: "' + username + '"');
+                return false;
+            }
+
+            if (!userRoleRec.user.active) {
+                this.log.debug('isSyncableUser: User: "' + username + '" is not active');
+                return false;
+            }
+
+            if (this.hasRole(userRoleRec.user)) {
+                this.log.debug('isSyncableUser: User: "' + username + '" has a syncable role');
+                return true;
+            }
+
+            if (this.isManagerSyncEnabled() && this.isManagerOfSyncableGroup(userRoleRec.user)) {
+                this.log.debug('isSyncableUser: User: "' + username + '" is a group manager');
+                return true;
+            }
+        }
+
+        this.log.debug('isSyncableUser: User: "' + username + '" does not have a syncable role');
+        return false;
+    },
+
+    /**
+     * Check to see if this is a data change we care about
+     *
+     * @param user the "current" sys_user record. Or the username to check.
+     * @param userRec_prev the "previous" sys_user record
+     * @param userRoleRec the "current" sys_user_has_role record
+     * @param userRoleRec_prev the "previous" sys_user_has_role record
+     * @returns {boolean}
+     */
+    isChanged: function (user, userRec_prev, userRoleRec, userRoleRec_prev) {
+        var username;
+
+        if (user) {
+            // check if any of the fields we sync changed
+            var changed = user.phone.changes() || user.mobile_phone.changes() ||
+                user.email.changes() || user.user_name.changes() || user.first_name.changes() ||
+                user.last_name.changes() || user.time_zone.changes() || user.manager.changes() ||
+                user.active.changes();
+
+            /*
+             * Custom properties
+             *
+             * Add any custom properties to inspect for changes to
+             * trigger dynamic sync to xMatters
+             *
+             * Note: Be sure to also update buildPersonObject() to
+             *       pass these values in the person object payload.
+             *
+             * Examples: Uncomment and/or customize the following lines to
+             *           check for changes in properties for dynamic sync to
+             *           xMatters
+             */
+            //changed = changed || user.title.changes();
+            //changed = changed || user.cost_center.changes();
+
+            username = this.getxMattersUsername(user);
+            if (username.trim() === '') {
+                this.log.warn('isChanged: User: "' + user.sys_id + '" has empty ' + this.config.USERNAMEFIELD);
+                return false;
+            }
+            this.log.debug('isChanged: Data has ' + (changed ? '' : 'not ') + 'changed for user: "' + username + '"');
+
+            return changed;
+
+        } else if (userRoleRec) {
+            // check if role we track was added or deleted
+            username = this.getxMattersUsername(userRoleRec.user);
+            if (username.trim() === '') {
+                this.log.warn('isChanged: User: "' + userRoleRec.user.sys_id + '" has empty ' + this.config.USERNAMEFIELD);
+                return false;
+            }
+
+            var role = userRoleRec.role.name.getDisplayValue();
+            var roles = this.config.SYNCABLEROLES;
+            for (var i = 0; i < roles.length; i++) {
+                if (roles[i] == role) {
+                    this.log.debug('isChanged: Role has changed for user: "' + username + '"');
+                    return true;
+                }
+            }
+
+            this.log.debug('isChanged: Role has not changed for user: "' + username + '"');
+            return false;
+        }
+
+        this.log.debug('isChanged: No user or user role to check');
+        return false;
+    },
+
+    /**
+     * Check to see if synchronization is required
+     *
+     * @param user the "current" sys_user record. Or the username to check.
+     * @param userRec_prev the "previous" sys_user record
+     * @param userRoleRec the "current" sys_user_has_role record
+     * @param userRoleRec_prev the "previous" sys_user_has_role record
+     * @returns {boolean}
+     */
+    isSyncRequired: function (userRec, userRec_prev, userRoleRec, userRoleRec_prev) {
+        var syncable = this.isSyncableUser(userRec, userRec_prev, userRoleRec, userRoleRec_prev);
+        var req = syncable || userRoleRec ? this.isChanged(userRec, userRec_prev, userRoleRec, userRoleRec_prev) : false;
+        if (!req && userRec) {
+            req = this.isRemoveRequired(userRec, userRec_prev, userRoleRec, userRoleRec_prev);
+        }
+
+        return req;
+    },
+
+    /**
+     * Determine if the status of the New Role Inheritance plugin is enabled. If so,
+     * then the manager code can run, otherwise it will be bypassed.
+     *
+     * @returns {boolean} True if the plugin is enabled.
+     */
+    isEnhancedRoleManagementEnabled: function() {
+        var isERMEnabled = gs.getProperty('glide.role_management.use.inh_count') == 'true';
+        if (!isERMEnabled) {
+            this.log.debug('isEnhancedRoleManagementEnabled: The ServiceNow Enhanced Role Management plugin is disabled, so the Always Sync Group Managers feature is disabled to avoid blocking role inheritance.');
+        }
+        return isERMEnabled;
+    },
+
+    /**
+     * Determine if we should sync Managers of groups that are syncable even if the
+     * user itself is not marked as syncable based on its role
+     * 
+     * @return {Boolean} True, if the feature is enabled and its dependency is also enabled
+     */
+    isManagerSyncEnabled: function() {
+        return this.config.SYNC_MANAGERS && this.isEnhancedRoleManagementEnabled();
+    },
+
+    /**
+     * Determine if a user is listed as a manager of a syncable group
+     *
+     * @param {string} userSys_ID the sys_user ID of the user to check
+     * @returns {boolean} if the user is listed as a manager in a syncable group
+     */
+    isManagerOfSyncableGroup: function (userSys_ID) {
+        var groupCollection = new xMattersGroupCollection(this.config, this.dataHelper, this.log.getLogTraceId());
+        var syncableGroups = groupCollection.getSyncableGroups();
+
+        var groups = new GlideRecord('sys_user_group');
+        groups.addQuery('name', 'IN', syncableGroups.join(','));
+        groups.addQuery('manager', userSys_ID);
+        groups.query();
+
+        return groups.next();
+    },
+
+    /**
+     * Determine if a user is listed as a manger of other syncable users
+     *
+     * @param {string} userSys_ID the sys_user ID of the user to check
+     * @returns {boolean} if the user is listed as the manager of syncable users
+     */
+    isManagerOfSyncableUser: function (userSys_ID) {
+        var personCollection = new xMattersPersonCollection(this.config, this.dataHelper, this.log.getLogTraceId());
+        var syncableUsers = personCollection.getSyncableUsers();
+
+        var users = new GlideRecord('sys_user');
+        users.addQuery('user_name', 'IN', syncableUsers.join(','));
+        users.addQuery('manager', userSys_ID);
+        users.query();
+
+        return users.next();
+    },
+
+    /**
+     * Check if user has specified role(s)
+     *
+     * If no roles are passed, roles are checked against the configuration
+     * roles.list for syncing users
+     *
+     * @param userSys_ID  the sys_user ID of the user to check
+     * @param roles [optional] - A string or an array of roles to check
+     * @returns {boolean} if the user has one of the roles specified
+     */
+    hasRole: function (userSys_ID, roles) {
+        var rolesList;
+
+        // convert string value to appropriate format
+        if (typeof roles === 'string' && roles.trim() !== '') {
+            rolesList = roles.split(';').join(',');
+
+        } else { // Otherwise, get it from the user sync list
+            rolesList = this.config.SYNCABLEROLES.join(',');
+        }
+
+        var userRole = new GlideRecord('sys_user_has_role');
+        userRole.addQuery('user.sys_id', userSys_ID);
+        userRole.addQuery('role.name', 'IN', rolesList);
+        userRole.query();
+
+        var found = userRole.next();
+
+        this.log.debug('hasRole: User: "' + userSys_ID + '" ' + (found ? 'has' : 'does not have') +
+            ' a role in syncable list: [' + rolesList + ']');
+
+        return found;
+    },
+
+    /**
+     * Retrieve and return a supervisor's xMatters ID, if syncable
+     *
+     * To make things a little more efficient for bulk operations,
+     * successful lookups will be cached and the cache-value returned
+     * on subsequent calls.
+     *
+     * TODO: Before attempting a full sync, try just retrieving user with embedded roles.
+     * The supervisor may already have necessary roles and not require updating.
+     *
+     * @param username
+     * @returns {int} supervisor's ID from xMatters
+     */
+    getSyncableSupervisorId: function (username) {
+        if (!username) {
+            return false;
+        }
+
+        this.log.debug('getSyncableSupervisorId: Checking for supervisor: "' + username + '" in cache ' +
+            global.JSON.stringify(this.cachedSupervisors));
+        if (!(username in this.cachedSupervisors)) {
+            var supervisorRec = new GlideRecord('sys_user');
+
+            if (!(supervisorRec.get(this.config.USERNAMEFIELD, username))) {
+                this.log.debug('getSyncableSupervisorId: Supervisor: "' + username + '" does not exist in ServiceNow');
+                this.cachedSupervisors[username] = false;
+
+            } else if (!this.isSyncableUser(supervisorRec)) {
+                this.log.debug('getSyncableSupervisorId: Supervisor: "' + username + '" is not syncable');
+                this.cachedSupervisors[username] = false;
+
+            } else {
+                this.log.debug('getSyncableSupervisorId: Syncing supervisor: "' + username + '" to retrieve xMatters ID');
+
+                var supervisor = this.syncUser(supervisorRec, null, {ignoreSupervisors: true});
+
+                // store xMatters id in cache (or false if sync failed)
+                if (supervisor !== null) {
+                    this.cachedSupervisors[username] = supervisor.id;
+                } else {
+                    this.log.debug('getSyncableSupervisorId: Could not sync supervisor: "' + username + '"');
+                    this.cachedSupervisors[username] = false;
+                }
+            }
+
+        } else {
+            this.log.debug('getSyncableSupervisorId: Returning xMatters ID from cache for supervisor: "' + username + '"');
+        }
+
+        return this.cachedSupervisors[username];
+    },
+
+    /**
+     * Get the xMatters username value from a ServiceNow userRec
+     *
+     * @param userRec ServiceNow sys_user record
+     * @returns {null|string} the username value to use for xMatters or null if not present
+     */
+    getxMattersUsername: function (userRec) {
+        return userRec[this.config.USERNAMEFIELD].getDisplayValue();
+    },
+
+    /**
+     * Gets the ServiceNow username of a user based on their xMatters Username
+     * @param  {string} xmUserName The username within xMatters
+     * @return {string}            The username of the user within ServiceNow
+     */
+    getServiceNowUserByxMattersUsername: function (xmUserName) {
+        var user = new GlideRecord('sys_user');
+        var hasUser = user.get(this.config.USERNAMEFIELD, xmUserName);
+
+        this.log.debug('getServiceNowUserByxMattersUsername: ' + (hasUser ? 'Found' : 'Could not find') +
+            ' ServiceNow user with ' + this.config.USERNAMEFIELD + ': "' + xmUserName + '"');
+
+        return user;
+    },
+
+    type: 'xMattersPerson'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-04-26 19:31:51</sys_created_on>
+        <sys_id>6188cd114f4312008472a88ca310c7dd</sys_id>
+        <sys_mod_count>80</sys_mod_count>
+        <sys_name>xMattersPerson</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_6188cd114f4312008472a88ca310c7dd</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:59</sys_updated_on>
+    </sys_script_include>
+</record_update>

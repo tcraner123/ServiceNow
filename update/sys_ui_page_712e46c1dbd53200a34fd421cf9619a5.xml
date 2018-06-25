@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description/>
+        <direct>false</direct>
+        <endpoint>x_xma_xmatters_xm_inform_with_xmatters_content.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+	
+
+<script src="x_xma_xmatters.angular.min.jsdbx"></script>
+<script src="x_xma_xmatters.angular-ui-bootstrap.min.jsdbx"></script>
+<script src="x_xma_xmatters.xm_app_inform_xmatters.jsdbx"></script>
+<script src="x_xma_xmatters.angular.translate.min.jsdbx"></script>
+<script src="x_xma_xmatters.xm_mod_glide_ajax.jsdbx"></script>
+<script src="x_xma_xmatters.xm_mod_xmatters_service.jsdbx"></script>
+<script src="x_xma_xmatters.xm_mod_location_service.jsdbx"></script>
+<script src="x_xma_xmatters.ng-tags-input.min.jsdbx"></script>
+	
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css" rel="stylesheet"></link>
+	
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"></link>
+<style>
+	body {
+		font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	        padding-top: 0;
+	}
+	.xm-label {
+		font-size: 13px;
+		font-weight: normal;
+	}
+	input.xm-tracked.ng-dirty, textarea.xm-tracked.ng-dirty {
+		border: 1px orange solid;
+	}
+	form.ng-submitted input.ng-invalid, form.ng-submitted textarea.ng-invalid {
+		border: 1px red solid;
+	}
+	a.xm-help {
+		margin-left: 5px;
+		display: inline-block !important;	
+	}
+	.ng-dirty .tags {
+		/**border-color: orange; **/
+	}
+	.xm-tags-input-group .input-group-btn .btn {
+	   height: 34px;
+	}
+	.tags {
+	    border: 1px solid #ccc !important;
+	}
+	form.ng-submitted .ng-invalid .tags {
+		border-color: red !important;
+	}
+	tags-input .tags {
+	     box-shadow: none !important;
+	}
+	tags-input .tags .tag-item {
+	    background: #445465;
+	    border: 0;
+	}
+	tags-input .tags .tag-item .remove-button {
+	    color: white;
+	}
+	tags-input .tags .tag-item .remove-button:hover {
+	    color: #bec1c6;;
+	}
+	tags-input .tags .tag-item.selected {
+		background-color: #ae1b1f;
+	}
+	.xm-input-group-btn {
+		background-color: #f6f6f6;
+		border: solid 1px #cccccc;
+		width: 106px;
+	}
+	.xm-left {
+	     float: left;
+	}
+	.xm-right {
+	    float: right;
+	}
+	.xm-tag-feedback {
+	   right: 10px;
+	}
+	.xm-error {
+	   color: red;
+	   font-size: 13px;
+	}
+	.xm-btn-default, .xm-btn-default:focus, .xm-btn-default:hover {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	    color: #343d47;
+	    background-color: rgba(255, 255, 255, 0.45);
+	    border-color: #bdc0c4;
+	}
+	tags-input .tags .tag-item {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	}
+	tags-input .tags .input {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	}
+	tags-input .autocomplete .suggestion-item {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	}
+	h4.xm-header {
+	     font-size: 21px;
+	     font-weight: normal;
+	     margin-top: 0;
+	}
+	.xm-left-icon {
+	    margin-right: 5px;
+	}
+	.xm-right-icon {
+	    margin-left: 0;
+	}
+	.xm-right-icon .remove-button .fa {
+	     font-size: 14px;
+	     vertical-align: text-top;
+	}
+	.form-control-feedback .fa {
+	     color: rgb(52, 61, 71);
+	}
+	.xm-success-message {
+	    max-width: 80%;
+	    min-width: 375px;
+	    padding: 0 40px;
+	}
+	.xm-cancel-button {
+		margin-left: 15px;
+	}
+</style>
+<div id="inform" ng-app="xm.inform-xm" class="container-fluid" ng-cloak="">
+<div ng-controller="informCtlr">
+	<h4 class="xm-header">{{ 'INFORM_XM.TITLE' | translate }}</h4>
+		<form name="informXMForm" novalidate="">
+			
+			<!-- 1st Row -->
+			<div class="row">
+				<div class="form-group col-sm-4" ng-class="informXMForm.update_type.$error.required ? 'is-required' : 'is-filled'">
+					<span class="required-marker" ></span>
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.UPDATE_TYPE' | translate }}</label>
+					<select class="form-control" ng-model="update_type" id="update_type" name="update_type" required="required">
+						<option ng-repeat="updateOpt in update_type_options" value="{{updateOpt.value}}" >{{ updateOpt.label }}</option>
+					</select>
+					<div class="xm-error" ng-messages="informXMForm.update_type.$error" ng-show="informXMForm.$submitted">
+						<div ng-message="required">{{ 'INFORM_XM.ERROR.REQUIRED' | translate }}</div>
+					</div>
+				</div>
+				
+				<div class="form-group col-sm-4 col-sm-offset-2">
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.PARENT_INCIDENT' | translate }}</label>
+					<input type="text" class="form-control" ng-model="incident.number" id="incident.number" name="incident.number" readonly="readonly"/>
+				</div>
+				
+			</div>
+			
+			<!-- Next Row -->
+			<div class="row">
+				
+				<div class="form-group col-sm-4" ng-class="informXMForm.first_reported.$error.required ? 'is-required' : 'is-filled'">
+					<span class="required-marker" ></span>
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.FIRST_REPORTED' | translate }}</label>
+
+					<p class="input-group">
+					
+					  <input type="text" class="form-control" uib-datepicker-popup="dd-MMMM-yyyy" ng-model="first_reported" is-open="calendarPopup.opened" datepicker-options="dateOptions" ng-required="true" close-text="Close" />
+					  <span class="input-group-btn">
+						<button type="button" class="btn btn-default" ng-click="openCalendarPopup()"><i class="glyphicon glyphicon-calendar"></i></button>
+					  </span>
+					</p>
+
+					<uib-timepicker ng-model="first_reported" ng-change="changed()" show-spinners="false"></uib-timepicker>
+				
+					<div class="xm-error" ng-messages="informXMForm.first_reported.$error" ng-show="informXMForm.$submitted">
+						<div ng-message="required">{{ 'INFORM_XM.ERROR.REQUIRED' | translate }}</div>
+					</div>
+					
+				</div>
+
+			</div>
+			
+			<!-- Next Row -->
+			<div class="row">
+				<div class="form-group col-sm-6" ng-class="informXMForm.locations.$error.required ? 'is-required' : 'is-filled'">
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.LOCATIONS' | translate }}</label>
+						<tags-input ng-model="locations" id="locations" name="locations" required="required" placeholder="Add Locations" add-from-autocomplete-only="true">
+							<auto-complete source="getLocations( $query )" load-on-down-arrow="true"></auto-complete>
+						</tags-input>
+				</div>
+				<div class="form-group col-sm-6" ng-class="informXMForm.services.$error.required ? 'is-required' : 'is-filled'">
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.SERVICES' | translate }}</label>
+						<tags-input ng-model="services" id="services" name="services" required="required" placeholder="Add Services" add-from-autocomplete-only="true">
+							<auto-complete source="getServices( $query )"></auto-complete>
+						</tags-input>
+				</div>
+			</div>
+			
+			<!-- Next Row -->
+			<div class="row">
+				<div class="form-group col-md-12" ng-class="informXMForm.business_impact.$error.required ? 'is-required' : 'is-filled'">
+					<span class="required-marker" ></span>
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.BUSINESS_IMPACT' | translate }}</label>
+					<textarea class="form-control" ng-model="business_impact" id="business_impact" name="business_impact" required="required" ng-maxlength="2000" />
+					<div class="xm-error" ng-messages="informXMForm.business_impact.$error" ng-show="informXMForm.$submitted">
+						<div ng-message="required">{{ 'INFORM_XM.ERROR.REQUIRED' | translate }}</div>
+						<div ng-message="maxlength">{{ 'INFORM_XM.ERROR.MAX_LENGTH' | translate:'{ max_length: 200 }' }}</div>
+					</div>
+				</div>
+			</div>
+
+			
+			<!-- Next Row -->
+			<div class="row">
+				<div class="form-group col-md-12" ng-class="informXMForm.update.$error.required ? 'is-required' : 'is-filled'">
+					<span class="required-marker" ></span>
+					<label class="xm-label">{{ 'INFORM_XM.LABEL.UPDATE' | translate }}</label>
+					<textarea class="form-control" ng-model="update" id="update" name="update" required="required" ng-maxlength="2000" />
+					<div class="xm-error" ng-messages="informXMForm.update.$error" ng-show="informXMForm.$submitted">
+						<div ng-message="required">{{ 'INFORM_XM.ERROR.REQUIRED' | translate }}</div>
+						<div ng-message="maxlength">{{ 'INFORM_XM.ERROR.MAX_LENGTH' | translate:'{ max_length: 200 }' }}</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Last Row -->
+			<div class="row">
+				<div class="col-md-4">
+					<button class="btn btn-default xm-btn-default" ng-click="submit()">{{ 'INFORM_XM.BUTTON.SUBMIT' | translate }}</button>
+					<!--<button class="btn btn-default xm-btn-default xm-cancel-button" type="button" ng-click="cancel()"><span class="pull-right">${{ 'INFORM_XM.BUTTON.CANCEL' | translate }}</span></button>-->
+				</div>
+			</div>
+			
+		</form>
+	
+	
+</div>
+</div>
+</j:jelly>]]></html>
+        <name>xm_inform_with_xmatters_content</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-02 22:22:40</sys_created_on>
+        <sys_id>712e46c1dbd53200a34fd421cf9619a5</sys_id>
+        <sys_mod_count>103</sys_mod_count>
+        <sys_name>xm_inform_with_xmatters_content</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_712e46c1dbd53200a34fd421cf9619a5</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-11-21 17:41:00</sys_updated_on>
+    </sys_ui_page>
+</record_update>

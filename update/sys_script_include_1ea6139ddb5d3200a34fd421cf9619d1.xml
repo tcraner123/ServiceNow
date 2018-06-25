@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersAjaxExtended</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>xMattersAjaxExtended</name>
+        <script><![CDATA[gs.include("xMattersConfigExtended");
+gs.include( "xMattersAjaxEngage" );
+
+var xMattersAjaxExtended = Class.create();
+
+// Object.extendsObject apparently only takes 2 parameters,
+// so to add more than two objects, we call this twice. 
+xMattersAjaxExtended.prototype = Object.extendsObject( global.AbstractAjaxProcessor, Object.extendsObject( new xMattersAjaxEngage(), {
+
+
+		/**
+	 * Submits a new Inform with xMatters record in ServiceNow (note that this does not perform any communication between ServiceNow and xMatters)
+	 * When called from glide ajax, must have a stringified "form_data" parameter. This parameter should look like the following:
+	 * 	{
+
+	 * 	}
+	 * 
+	 * @return {String} A stringified JSON object with the following details:
+	 * {
+	 * 		"success": true or false depending on whether the submission was successful,
+	 * 		"error": only present if "success" = false - a string describing what went wrong,
+	 * 		"data": only present if "success" = true - an object with the following properties:
+	 * 			{
+	 * 				"sys_id": the id of the new Engage with xMatters record
+	 * 			}
+	 * }
+	 */
+	submitInformWithXMatters: function() {
+		var response;
+		try {
+			var form_data = this.getParameter( 'form_data' );	
+			var formData = new global.JSON().decode( form_data );
+
+			var informRequest = new GlideRecord( 'x_xma_xmatters_inform_with_xmatters' );
+			informRequest.initialize();
+			
+			informRequest.business_impact = formData.business_impact;
+			informRequest.first_reported  = formData.first_reported.replace( /T/g, ' ' );
+			informRequest.locations       = formData.locations;
+			informRequest.services        = formData.services;
+			informRequest.update          = formData.update;
+			informRequest.update_type     = formData.update_type;
+			informRequest.parent_incident = formData.parent_incident;
+
+			informRequest.insert();
+
+			response = {
+				success: true,
+				data: { sys_id: String( informRequest.sys_id ) }
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+	
+	
+	
+	
+	getLocations: function() {
+		var conf = new xMattersConfigExtended();
+		response = {
+			success: true,
+			data: conf.INFORM.LOCATIONS.LIST
+		};
+		
+		return new global.JSON().encode( response );
+	},
+	
+	getServices: function() {
+		var conf = new xMattersConfigExtended();
+		response = {
+			success: true,
+			data: conf.INFORM.SERVICES.LIST
+		};
+		return new global.JSON().encode( response );
+	},
+	
+	getIncident: function() {
+
+		var sys_id = this.getParameter( 'sysparm_sys_id' );	
+		var rec = new GlideRecord( 'incident' );
+		rec.get( sys_id );
+		
+		var fields = [ 'number', 'short_description', 'cmdb_ci' ];
+		
+		response =  {
+			success: true,
+			data: this._getIncFields( fields, rec )
+		};
+		
+		return new global.JSON().encode( response );
+		
+	},
+	
+		getRelatedCiSupportGroups: function() {
+		var CISysID = this.getParameter( 'sysparm_cisys_id' );
+        var CIUtil = new global.xMCIUtils();
+        var serviceIds = CIUtil.servicesRelatedToCI( CISysID, ["child", "parent"] );
+	
+        var list = [];
+		var id = 0;
+        for( var i in serviceIds ) {
+            var service = new GlideRecord("cmdb_ci_service");
+            service.get( serviceIds[i] );
+
+			group = service.support_group.name.getDisplayValue() || 'None';
+			label = group + ' (CI: ' + service.getDisplayValue() + ')';
+
+            list.push( { 
+				"id": id, 
+				"ci": service.getDisplayValue(), 
+				"group": group, 
+				"label": label } );
+
+			id ++;
+        }
+		
+		
+	
+		var response = {
+			"success": true,
+			"data": list
+		};
+		
+		return new global.JSON().encode( response );
+		
+
+    },
+	
+	
+	// There isn't a GlideRecord.toJSON function, so
+	// we'll fake it by just grabbing a handful of fields
+	_getIncFields: function( fields, rec ) {
+
+		var resp = {};
+		for( var f in fields ) {
+			key = fields[f];
+			val = '' + rec[ fields[f] ];  //.getDisplayValue();
+			//gs.info( 'Key: ' + key + '. Val: ' + val );
+			resp[ key ] = val;
+		}
+		
+		return resp;
+	},
+	
+	getOpenConferenceBridges: function(){
+		var response;
+		var opts;
+		var openBridges = [];
+		var processedBridges = {};
+		try {
+			var json = new global.JSON();	
+			var sys_id = this.getParameter( 'sys_id' );
+			opts = {
+				"method": "GET",
+				"path": "/api/xm/1/events?propertyName=sys_id%23en&propertyValue=" + sys_id
+			};	
+			var dataHelper = new xMattersDataHelper();
+			var apiResp = dataHelper.sendRequest( opts );
+			if( apiResp.status >= 200 && apiResp.status < 300 ) {	
+				var events = json.decode(apiResp.body).data;
+				for (var i = 0; i < events.length; i++) {
+					var event = events[i];
+					if (event.conference == null) {
+						continue;
+					}
+					thisBridge = event.conference.bridgeId;
+					if (processedBridges[thisBridge] != null) {
+						//already processed this bridge
+						continue;
+					}
+					processedBridges[thisBridge] = true;
+					opts = {
+						"method": "GET",
+						"path": event.conference.links.self
+					};
+					apiResp = dataHelper.sendRequest( opts );
+					if( apiResp.status >= 200 && apiResp.status < 300 ) {
+						var bridge = json.decode(apiResp.body);
+						if (bridge.status != "INACTIVE") {
+							openBridges.push(thisBridge);
+						}
+					}
+				
+				}
+				
+				response = {
+					success: true,
+					data: openBridges
+				};
+			} else {
+				response = {
+					success: false,
+					api_response: apiResp,
+					error: 'The call to xMatters was unsuccessful'
+				};
+			}
+		} catch( e ) {
+			response = {
+				success: false,
+				opts: opts,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );
+	},	
+		
+    type: 'xMattersAjaxExtended'
+}));]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-03 22:31:13</sys_created_on>
+        <sys_id>1ea6139ddb5d3200a34fd421cf9619d1</sys_id>
+        <sys_mod_count>38</sys_mod_count>
+        <sys_name>xMattersAjaxExtended</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_1ea6139ddb5d3200a34fd421cf9619d1</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-03-26 16:14:49</sys_updated_on>
+    </sys_script_include>
+</record_update>

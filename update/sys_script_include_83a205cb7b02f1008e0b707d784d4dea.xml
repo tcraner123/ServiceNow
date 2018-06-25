@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersProperties</api_name>
+        <client_callable>false</client_callable>
+        <description>Script to help manage various properties in the ServiceNow engine in xMatters. </description>
+        <name>xMattersProperties</name>
+        <script><![CDATA[gs.include('xMattersLogger');
+gs.include('xMattersConfig');
+gs.include('xMattersDataHelper');
+
+/**
+ * xMattersProperties class for updating configuration item props
+ *
+ * @type {Object}
+ */
+var xMattersProperties = Class.create();
+
+xMattersProperties.prototype = {
+
+    /**
+     * Initialize xMattersProperties object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, logTraceId) {
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersProperties', logTraceId);
+
+        this.dataHelper = new xMattersDataHelper(config, this.log.getLogTraceId());
+        this.dataHelper.setBaseURL('/reapi/2015-04-01');
+    },
+
+    /**
+     * Asynchronously update properties in xMatters
+     *
+     * @param {string} uuid of property to update in xMatters
+     * @param {Array} values (optional) to update
+     * @returns {*}
+     */
+    syncPropertyValuesAsync: function (uuid, values) {
+        var worker = new GlideScriptedHierarchicalWorker();
+        worker.setProgressName("x_xma_xmatters.xMattersProperties syncPropertyValues");
+
+        worker.setBackground(true);
+        worker.setScriptIncludeName("x_xma_xmatters.xMattersProperties");
+        worker.setScriptIncludeMethod("syncPropertyValues");
+        worker.putMethodArg("uuid", uuid);
+        worker.putMethodArg("values", new global.JSON().encode(values));
+        worker.putMethodArg('parentLogTraceId', this.log.getLogTraceId());
+
+        worker.start();
+
+        return worker.getProgressID();
+    },
+
+    /**
+     * Sync properties to xMatters
+     *
+     * @param {string} uuid of property to update in xMatters
+     * @param {Array} values to set for property
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns {*|{status: *, body: string}}
+     */
+    syncPropertyValues: function (uuid, values, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            if (typeof values === 'string') {
+                values = new global.JSON().decode(values);
+            }
+            if (values.length < 1) {
+                this.log.warn('syncPropertyValues: No values to sync');
+                return false;
+            }
+            this.log.debug('syncProperties: Syncing: [' + values + ']');
+
+            var response = this.dataHelper.put('/properties/' + uuid + '/values', values);
+            if (this.dataHelper.isSucessfulResponse(response)) {
+                this.log.info('syncPropertyValues: Successfully synced ' + values.length + ' properties');
+
+            } else {
+                this.log.error('syncPropertyValues: Failed syncing ' + values.length + " properties\n" +
+                    this.dataHelper.formatErrorMessage(response));
+            }
+
+            this.log.debug('syncPropertyValues: Leaving (' + this.log.timer(start) + 'ms elapsed)');
+
+            return response;
+
+        } catch (e) {
+            this.log.logException('syncPropertyValues', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Get configuration item properties from ServiceNow
+     *
+     * @returns {Array}
+     */
+    getSyncableCIs: function () {
+        var gr = new GlideRecord("cmdb_ci");
+        gr.addEncodedQuery(gs.nil(this.config.CI_QUERY) ? '' : this.config.CI_QUERY);
+        gr.query();
+
+        var ciList = [];
+        var arrayUtil = new global.ArrayUtil();
+
+        while (gr.next()) {
+            // There seems to be a bug where the first entry is
+            // repeatedly added when you push a GlideRecord into
+            // an array. No seriously: https://community.servicenow.com/thread/167328
+            ciList.push(gr.name.getDisplayValue());
+        }
+
+        ciList = arrayUtil.unique(ciList);
+        ciList.sort();
+
+        if (ciList.length) {
+            this.log.debug('getSyncableCIs: retrieved: [' + ciList + ']');
+        } else {
+            this.log.debug('getSyncableCIs: no CIs retrieved');
+        }
+
+        return ciList;
+    },
+
+    /**
+     * Check to see if we care about a given configuration item or items
+     *
+     * @param {Array|string} ci
+     * @returns {boolean}
+     */
+    isSyncableCI: function (ci) {
+        myCI = ci;
+        if (ci.constructor === Array) {
+            myCI = ci.join();
+        }
+
+        var gr = new GlideRecord("cmdb_ci");
+        gr.addEncodedQuery(gs.nil(this.config.CI_QUERY) ? '' : this.config.CI_QUERY);
+        gr.addQuery('name', 'IN', myCI);
+        gr.query();
+
+        return gr.next();
+    },
+
+    type: 'xMattersProperties'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:56:52</sys_created_on>
+        <sys_id>83a205cb7b02f1008e0b707d784d4dea</sys_id>
+        <sys_mod_count>38</sys_mod_count>
+        <sys_name>xMattersProperties</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_83a205cb7b02f1008e0b707d784d4dea</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-18 21:30:18</sys_updated_on>
+    </sys_script_include>
+</record_update>

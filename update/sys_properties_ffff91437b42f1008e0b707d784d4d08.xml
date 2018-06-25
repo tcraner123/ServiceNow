@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Delete Event Endpoint: specifies the REST endpoint to use when deleting events from xMatters; replace the placeholders in the URL with your xMatters company name and the xMatters On-Demand server identified by your xMatters enablement representative.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.reb.events.endpoint-DEPRECATED</name>
+        <read_roles/>
+        <suffix>xmatters.reb.events.endpoint-DEPRECATED</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 22:04:58</sys_created_on>
+        <sys_id>ffff91437b42f1008e0b707d784d4d08</sys_id>
+        <sys_mod_count>10</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.reb.events.endpoint-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_ffff91437b42f1008e0b707d784d4d08</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-22 23:16:48</sys_updated_on>
+        <type>string</type>
+        <value/>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=ffff91437b42f1008e0b707d784d4d08"/>
+</record_update>

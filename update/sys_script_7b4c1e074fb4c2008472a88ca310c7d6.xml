@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update sys_domain="global" table="sys_script">
+    <sys_script action="INSERT_OR_UPDATE">
+        <abort_action>false</abort_action>
+        <access>package_private</access>
+        <action_delete>true</action_delete>
+        <action_insert>true</action_insert>
+        <action_query>false</action_query>
+        <action_update>true</action_update>
+        <active>true</active>
+        <add_message>false</add_message>
+        <advanced>true</advanced>
+        <change_fields>false</change_fields>
+        <client_callable>false</client_callable>
+        <collection>sys_user_has_role</collection>
+        <condition>(new xMattersConfig()).SYNC_DYNAMICALLY &amp;&amp; (new xMattersPerson()).isSyncRequired(null, null, current)</condition>
+        <description/>
+        <execute_function>true</execute_function>
+        <filter_condition/>
+        <is_rest>false</is_rest>
+        <message/>
+        <name>xMatters User Role Sync</name>
+        <order>20</order>
+        <priority>100</priority>
+        <rest_method/>
+        <rest_method_text/>
+        <rest_service/>
+        <rest_service_text/>
+        <rest_variables/>
+        <role_conditions/>
+        <script><![CDATA[function onAfter(current, previous) {
+    var config = new xMattersConfig();
+    var log = new xMattersLogger(config.DEBUGGING, 'xMatters User Role Sync BR');
+    var dataHelper = new xMattersDataHelper(config, log.getLogTraceId());
+
+    var timer = log.timer();
+    log.debug('Starting Business Rule (operation: ' + current.operation() + ')');
+    try {
+        var userRec = new GlideRecord('sys_user');
+        userRec.addQuery('sys_id', current.user);
+        userRec.query();
+
+        if (!userRec.next()) {
+            log.debug('No user found');
+            return;
+        }
+        var username = userRec[config.USERNAMEFIELD].getDisplayValue();
+
+        var currentUser = null, previousUser = null;
+        var xmperson = new xMattersPerson(config, dataHelper, log.getLogTraceId());
+
+        var action;
+        if (xmperson.isRemoveRequired(currentUser, previousUser, current, previous)) {
+            log.debug('Removing user: "' + username + '"');
+            action = 'delete';
+            xmperson.removeUserAsync(userRec);
+        } else {
+            log.debug('Syncing user: "' + username + '"');
+            action = 'sync';
+            xmperson.syncUserAsync(userRec);
+        }
+
+        log.info('Business Rule finished for user: "' + username +
+            '" action: "' + action +
+            '" (' + log.timer(timer) + 'ms elapsed)');
+
+    } catch (e) {
+        log.logException('', e);
+        throw e;
+    }
+}
+]]></script>
+        <sys_class_name>sys_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-06-26 19:26:10</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>7b4c1e074fb4c2008472a88ca310c7d6</sys_id>
+        <sys_mod_count>21</sys_mod_count>
+        <sys_name>xMatters User Role Sync</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_7b4c1e074fb4c2008472a88ca310c7d6</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-18 21:30:17</sys_updated_on>
+        <template/>
+        <when>after</when>
+    </sys_script>
+    <sys_translated_text action="delete_multiple" query="documentkey=7b4c1e074fb4c2008472a88ca310c7d6"/>
+</record_update>

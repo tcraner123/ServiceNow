@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMattersRESTHelper-DEPRECATED</api_name>
+        <client_callable>false</client_callable>
+        <description>Script Object to handle populating REST Messages for calls to the xMatters Relevance Engine.</description>
+        <name>xMattersRESTHelper-DEPRECATED</name>
+        <script><![CDATA[gs.include("xMattersLogger");
+gs.include("xMattersConfig");
+
+var xMattersRESTHelper = Class.create();
+
+xMattersRESTHelper.prototype = {
+	
+	initialize : function() {
+		this.appPrefix = gs.getCurrentScopeName();
+		this.propUtils = new xMattersConfig();
+		this.log = new xMattersLogger(gs.getProperty( this.appPrefix + '.' + "xmatters.logging.level"), 'xMattersRESTHelper-DEPRECATED' );
+		this.restMessage = null;
+		this.json = new global.JSON();
+	},
+	
+	/**
+ 	* Add a data element to the REST object
+ 	* @param nodeName name of the node to create inside the data tree
+ 	* @param value String value to post to xMatters
+ 	* @param raw true if the string should not be escaped, false otherwise
+ 	*/
+	setParameter : function (name, value, raw) {
+        value = (value !== null ? value : "" );
+		
+		// do we need a call to this.escapeXml(value)?
+		if( raw )
+			this.restMessage.setStringParameterNoEscape( name, value );
+		else
+			this.restMessage.setStringParameter(name, value );
+	},
+	
+	/**
+ 	* Escape special characters in the XML
+ 	* @param txt String to escape
+ 	* @return escaped string
+ 	*/
+	escapeXml : function (txt) {
+		// In order to cope with escaping numeric values, ensure they are first converted to a string.
+		txt += "";
+		var escapeValue = txt.replace(/\\/g, "\\\\")
+		.replace(/"/g, '\\"')
+		.replace(/\//g, "\\/")
+		//.replace(/'/g, "\\'")
+		.replace(/\t/g, "" );
+		return escapeValue;
+	},
+	
+	/*
+	sendAddIncidentRESTMessage has been replaced with a generic sendEvent() method,
+	with the business logic moved to xMattersIncident.addIncident method.
+	
+	sendAddTaskRESTMessage has been replaced with a generic sendEvent() method
+ 	*/
+	
+	/**
+ 	* Builds the REST Request to add an event into xMatters and posts it. This function is
+ 	*  more generic than the sendAddIncidentRESTMessage and is designed for Tasks, but could
+ 	*  be used for any record.
+ 	*
+ 	* @param
+ 	*/
+	sendEvent : function (properties, recipients, conferences, priority, callbacks, responses, endpoint ) {
+        priority = priority === null ? "" : String(priority);
+		
+		this.restMessage = new sn_ws.RESTMessageV2();
+		this.restMessage.setHttpMethod( 'post' );
+		this.restMessage.setEndpoint( endpoint );
+		
+		var event = {
+			"properties" : properties,
+			"recipients" : recipients,
+			"priority" : priority
+		};
+		
+		if (conferences && conferences.length) {
+			event.conferences = conferences;
+		}
+		
+		if( callbacks && callbacks.length ) {
+			event.callbacks = callbacks;
+		}
+		
+		if( responses && responses.length ) {
+			event.responses = responses;
+		}
+		
+        this.callCount++;
+		this.restMessage.setRequestBody(this.json.encode(event));
+		
+		return this.send().id;
+	},
+	
+	callbackHelper : function( inboundProcessor, emitStatus, emitdDeliveryStatus, emitResponse ) {
+		var callbacks = [];
+		
+		// we only want to provide the callbacks if they are enabled for status and delivery
+        if (emitStatus == "true" || emitStatus === true) {
+			callbacks.push( this.getCallback(inboundProcessor, "status") );
+		}
+		
+        if (emitdDeliveryStatus == "true" || emitdDeliveryStatus === true) {
+			callbacks.push( this.getCallback(inboundProcessor, "deliveryStatus") );
+		}
+		
+        if (emitResponse == "true" || emitResponse === true) {
+			callbacks.push( this.getCallback(inboundProcessor,"response") );
+		}
+		
+		return callbacks;
+	},
+	
+	getCallback : function( inboundProcessor, type ) {
+		return {
+			"url": gs.getProperty('glide.servlet.uri') + inboundProcessor + '?mode=' + type,
+			"type":type,
+			"authType": "basic",
+			"authUserName": gs.getProperty(this.appPrefix + '.' + "xmatters.api.user"),
+			"authPassword": gs.getProperty(this.appPrefix + '.' + "xmatters.api.password")
+		};
+	},
+	
+	/**
+ 	* Calculate the event queue based on the incident number. This is essentially a load balancer
+ 	* @param number - The Incident number. The last digit is inspected to determine which queue to send to
+ 	* @param eventBase - The base event name. One of [A-C] will be appended to this depending on the number passed
+ 	*/
+	
+	getEventName: function( number, eventBase ) {
+		number = String( number );
+		var last = number.slice( number.length-1 );
+		
+		map = {
+			"0": "A", "1": "A", "2": "A", 
+			"3": "B", "4": "B", "5": "B",
+			"6": "C", "7": "C", "8": "C", "9": "C"
+		};
+		
+		return eventBase + '.' + map[ last ];
+	},
+	
+	/**
+ 	* Send the REST Request and process the response
+ 	* @param number - The Incident number that will be printed to the log in case of failure
+ 	*/
+	send : function( number, async ) {
+		// set the REST user/password for the xMatters user to authenticate to the xM REST API
+		this.restMessage.setBasicAuth( gs.getProperty(this.appPrefix + '.' + "xmatters.reb.user"), gs.getProperty(this.appPrefix + '.' + "xmatters.reb.password") );
+		this.restMessage.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+		
+		// In case of network hiccups, we attempt the call to xM 3 times.
+		var count = 0;
+		var maxTries = 3;
+		
+		while( true ) {
+			try{
+				// If we hit the return, we did not hit the catch,
+				// so we just jump out of the entire function.
+				return this.attemptSend(async);
+			} catch (e) {
+				// If we reach the maxTries limit
+				// then exit and pass along the error
+				if( ++count == maxTries ) {
+					var s = "Failed sending event to xMatters after " + maxTries + " attempts. Error: " + e + ': ' + e.message;
+					this.log.error( s + " Incident# " + number);
+					throw s;
+				}
+			}
+		}
+	},
+	
+	/**
+ 	* Send the REST Request and process the response
+ 	*/
+	attemptSend : function(async) {
+		this.log.debug( 'REST ' + this.restMessage.getEndpoint() + ' with PAYLOAD: ' + this.restMessage.getRequestBody() );
+		
+        this.callCount++;
+		var restResponse = this.restMessage.executeAsync();
+		if (async) return true;
+			
+        if (restResponse === null) {
+			throw "REST Response is NULL";
+		}
+		
+		restResponse.waitForResponse(30);
+		
+        if (restResponse.getStatusCode() === null) {
+			throw "REST Response HTTP Status Code is NULL";
+		}
+		
+		if(restResponse.haveError()) {
+			this.log.error( "An ERROR occured processing the REST ErrorCode " + restResponse.getErrorCode() +
+			" ErrorMessage " + restResponse.getErrorMessage() +
+			" Body " + restResponse.getBody() );
+			
+			throw restResponse.getErrorCode() + " - " +
+			restResponse.getStatusCode() + " - " +
+			restResponse.getErrorMessage() + " " +
+			restResponse.getBody();
+
+        } else {
+			var parser = new global.JSON();
+			var body = parser.decode( restResponse.getBody() );
+			this.log.debug( "REST Response getBody = " + restResponse.getBody() );
+			return body;
+		}
+	},
+	
+	/**
+ 	* Generic wrapper for terminating events.
+ 	*
+ 	* Sending the property name and ServiceNow field allows for great flexibility on what kind of events
+ 	* this function can terminate.
+ 	*
+ 	* @param record - the ServiceNow record representing the events to be terminated
+ 	* @param xMProperty - the property name to query the events on
+ 	* @param value - the value to query on (e.g. record.number)
+ 	*
+ 	*/
+	sendTerminateEvent : function( xMProperty, value ) {
+		this.log.debug("Entering sendTerminateEvent for incident to delete: " + value );
+		var endpoint = propUtils.getDeleteEventsEndpoint();
+		var langSuffix = gs.getProperty(this.appPrefix + '.' + "xmatters.reb.events.language");
+		
+		var activeEndpoint = endpoint + "&status=ACTIVE&properties=" + encodeURIComponent(xMProperty+"#"+langSuffix+"="+ value);
+		var suspendedEndpoint = endpoint + "&status=SUSPENDED&properties=" + encodeURIComponent(xMProperty+"#"+langSuffix+"="+ value);
+		
+		var prefixEndpoint = propUtils.getXMHostname();
+		
+		// Get both the active and suspended events
+		this.restMessage = new sn_ws.RESTMessageV2();
+		this.restMessage.setHttpMethod('get');
+		this.restMessage.setEndpoint(activeEndpoint);
+		var activeEvents = this.send();
+		
+		this.restMessage = new sn_ws.RESTMessageV2();
+		this.restMessage.setHttpMethod('get');
+		this.restMessage.setEndpoint(suspendedEndpoint);
+		var suspendedEvents = this.send();
+		
+		// Get the list of events to terminate
+		var records = activeEvents.records;
+		records.concat(suspendedEvents.records);
+		
+		// go through each record and terminate the events
+		for(var i=0; i<records.length; i++) {
+			// if an event reference is found it is terminated
+            if (records[i].href !== null) {
+				var href = records[i].href;
+				this.restMessage = new sn_ws.RESTMessageV2();
+				this.restMessage.setHttpMethod('put');
+				this.restMessage.setEndpoint(prefixEndpoint + href);
+				this.restMessage.setRequestBody(this.json.encode({status : "TERMINATED"}));
+				this.log.debug("Sending REST PUT termination for event " + href);
+				this.send(value, /* no need to wait for response */ true);
+			}
+		}
+	}
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:57:05</sys_created_on>
+        <sys_id>5eb245cb7b02f1008e0b707d784d4d0a</sys_id>
+        <sys_mod_count>63</sys_mod_count>
+        <sys_name>xMattersRESTHelper-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_5eb245cb7b02f1008e0b707d784d4d0a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 22:19:44</sys_updated_on>
+    </sys_script_include>
+</record_update>

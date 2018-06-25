@@ -1,0 +1,2370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMattersSOAPHelper-DEPRECATED</api_name>
+        <client_callable>false</client_callable>
+        <description>Script Object to handle populating SOAP Messages for calls to the xMatters Web Services.</description>
+        <name>xMattersSOAPHelper-DEPRECATED</name>
+        <script><![CDATA[gs.include("xMattersLogger");
+
+var xMattersSOAPHelper = Class.create();
+
+xMattersSOAPHelper.prototype = {
+
+    initialize: function () {
+        var temp = 'value';
+        this.appPrefix = gs.getCurrentScopeName();
+        this.log = new xMattersLogger(gs.getProperty(this.appPrefix + '.' +
+            "xmatters.logging.level"), 'xMattersSOAPHelper-DEPRECATED');
+        this.soapMessage = null;
+        this.STATUS_NODE = "ns:status";
+        this.PERSON_NODE = "ns:person";
+        this.USER_DOES_NOT_EXIST = 'UNKNOWN_USER';
+
+        this.teamName = "ServiceNow";
+        this.teamType = "basic";
+        this.coverageName = "24x7";
+
+        this.callCount = 0;
+    },
+
+    /**
+     * Add a data element to the SOAP object
+     * @param nodeName name of the node to create inside the data tree
+     * @param value String value to post to xMatters
+     * @param raw true if the string should not be escaped, false otherwise
+     */
+    setParameter: function (nodeName, value, raw) {
+        value = value !== null ? value : "";
+
+        // do we need a call to this.escapeXml(value)?
+        if (raw)
+            this.soapMessage.setStringParameterNoEscape(nodeName, value);
+        else
+            this.soapMessage.setStringParameter(nodeName, value);
+    },
+
+    /**
+     * Escape special characters in the XML
+     * @param txt String to escape
+     * @return escaped string
+     */
+    escapeXml: function (txt) {
+        // In order to cope with escaping numeric values, ensure they are first converted to a string.
+        var escapeValue = String(txt).replace(/&/g, "&amp;")
+            .replace(/\"/g, "&quot;")
+            .replace(/\'/g, "&apos;")
+            .replace(/</g, "&lt;")
+            .replace(/\>/g, "&gt;");
+        return escapeValue;
+    },
+
+    /**
+     * Returns a number current time or number of milliseconds since the given time
+     * @param since time to compare
+     * @return escaped string
+     */
+    timer: function (since) {
+        return new Date().getTime() - (since ? since : 0);
+    },
+
+    /**
+     * Builds the SOAP Request to add a group into xMatters and posts it
+     * @param record current record to process
+     */
+    sendAddGroupSOAPMessage: function (record) {
+
+        // This will check if the user exists in xM
+        // and will grant the Group Supervisor role
+        var supervisorName = this.getGroupManager(record);
+
+        var supervisorsXML = '<supervisor><targetName>' + supervisorName + '</targetName></supervisor>';
+        supervisorsXML += '<supervisor><targetName>' + gs.getProperty(this.appPrefix + '.' + "xmatters.sync.supervisor") + '</targetName></supervisor>';
+
+        this.log.debug('sendAddGroupSOAPMessage: supervisorsXML: ' + supervisorsXML);
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'AddGroup');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('active', record.active.getDisplayValue());
+        this.setParameter('description', record.description);
+        this.setParameter('allowDuplicates', gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.allow.duplicates"));
+        this.setParameter('externallyOwned', gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.externally.owned"));
+        this.setParameter('name', record.name);
+        this.setParameter('observedByAll', 'true');
+        this.setParameter('observerName', '');
+
+        this.setParameter('supervisors', supervisorsXML, true);
+        this.setParameter('site', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.site"));
+        this.setParameter('timezone', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.time.zone"));
+        this.setParameter('useDefaultDevices', gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.use.default.devices"));
+        this.setParameter('observedByAll', 'true');
+        this.setParameter('observerName', '');
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     *  Defaults the group manager to the value in the settings, but if the user exists
+     *  in xMatters, then we update them to have the Group Supervisor
+     *  record - the sys_user_group GlideRecord
+     */
+    getGroupManager: function (record) {
+        try {
+            //update group manager's role by adding Group Supervisor
+            this.sendUpdateUserSOAPMessage(record.manager, record.manager.user_name, ["Group Supervisor"]);
+            //use GroupSupervisor
+            return record.manager.user_name;
+        } catch (e) {
+            // if user does not exist, return default group supervisor
+            if (e != this.USER_DOES_NOT_EXIST) {
+                this.log.debug('updateUser(' + record.manager.user_name + '): ERROR: ' + e);
+                throw e;
+            }
+        }
+        // return the default supervisor
+        return this.escapeXml(gs.getProperty(this.appPrefix + '.' + "xmatters.sync.supervisor"));
+    },
+
+    /**
+     * Builds the SOAP Request to add a team into xMatters and posts it
+     * @param groupName name of group to associate the team to
+     * @param memberList list of members in the team
+     */
+    sendAddTeamSOAPMessage: function (groupName, memberList) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'AddTeam');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', groupName);
+        this.setParameter('description', 'Created from Service-now Group Member Sync');
+        this.setParameter('externallyOwned', 'false');
+        this.setParameter('memberList', this.buildGroupMemberList(memberList), true);
+        this.setParameter('teamName', this.teamName);
+        this.setParameter('reuse', 'true');
+        this.setParameter('rotationInterval', '');
+        this.setParameter('rotationStart', '');
+        this.setParameter('rotationUnit', '');
+        this.setParameter('teamType', this.teamType);
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to add a coverage into xMatters and posts it
+     * @param groupName the root for the coverage name.
+     */
+    sendAddCoverageSOAPMessage: function (groupName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'AddCoverage');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', groupName);
+        this.setParameter('coverageName', this.coverageName);
+        this.setParameter('teamName', this.teamName);
+        this.setParameter('recurringStartDate', '01/01/1970');
+        this.setParameter('durationHours', '24');
+        this.setParameter('durationMinutes', '0');
+        this.setParameter('excludeHolidays', 'true');
+        this.setParameter('includeHolidays', 'false');
+        this.setParameter('frequency', 'WEEKLY');
+        this.setParameter('interval', '1');
+        this.setParameter('noEndDate', 'true');
+        this.setParameter('recurringStartTime', '00:00');
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to update a group into xMatters and posts it
+     * @param record current record to process
+     * @param previousGroupName name of the group prior to the update
+     * @param groupInfo optional object that will contain the xMatters group data before the update
+     */
+    sendUpdateGroupSOAPMessage: function (record, previousGroupName, groupInfo) {
+        this.log.debug('Entering sendUpdateGroupSOAPMessage for ' + previousGroupName);
+
+        groupInfo = this.sendQueryGroupSOAPMessage(previousGroupName, groupInfo);
+        // Get the new supervisorXML
+        var supervisorsXML = groupInfo.supervisorsXML;
+        var newSupervisor = this.getGroupManager(record);
+
+        // Now append the new supervisor with any existing supervisors.
+        // But first check to see if the new supervisor is there....
+        // The targetName is a very old version of the AP SOAP WS. Later versions use name instead
+        // but since our endpoint is AlarmPointWebServices, we use targetName instead.
+        if (groupInfo.supervisorsXML.indexOf(">" + newSupervisor + "<") == -1) {
+            supervisorsXML += '<supervisor><targetName>' + newSupervisor + '</targetName></supervisor>';
+        }
+
+        if (groupInfo.supervisorsXML.indexOf(">" + gs.getProperty(this.appPrefix + '.' + "xmatters.sync.supervisor") + "<") == -1) {
+            supervisorsXML += '<supervisor><targetName>' + gs.getProperty(this.appPrefix + '.' + "xmatters.sync.supervisor") + '</targetName></supervisor>';
+        }
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'UpdateGroup');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', previousGroupName);
+
+        var newInfo = {
+            'active': record.active.getDisplayValue(),
+            'description': record.description,
+            'allowDuplicates': gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.allow.duplicates"),
+            'externallyOwned': gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.externally.owned"),
+            'name': record.name,
+            'site': gs.getProperty(this.appPrefix + '.' + "xmatters.sync.site"),
+            'supervisors': supervisorsXML, // raw
+            'timezone': gs.getProperty(this.appPrefix + '.' + "xmatters.sync.time.zone"),
+            'useDefaultDevices': gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.use.default.devices"),
+            'observedByAll': 'true',
+            'observerName': ''
+        };
+
+        groupInfo.supervisors = groupInfo.supervisorsXML; // to match new info
+
+        var needToUpdate = false;
+        for (var prop in newInfo) {
+            this.setParameter(prop, newInfo[prop], prop == 'supervisors');
+
+            if (groupInfo[prop] === undefined) {
+                this.log.debug("Group " + record.name + " does not have property " + prop + " in xMatters");
+                needToUpdate = true;
+            } else if (groupInfo[prop] != newInfo[prop]) {
+                this.log.debug("Group " + record.name + "'s property " + prop + " value has changed from " + groupInfo[prop] + " to " + newInfo[prop]);
+                needToUpdate = true;
+            }
+        }
+
+        if (!needToUpdate) {
+            this.log.debug("Group " + record.name + " does " + (needToUpdate ? "" : "not ") + "need to be updated in xMatters");
+            return true;
+        }
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    sendQueryGroupSOAPMessage: function (groupName, groupInfo) {
+        var time = this.timer();
+        var sDebug = "Entering sendQueryGroupSOAPMessage:\n";
+        this.createSyncSOAPMessage("xMatters AlarmPoint Engine", "QueryGroup");
+        this.setParameter("groupName", groupName);
+        this.setParameter("company", gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        var soapResponse = this.send(this.STATUS_NODE);
+
+        if (this.log.isDebug()) {
+            this.log.debug(sDebug + '. soapResponse in ' + this.timer(time) + ' ms: ' + soapResponse);
+        }
+
+        if (groupInfo === undefined || groupInfo === null) {
+            groupInfo = {};
+        }
+
+        groupInfo.soapResponse = soapResponse;
+        groupInfo.site = soapResponse.getNodeText("//ns:site");
+        groupInfo.active = soapResponse.getNodeText("//ns:active");
+        groupInfo.description = soapResponse.getNodeText("//ns:description");
+        groupInfo.allowDuplicates = soapResponse.getNodeText("//ns:allowDuplicates");
+        groupInfo.externallyOwned = soapResponse.getNodeText("//ns:externallyOwned");
+        groupInfo.name = soapResponse.getNodeText("//ns:name");
+        groupInfo.timezone = soapResponse.getNodeText("//ns:timezone");
+        groupInfo.useDefaultDevices = soapResponse.getNodeText("//ns:useDefaultDevices");
+        groupInfo.observedByAll = soapResponse.getNodeText("//ns:observedByAll");
+        groupInfo.observerName = soapResponse.getNodeText("//ns:observers");
+        // other stuff would go here...
+
+        var supervisorsXML = "";
+        var node = soapResponse.getNode('//ns:supervisors');
+
+        var iter = node.getChildNodeIterator();
+        while (iter.hasNext()) {
+            var n = iter.next();
+            supervisorsXML += "<supervisor><targetName>" + this.escapeXml(n.getTextContent()) + "</targetName></supervisor>";
+        }
+        sDebug += '\nsupervisorsXML: ' + supervisorsXML;
+
+        groupInfo.supervisorsXML = supervisorsXML;
+        this.log.debug(sDebug);
+
+        return groupInfo;
+    },
+
+    /**
+     * Builds the SOAP Request to update a team into xMatters and posts it
+     * @param groupName name of group to associate the team to
+     * @param memberList list of members in the team
+     * @param team object with team details
+     */
+    sendUpdateTeamSOAPMessage: function (groupName, memberList, team) {
+        this.log.debug("sendUpdateTeamSOAPMessage team.name " + team.name);
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'UpdateTeam');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', groupName);
+        this.setParameter("teamName", team.name);
+        this.setParameter("description", team.description);
+        this.setParameter("externallyOwned", team.externallyOwned);
+        this.setParameter("newTeamName", team.name);
+        this.setParameter("reuse", team.reuse);
+        this.setParameter("rotationInterval", team.rotationInterval);
+        this.setParameter("rotationStart", team.rotationStart);
+        this.setParameter("rotationUnit", team.rotationUnit);
+        this.setParameter("teamType", team.type);
+        this.setParameter("memberList", memberList, true);
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to update a coverage into xMatters and posts it
+     * @param groupName the root for the coverage name.
+     */
+    sendUpdateCoverageSOAPMessage: function (groupName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'UpdateCoverage');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', groupName);
+        this.setParameter('coverageName', this.coverageName);
+        this.setParameter('durationHours', '24');
+        this.setParameter('durationMinutes', '0');
+        this.setParameter('excludeHolidays', 'true');
+        this.setParameter('includeHolidays', 'false');
+        this.setParameter('frequency', 'WEEKLY');
+        this.setParameter('recurringStartDate', '01/01/1970');
+        this.setParameter('recurringStartTime', '00:00');
+        this.setParameter('newCoverageName', this.coverageName);
+        this.setParameter('teamName', this.teamName);
+        this.setParameter('interval', '1');
+        this.setParameter('noEndDate', 'true');
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to delete a group from xMatters and posts it
+     * @param groupName name of the group to remove
+     */
+    sendDeleteGroupSOAPMessage: function (groupName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'DeleteGroup');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('name', groupName);
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to delete a team from xMatters and posts it
+     * @param groupName the root for the team name.
+     */
+    sendDeleteTeamSOAPMessage: function (groupName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'DeleteTeam');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', groupName);
+        this.setParameter('teamName', this.teamName);
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to delete a coverage from xMatters and posts it
+     * @param groupName the root for the coverage name.
+     */
+    sendDeleteCoverageSOAPMessage: function (groupName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', 'DeleteCoverage');
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('groupName', groupName);
+        this.setParameter('coverageName', this.coverageName);
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to add a user into xMatters and posts it
+     * @param record current record to process
+     */
+    sendAddUserSOAPMessage: function (record) {
+        this.log.debug('sendAddUserSOAPMessage: enter');
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "AddUser");
+
+        // Verify the User record has values
+        var firstName = (!record.first_name.nil() ? record.first_name : gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.first.name"));
+        var lastName = (!record.last_name.nil() ? record.last_name : gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.last.name"));
+        var timeZone = (!record.time_zone.nil() && (record.time_zone in this.TIMEZONES) ? record.time_zone : gs.getProperty(this.appPrefix + '.' + "xmatters.sync.time.zone"));
+
+        this.setParameter('active', record.active.toString());
+        this.setParameter('externallyOwned', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.externally.owned"));
+        this.setParameter('mobileAccess', 'false');
+        this.setParameter('site', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.site"));
+        this.setParameter('language', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.language"));
+
+        var roles = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.role").split(";");
+        this.log.debug('sendAddUserSOAPMessage: roles: ' + roles);
+
+        var roleXML = "";
+        for (var i = 0; i < roles.length; i++) {
+            roleXML += "<role xsi:type=\"m:SoapRole\"><name xsi:type=\"xsd:string\">" + this.escapeXml(roles[i].trim()) + "</name></role>";
+        }
+        this.log.debug('sendAddUserSOAPMessage: roleXML: ' + roleXML);
+
+        this.setParameter('role', roleXML, true);
+        this.setParameter('supervisor', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.supervisor"));
+        this.setParameter('hasPhoneLogin', 'false');
+        this.setParameter('phoneLogin', '');
+        this.setParameter('phonePassword', '');
+        this.setParameter('ldapDomain', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.ldap.domain"));
+        this.setParameter('webLogin', record.user_name);
+        this.setParameter('webPassword', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.default.password"));
+        this.setParameter('webLoginType', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.weblogin.type"));
+        this.setParameter('timeZone', timeZone);
+        this.setParameter('firstName', firstName);
+        this.setParameter('lastName', lastName);
+        this.setParameter('targetName', record.user_name);
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Query xMatters for to see if a user exists
+     * @param userName user to query
+     * @return true if the user exists, false if not
+     */
+    checkIfUserExistsInXmatters: function (userName) {
+        if (gs.nil(userName)) return false;
+
+        this.createSyncSOAPMessage("xMatters AlarmPoint Engine", "FindPersons");
+        this.setParameter("targetName", userName);
+        this.setParameter("company", gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+        // check if the user exists, if the response is OK the user was found, if not an exception is thrown and the user is not found
+        try {
+            var soapResponse = this.send(this.STATUS_NODE);
+            return true;
+        } catch (e) {
+            return false;
+        }
+        return false;
+    },
+
+    /**
+     * Query xMatters for to see if a group exists
+     * @param groupName group to query
+     * @return true if the group exists, false if not
+     */
+    checkIfGroupExistsInXmatters: function (groupName) {
+        this.createSyncSOAPMessage("xMatters AlarmPoint Engine", "FindGroups");
+        this.setParameter("groupName", groupName);
+        this.setParameter("company", gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+        // check if the user exists, if the response is OK the user was found, if not an exception is thrown and the user is not found
+        try {
+            var soapResponse = this.send(this.STATUS_NODE);
+            return true;
+        } catch (e) {
+            return false;
+        }
+        return false;
+    },
+
+    /**
+     * Query xMatters for to obtain a user's record information
+     * @param userName user to query
+     * @return Object that contains user information so that it can be persisted when updated in xMatters
+     * hasMobileAccess, language, roles, site, supervisors, timeZone, (webUserLogin)ldapDomain, login, type
+     */
+    sendQueryUserSOAPMessage: function (userName) {
+        this.log.debug("Entering sendQueryUserSOAPMessage for " + userName);
+
+        this.createSyncSOAPMessage("xMatters AlarmPoint Engine", "QueryUser");
+        this.setParameter("targetName", userName);
+        this.setParameter("company", gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+        var time = this.timer();
+        var soapResponse = this.send(this.STATUS_NODE);
+
+        if (this.log.isDebug()) {
+            this.log.debug('sendQueryUserSOAPMessage: queryUser(' + userName + ') response in ' + this.timer(time) + ' ms: ' + soapResponse);
+        }
+
+        var userInfo = {};
+        userInfo.active = soapResponse.getNodeText("//ns:active");
+        userInfo.lastName = soapResponse.getNodeText("//ns:lastName");
+        userInfo.timeZone = soapResponse.getNodeText("//ns:timeZone");
+        userInfo.externallyOwned = soapResponse.getNodeText("//ns:externallyOwned");
+        userInfo.targetName = soapResponse.getNodeText("//ns:targetName");
+        userInfo.firstName = soapResponse.getNodeText("//ns:firstName");
+        userInfo.hasMobileAccess = soapResponse.getNodeText("//ns:hasMobileAccess");
+        userInfo.language = soapResponse.getNodeText("//ns:language");
+        userInfo.site = soapResponse.getNodeText("//ns:site");
+        userInfo.ldapDomain = soapResponse.getNodeText("//ns:ldapDomain");
+        userInfo.login = soapResponse.getNodeText("//ns:login");
+        userInfo.type = soapResponse.getNodeText("//ns:type");
+
+        if (this.log.isDebug()) {
+            this.log.debug('sendQueryUserSOAPMessage: post userInfo: ' + global.JSON.stringify(userInfo));
+        }
+
+        // Roles
+        var node = soapResponse.getFirstNode('//ns:roles');
+        var rolesXML = '';
+        try {
+            while (node !== null) {
+                rolesXML += '<role><name>' + this.escapeXml(node.getTextContent()) + '</name></role>';
+                node = soapResponse.getNextNode(node);
+            }
+        } catch (e) {
+            this.log.debug('Caught "' + e + '". Continuing happily. Probably due to no roles found. Defect in the getFirstNode method');
+        }
+        userInfo.roles = rolesXML;
+
+        // Supervisors
+        node = soapResponse.getFirstNode("//ns:supervisors");
+
+        var supervisorsXML = "";
+        try {
+            while (node !== null) {
+                supervisorsXML += "<supervisor><targetName>" + this.escapeXml(node.getTextContent()) + "</targetName></supervisor>";
+                node = soapResponse.getNextNode(node);
+            }
+        } catch (e2) {
+            this.log.debug('Caught "' + e2 + '". Continuing happily. Probably due to no supervisors found. Defect in the getFirstNode method');
+        }
+
+        this.log.debug('rolesXML: ' + rolesXML + '\n' + 'supervisorsXML: ' + supervisorsXML);
+        userInfo.supervisorsXML = supervisorsXML;
+
+        return userInfo;
+    },
+
+    /**
+     * Process the team including updates for deleting members out of each team within that group.
+     * If a user is passed in to be deleted each team the user belongs to is updated.
+     * The returned team is the default xM Roster team.
+     * @param groupName group to query
+     * @param userToDelete deletes this user from other teams within the group
+     * @return Object that contains user information so that it can be persisted when updated in xMatters
+     *  (timezone, useDefaultDevices, observedByAll, observers, allowDuplicates, supervisors)
+     */
+    processTeams: function (groupName, userToDelete, groupInfo) {
+        this.log.debug("Entering processTeams for " + groupName);
+        var start = this.timer();
+        var sDebug = "**** processTeams:\n";
+        var team = {};
+        team.members = [];
+        var teamExistsInGroup = false;
+        var error = null;
+
+        try {
+            var soapResponse;
+
+            if (groupInfo && groupInfo.hasOwnProperty('soapResponse')) {
+                soapResponse = groupInfo.soapResponse;
+                this.log.debug("processTeams: will use response passed as an argument");
+            } else {
+                this.createSyncSOAPMessage("xMatters AlarmPoint Engine", "QueryGroup");
+                this.setParameter("groupName", groupName);
+                this.setParameter("company", gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+                soapResponse = this.send(this.STATUS_NODE);
+                this.log.debug("processTeams: QueryGroup took " + this.timer(start) + " ms.");
+            }
+            sDebug += "soapResponse: " + soapResponse + "\n";
+
+            // So frustrating... this is a useful utility not available
+            // to scoped apps.
+            //helper = new global.XMLHelper( soapResponse.toString() );
+            //soapResponseJSON = helper.toObject();
+
+            //group = soapResponseJSON[ 'soapenv:Body' ][ 'ns:QueryGroupResponse' ][ 'ns:return' ][ 'ns:group' ];
+            //teams = group[ 'ns:teams' ];
+
+            teamsNode = soapResponse.getFirstNode("//ns:teams/ns:team");
+            teams = this.getTeamsJSON(teamsNode, soapResponse);
+
+            for (var j in teams) {
+                var teamName = teams[j].name;
+                this.log.debug('teamName: ' + teamName);
+
+                teamExistsInGroup = true;
+                sDebug += "Processing team with name " + teamName;
+
+                if (teamName == this.teamName) {
+                    sDebug += "Default Team: " + teamName + "\n";
+
+                    team.name = teamName;
+                    team.description = teams[j].description;
+                    team.externallyOwned = teams[j].externallyOwned;
+                    team.reuse = teams[j].reuse;
+                    team.rotationInterval = teams[j].rotationInterval;
+                    team.rotationStart = teams[j].rotationStart;
+                    team.rotationUnit = teams[j].rotationUnit;
+                    team.type = teams[j].type;
+
+                    var teamMembers = teams[j].members;
+
+                    for (var k in teamMembers) {
+                        var memberInfo = {};
+                        memberInfo.name = teamMembers[k].name;
+
+                        sDebug += "Memer Name: " + memberInfo.name + "\n";
+
+                        memberInfo.active = teamMembers[k].active;
+                        memberInfo.delay = teamMembers[k].delay;
+                        memberInfo.description = teamMembers[k].description;
+                        memberInfo.escalation = teamMembers[k].escalation;
+                        memberInfo.inRotation = teamMembers[k].inRotation;
+                        memberInfo.type = teamMembers[k].type;
+
+                        team.members.push(memberInfo);
+                    }
+                } else if (userToDelete !== null) {
+                    this.log.debug("Looking at team " + teamName + " to see if deleted user " + userToDelete + " exists and the team needs to be updated.");
+
+                    var userExistsInTeam = false;
+                    var teamToUpdate = {};
+                    var memberListXML = "";
+
+                    teamToUpdate.name = teamName;
+                    teamToUpdate.description = teams[j].description;
+                    teamToUpdate.externallyOwned = teams[j].externallyOwned;
+                    teamToUpdate.reuse = teams[j].reuse;
+                    teamToUpdate.rotationInterval = teams[j].rotationInterval;
+                    teamToUpdate.rotationStart = teams[j].rotationStart;
+                    teamToUpdate.rotationUnit = teams[j].rotationUnit;
+                    teamToUpdate.type = teams[j].type;
+
+                    teamMembers2 = teams[j].members;
+
+                    for (var k1 in teamMembers2) {
+
+                        if (userToDelete == teamMembers2[k1].name) {
+                            // we dont process the user as he will be deleted from the current team
+                            userExistsInTeam = true;
+                        } else {
+                            memberListXML += "<member>";
+                            memberListXML += "<delay>" + teamMembers2[k1]["ns:delay"] + "</delay>" +
+                                "<inRotation>" + teamMembers2[k1]["ns:inRotation"] + "</inRotation>" +
+                                "<targetName>" + teamMembers2[k1]["ns:name"] + "</targetName>" +
+                                "<type>" + teamMembers2[k1]["ns:type"] + "</type>";
+                            memberListXML += "</member>";
+                        }
+                    }
+                    // if the user to delete was found we need to update the team
+                    if (userExistsInTeam) {
+                        this.log.debug("Updating team " + teamName + " as the deleted user " + userToDelete + " exists within the team and needs to be removed.");
+                        this.sendUpdateTeamSOAPMessage(groupName, memberListXML, teamToUpdate);
+                    }
+
+                    this.log.debug('memberListXML: ' + memberListXML);
+                }
+            }
+        } catch (e) {
+            sDebug += "\nERROR:\n " + e + "\n";
+            error = e;
+        }
+        sDebug += "\nprocessTeams for " + groupName + " took " + this.timer(start) + " ms";
+        this.log.debug(sDebug);
+
+        // check to see if the team exists, if the team does not exist thrown an error
+        // if the team does not exist and there are other teams in the group thrown an error
+        if (error == 'UNKNOWN_GROUP') {
+            this.log.debug("Group " + groupName + " does not exist in xMatters");
+            throw error;
+        } else if (teamExistsInGroup && team.name === null) {
+            this.log.debug("Team " + this.teamName + " was not found but other teams exist in the group " + groupName);
+            throw "UNKNOWN_TEAM_IN_GROUP_WITH_TEAMS";
+        } else if (team.name === null) {
+            this.log.debug("Team " + this.teamName + " was not found in group " + groupName);
+            throw "UNKNOWN_TEAM";
+        }
+
+        return team;
+    },
+
+    /**
+     *  Converts the XML to json. XMLHelper would do this for us,
+     *  but is not available in scoped apps :(
+     *  @param teamsNode - the result of this xpath: //ns:teams/ns:team
+     *  @param returns - an array of "team" objects with the "ns:" removed.
+     */
+    getTeamsJSON: function (teamsNode, xmlDoc) {
+        var teams = [];
+
+        // For each team
+        while (teamsNode !== null) {
+
+            // Start with a blank object
+            var team = {};
+
+            // Loop through each team property
+            var iter = teamsNode.getChildNodeIterator();
+            while (iter.hasNext()) {
+                var teamProp = iter.next();
+                //gs.info( 'teamProp.Name: ' + teamProp.getNodeName() + '. Val: ' + teamProp.getTextContent() );
+                var name = teamProp.getNodeName().replace('ns:', '');
+
+                // Members is the only "complex" type,
+                // so we make a special case for it
+                if (name == 'members') {
+                    team.members = [];
+
+                    // Loop through the list of members
+                    var subProp = teamProp.getChildNodeIterator();
+                    while (subProp.hasNext()) {
+                        var node = subProp.next();
+
+                        //gs.info( '  Member: ' + node.getNodeName() + '. Val: ' + node.getTextContent() );
+                        var member = {};
+
+                        // Loop through each member property
+                        var memberPropIter = node.getChildNodeIterator();
+                        while (memberPropIter.hasNext()) {
+                            var memberProp = memberPropIter.next();
+                            member[memberProp.getNodeName().replace('ns:', '')] = memberProp.getTextContent();
+                        }
+                        team.members.push(member);
+                    }
+                } else { // Otherwise, it is a normal text type
+                    team[name] = teamProp.getTextContent();
+                }
+            }
+
+            // Add it to the list and get the next one
+            teams.push(team);
+            teamsNode = xmlDoc.getNextNode(teamsNode);
+        }
+
+        return teams;
+    },
+
+    /**
+     * Builds the SOAP Request to update a user in xMatters and posts it
+     * @param record current record to process
+     * @param previousUserName name of the user prior to the update
+     */
+    sendUpdateUserSOAPMessage: function (record, previousUserName, roles) {
+        var sDebug = "Entering sendUpdateUserSOAPMessage:\n";
+        this.log.debug(sDebug);
+
+        var userInfo = this.sendQueryUserSOAPMessage(record.user_name);
+
+        if (this.log.isDebug()) {
+            this.log.debug('After sendQueryUserSOAPMessage: userInfo: ' + global.JSON.stringify(userInfo));
+
+            sDebug += "userInfo.hasMobileAccess: " + userInfo.hasMobileAccess + "\n";
+            sDebug += "userInfo.language: " + userInfo.language + "\n";
+            sDebug += "userInfo.site: " + userInfo.site + "\n";
+            sDebug += "userInfo.ldapDomain: " + userInfo.ldapDomain + "\n";
+            sDebug += "userInfo.login: " + userInfo.login + "\n";
+            sDebug += "userInfo.type: " + userInfo.type + "\n";
+            sDebug += "userInfo.roles: " + userInfo.roles + "\n";
+            sDebug += "userInfo.supervisors: " + userInfo.supervisors + "\n";
+            sDebug += "userInfo.customAttributes: " + userInfo.customAttributes + "\n";
+            sDebug += "userInfo.customFields: " + userInfo.customFields + "\n";
+
+            this.log.debug(sDebug);
+        }
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "UpdateUser");
+        this.log.debug('After creatSyncSOAPMessage');
+
+        var firstName = (!record.first_name.nil() ? record.first_name : gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.first.name"));
+        var lastName = (!record.last_name.nil() ? record.last_name : gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.last.name"));
+        var timeZone = (!record.time_zone.nil() ? record.time_zone : gs.getProperty(this.appPrefix + '.' + "xmatters.sync.time.zone"));
+
+        var newRoles = userInfo.roles;
+        if (roles !== null) {
+            for (var i = 0; i < roles.length; i++) {
+                if (newRoles.indexOf(">" + roles[i] + "<") == -1) { // check if role already exists
+                    newRoles += "<role><name>" + roles[i] + "</name></role>";
+                } else {
+                    this.log.debug("User " + record.user_name + " already has role [" + roles[i] + "]. Role not added.");
+                }
+            }
+        }
+        this.log.debug('sendUpdateUserSOAPMessage: roles: ' + newRoles);
+
+        // Properties set from a record retrieved from xMatters 
+        this.setParameter('mobileAccess', userInfo.hasMobileAccess);
+        this.setParameter('site', userInfo.site);
+        this.setParameter('language', userInfo.language);
+
+        this.setParameter('supervisors', userInfo.supervisorsXML, true);
+        this.setParameter('ldapDomain', userInfo.ldapDomain);
+        this.setParameter('webLoginType', userInfo.type);
+        this.setParameter('customAttributes', userInfo.customAttributes, true);
+        this.setParameter('customFields', userInfo.customFields, true);
+        this.setParameter('webLogin', userInfo.login);
+
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('oldTargetName', previousUserName);
+
+        // New data
+        var newInfo = {
+            'active': record.active.toString(),
+            'externallyOwned': gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.externally.owned"),
+            'role': newRoles, /* raw */
+            'timeZone': timeZone,
+            'firstName': firstName,
+            'lastName': lastName,
+            'targetName': record.user_name
+        };
+
+        userInfo.role = userInfo.roles; // to match new info
+        var needToUpdate = false;
+        for (var prop in newInfo) {
+            this.setParameter(prop, newInfo[prop], /* raw? */ prop == 'role');
+
+            // check if this update request needs to be sent
+            if (prop == "oldTargetName") continue;
+
+            if (userInfo[prop] === undefined) {
+                this.log.debug("User " + record.user_name + " does not have property " + prop + " in xMatters");
+                needToUpdate = true;
+            } else if (userInfo[prop] != newInfo[prop]) {
+                this.log.debug("User " + record.user_name + " property " + prop + " value has changed from " + userInfo[prop] + " to " + newInfo[prop]);
+                needToUpdate = true;
+            }
+        }
+
+        if (!needToUpdate) {
+            this.log.debug("User " + record.user_name + " does " + (needToUpdate ? "" : "not ") + "need to be updated in xMatters");
+            return true;
+        }
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to delete a user from xMatters and posts it
+     * @param userName name of the user to remove
+     */
+    sendDeleteUserSOAPMessage: function (userName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "DeleteUser");
+        this.setParameter('targetName', userName);
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Builds the SOAP Request to find a user device in xMatters and posts it
+     * @param userName name of the user the device belongs to
+     * @param deviceName name of the device to find
+     * @return the unique device id in xMatters
+     */
+    sendFindDeviceSOAPMessage: function (userName, deviceName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "FindDevices");
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('owner', userName);
+        this.setParameter('targetName', userName + "|" + deviceName);
+
+        try {
+            var soapResponse = this.send(this.STATUS_NODE);
+            return soapResponse.getNodeText("//ns:deviceIdentifier");
+        } catch (e) {
+            this.log.debug("Device not found: " + e);
+            return null;
+        }
+    },
+
+    /**
+     * Builds the SOAP Request to add a user device into xMatters and posts it
+     * @param record current record to process
+     * @param deviceType type of device (email, phone)
+     * @param deviceName name of the device to add
+     */
+    sendAddDeviceSOAPMessage: function (record, deviceType, deviceName) {
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "Add" + deviceType + "Device");
+        this.setParameter('targetName', record.user_name);
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('externallyOwned', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.externally.owned"));
+        this.setParameter('deviceName', deviceName);
+        this.setParameter('delay', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.device.delay"));
+        this.setParameter('priorityThreshold', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.priority.threshold"));
+
+        var parameters;
+        if (deviceName == gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.email.device.name")) {
+            parameters = this.getEmailDeviceSOAPParameters(record.email);
+        } else if (deviceName == gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.sms.device.name")) {
+            parameters = this.getSMSPhoneDeviceSOAPParameters(record.mobile_phone);
+        } else if (deviceName == gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.work.phone.device.name")) {
+            parameters = this.getPhoneDeviceSOAPParameters(record.phone);
+        } else {
+            parameters = this.getPhoneDeviceSOAPParameters(record.mobile_phone);
+        }
+
+        for (var parameter in parameters) {
+            this.setParameter(parameter, parameters[parameter]);
+        }
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Query xMatters to obtain the device information
+     * @param userName user
+     * @param deviceName device (optional, if not specified, all user devices are retrieved)
+     * @return Object that contains user information so that it can be persisted when updated in xMatters
+     */
+    sendQueryDeviceSOAPMessage: function (userName, deviceName) {
+        var sDebug = "SendQueryDeviceSOAPMessage for " + userName + ", " + deviceName + ". \n";
+        this.log.debug(sDebug);
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "FindDevices");
+
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('owner', userName);
+
+        if (deviceName) {
+            this.setParameter('targetName', userName + "|" + deviceName);
+        }
+
+        var soapResponse;
+
+        try {
+            soapResponse = this.send(this.STATUS_NODE);
+        } catch (e) {
+            this.log.debug("sendQueryDeviceSOAPMessage got [" + e + "] for user " + userName + (deviceName ? " and device " + deviceName : ""));
+            if (deviceName === undefined && e == "EMPTY_RESULT_SET") // user has no devices. it's OK, return an empty array
+                return [];
+            else
+                throw e;
+        }
+
+        var devices = [];
+
+        var node = soapResponse.getFirstNode('//ns:devices');
+        var iter = node.getChildNodeIterator();
+        while (iter.hasNext()) {
+            var n = iter.next();
+            var deviceInfo = {};
+            // this.log.debug("Device " + n.getNodeName());
+
+            var props = n.getChildNodeIterator();
+            while (props.hasNext()) {
+                var prop = props.next();
+                var name = prop.getNodeName().split(":")[1];
+                // this.log.debug("Property " + name + "=" + prop.getTextContent());
+                switch (name) {
+                    case 'name' :
+                        deviceInfo.deviceName = prop.getTextContent();
+                        break;
+                    case 'deviceIdentifier' :
+                        deviceInfo.deviceId = prop.getTextContent();
+                        break;
+                    case 'default' :
+                        deviceInfo.defaultDevice = prop.getTextContent();
+                        deviceInfo.defaultDevice = ((deviceInfo.defaultDevice === "") ? "false" : deviceInfo.defaultDevice);
+                        break;
+                    case 'userServiceProvider':
+                        deviceInfo.serviceProvider = prop.getLastChild().getTextContent();
+                        break;
+                    default:
+                        deviceInfo[name] = prop.getTextContent();
+                }
+            }
+
+            if (deviceName) {
+                return deviceInfo;
+            }
+            devices.push(deviceInfo);
+        }
+
+        return devices;
+    },
+
+    /**
+     * Builds the SOAP Request to update a user device into xMatters and posts it
+     * @param record current record to process
+     * @param deviceType type of device (email, phone)
+     * @param deviceIdentifier unique id for the device in xMatters
+     * @param deviceName name of the device to add
+     * @param deviceInfo info of the device (if already retrieved,optional)
+     */
+    sendUpdateDeviceSOAPMessage: function (record, deviceType, deviceIdentifier, deviceName, deviceInfo) {
+        this.log.debug("sendUpdateDeviceSOAPMessage for " + deviceName + " type=" + deviceType + " id=" + deviceIdentifier + " device info is " + (deviceInfo === undefined ? "not " : "") + "provided");
+
+        if (deviceInfo === undefined) {
+            deviceInfo = this.sendQueryDeviceSOAPMessage(record.user_name, deviceName);
+        }
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "Update" + deviceType + "Device");
+        this.setParameter('active', deviceInfo.active);
+        this.setParameter('default', deviceInfo.defaultDevice);
+        this.setParameter('deviceIdentifier', deviceIdentifier); // deviceInfo.deviceId
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+        this.setParameter('externallyOwned', gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.externally.owned"));
+        this.setParameter('deviceName', deviceInfo.deviceName);
+        this.setParameter('delay', deviceInfo.delay);
+        this.setParameter('priorityThreshold', deviceInfo.priorityThreshold);
+
+        var parameters;
+        if (deviceName == gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.email.device.name")) {
+            parameters = this.getEmailDeviceSOAPParameters(record.email);
+        } else if (deviceName == gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.sms.device.name")) {
+            parameters = this.getSMSPhoneDeviceSOAPParameters(record.mobile_phone);
+        } else if (deviceName == gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.work.phone.device.name")) {
+            parameters = this.getPhoneDeviceSOAPParameters(record.phone);
+        } else {
+            parameters = this.getPhoneDeviceSOAPParameters(record.mobile_phone);
+        }
+        // set the correct provider after the calls to set the individual device details
+        parameters.serviceProvider = deviceInfo.serviceProvider;
+
+        // check if this update needs to be sent
+        var sendUpdate = false;
+        for (var parameter in parameters) {
+            if (!sendUpdate && parameters[parameter] != deviceInfo[parameter]) {
+                this.log.debug("Device '" + deviceName + "' parameter [" + parameter + "] value is different (" + parameters[parameter] +
+                    "!=" + deviceInfo[parameter] + "). Update is necessary");
+                sendUpdate = true; // don't break off here, as we still need to set other parameters
+            }
+            this.setParameter(parameter, parameters[parameter]);
+        }
+
+        if (sendUpdate) {
+            return this.send(this.STATUS_NODE);
+        }
+
+        this.log.debug("Device '" + deviceName + "' parameters match. No update is necessary.");
+        return true;
+    },
+
+    /**
+     * Builds the SOAP Request to delete a user device into xMatters and posts it
+     * @param deviceIdentifier unique id for the device in xMatters
+     */
+    sendDeleteDeviceSOAPMessage: function (deviceIdentifier) {
+        this.log.debug("sendDeleteDeviceSOAPMessage for deviceId '" + deviceIdentifier + "'");
+
+        this.createSyncSOAPMessage('xMatters AlarmPoint Engine', "DeleteDevice");
+        this.setParameter('deviceIdentifier', deviceIdentifier);
+        this.setParameter('company', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.company.name"));
+
+        return this.send(this.STATUS_NODE);
+    },
+
+    /**
+     * Set the device parameters for the email device
+     * @param emailAddress email address to set
+     */
+    getEmailDeviceSOAPParameters: function (emailAddress) {
+        return {
+            "address": emailAddress,
+            "serviceProvider": gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.email.service.provider")
+        };
+    },
+
+    /**
+     * Set the device parameters for the phone device
+     * @param phoneNumber phone number to set
+     */
+    getSMSPhoneDeviceSOAPParameters: function (phoneNumber) {
+        phoneNumber = String(phoneNumber);
+        var cCode;
+
+        // If it has a +, then we need to strip out the
+        // country code and leave just the number
+        if (phoneNumber.indexOf('+') > -1) {
+            var cCodeNumber = this.getCountryCode(phoneNumber);
+            phoneNumber = cCodeNumber.number;
+            cCode = cCodeNumber.iso_code;
+        }
+        var phoneNo = phoneNumber.replace(/[^\d\.]+/g, '');
+        var regexObj = new RegExp(gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.phone.regex"));
+
+        if (regexObj.test(phoneNo)) {
+            phoneNo = phoneNo.replace(regexObj, "$1") + phoneNo.replace(regexObj, "$2") + phoneNo.replace(regexObj, "$3");
+        }
+
+        return {
+            "number": phoneNo,
+            "serviceProvider": gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.sms.service.provider"),
+            "countryCodeOverride": cCode
+        };
+    },
+
+    /**
+     * Set the device parameters for the phone device
+     * @param phoneNumber phone number to set
+     */
+    getPhoneDeviceSOAPParameters: function (phoneNumber) {
+        // this.log.debug("getPhoneDeviceSOAPParameters for [" + phoneNumber + "]");
+        phoneNumber = String(phoneNumber);
+        var cCode = '', aCode, ext = '';
+
+        // If it has a +, then we need to strip out the
+        // country code and leave just the number
+        if (phoneNumber.indexOf('+') > -1) {
+            var cCodeObj = this.getCountryCode(phoneNumber);
+            phoneNumber = cCodeObj.number;
+            cCode = cCodeObj.iso_code;
+
+            var phoneNo = phoneNumber.replace(/[^\d\.]+/g, '');
+            aCode = phoneNo.slice(0, 3);
+            phoneNumber = phoneNo.slice(3);
+        } else {
+            var phoneNo1 = phoneNumber.replace(/[^\d\.]+/g, '');
+            var regexObj = new RegExp(gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.phone.regex"));
+
+            aCode = phoneNo1.replace(regexObj, "$1");
+            phoneNumber = phoneNo1.replace(regexObj, "$2");
+            ext = phoneNo1.replace(regexObj, "$3");
+        }
+        return {
+            "serviceProvider": gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.phone.service.provider"),
+            "areaCode": aCode, "number": phoneNumber, "extension": ext, "countryCodeOverride": cCode
+        };
+    },
+
+    getCountryCode: function (number) {
+        var re = /\D/g;
+        var n = number.replace(re, '');
+
+        for (var c in this.COUNTRY_CODES) {
+            code = this.COUNTRY_CODES[c];
+            if (n.substring(0, c.length) == c) {
+                val = code;
+                val.number = n.substring(c.length);
+                return val;
+            }
+        }
+
+        // If we got here, we didn't find a
+        // matching code, so just return as is and log
+        this.log.info('Could not match "' + n + '" to a country code. Defaulting to User\'s default country code.');
+        return {"number": n};
+
+    },
+
+    /**
+     * Generate the XML (as it is variable length) for the group members
+     * @param memberList list of members to process
+     */
+    buildGroupMemberList: function (memberList) {
+        var memberListXml = "";
+
+        if (memberList !== null) {
+            this.log.debug("Size of memberlist is " + memberList.length);
+            for (var i = 0; i < memberList.length; i++) {
+                memberListXml += "<member xsi:type=\"m:SoapTeamMember\">" +
+                    "<delay xsi:type=\"xsd:string\">0</delay>" +
+                    "<inRotation xsi:type=\"xsd:boolean\">true</inRotation>" +
+                    "<targetName xsi:type=\"xsd:string\">" + this.escapeXml(memberList[i]) + "</targetName>" +
+                    "<type xsi:type=\"xsd:string\">person</type>" +
+                    "</member>";
+            }
+            this.log.debug(memberListXml);
+        }
+
+        return memberListXml;
+    },
+
+    /**
+     * Check the user for an associated active role
+     * @param user user name of the user we are checking against the role
+     * @param role role object or name of the role we are checking against the user
+     */
+    checkForRole: function (userRecord, role) {
+        var gr_has_role = new GlideRecord("sys_user_has_role");
+        var user_sys_id = userRecord.sys_id;
+
+        gr_has_role.addQuery("user", "=", user_sys_id);
+        gr_has_role.addQuery("state", "=", "active");
+        gr_has_role.query();
+        while (gr_has_role.next()) {
+            if (gr_has_role.role == role || gr_has_role.role.name == role) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    /**
+     * Checks the include exclude list to see if we are performing a include or exclude.
+     * If we are performing a exclude we check to see that the user does not exist in the list.
+     * If we are performing a include we check to make sure they are in the list.
+     */
+    checkIncludeExcludeList: function (type, name, listString, exclude, suffix, triggerRule) {
+        var found = false;
+        var foundRole = false;
+        var roleName = "";
+
+        suffix = (suffix !== null ? (" " + suffix) : "");
+
+        // List is not used as it does not hold any values
+        //if (exclude == "true" && (listString === null || listString === "")) {
+        //   this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is not on the exclude list");
+        //   return true;
+        //}
+
+        var list = listString !== null ? listString.toLowerCase().split(";") : null;
+        if (list !== null) {
+            for (var i = 0; i < list.length; i++) {
+                if (name.toString().toLowerCase() == list[i].trim()) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        //if (type != "Group" && type != "Team")
+        if (type != "Group" && type != "Team" && ((exclude == "true" && !found) || (exclude != "true" && found))) {
+            // get the user record to pass to check for active state and correct roles
+            var userRecord = new GlideRecord("sys_user");
+            var user_sys_id = "";
+
+            userRecord.addQuery("user_name", "=", name);
+            userRecord.query();
+            while (userRecord.next()) {
+                this.log.debug("Role Check for Sys ID: " + userRecord.sys_id);
+                user_sys_id = userRecord.sys_id;
+            }
+
+            this.log.debug("Checking the userRecord: " + userRecord.user_name + " is Active: " + userRecord.active);
+
+            // only process if user is Active
+            if (!userRecord.active && triggerRule != "DeleteUser") {
+                this.log.debug(type + ": " + name + suffix + " will not be synchronized as " + name + " is not active");
+                return false;
+            }
+
+            var roleFilterList = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.roles.list");
+            var roles = roleFilterList.split(";");
+            for (var j = 0; j < roles.length; j++) {
+                if (this.checkForRole(userRecord, roles[j])) {
+                    foundRole = true;
+                    roleName = roles[j];
+                    break;
+                }
+            }
+        }
+
+        var roleExclude = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.exclude.roles.list.boolean");
+
+        this.log.debug("Exclude: " + exclude + " found: " + found + " roleExclude: " + roleExclude + " foundRole: " + foundRole);
+
+        if (exclude == "true" && !found) {
+            if (type != "Group" && type != "Team" && triggerRule != "DeleteUser") {
+                if (roleExclude == "true" && !foundRole) {
+                    this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is not on the exclude list and the role is not on the role exclude list");
+                    return true;
+                } else if (roleExclude == "false" && foundRole) {
+                    this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is not on the exclude list and the role is on the role include list");
+                    return true;
+                }
+            } else {
+                this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is not on the exclude list");
+                return true;
+            }
+        } else if (exclude == "false" && found) {
+            if (type != "Group" && type != "Team" && triggerRule != "DeleteUser") {
+                if (roleExclude == "true" && !foundRole) {
+                    this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is on the include list and the role is not on the role exclude list");
+                    return true;
+                } else if (roleExclude == "false" && foundRole) {
+                    this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is on the include list and the role is on the role include list");
+                    return true;
+                }
+            } else {
+                this.log.debug(type + ": " + name + suffix + " will be synchronized as " + name + " is on the inclue list");
+                return true;
+            }
+        }
+
+        if (exclude == "true") {
+            if (type != "Group" && type != "Team" && triggerRule != "DeleteUser") {
+                if (roleExclude == "true") {
+                    this.log.warn(type + ": " + name + suffix + " will not be synchronized as " + name + " is on the exclude list or role was not on the role exclude list");
+                } else {
+                    this.log.warn(type + ": " + name + suffix + " will not be synchronized as " + name + " is on the exclude list or role was not on the role include list");
+                }
+            } else {
+                this.log.debug(type + ": " + name + suffix + " will not be synchronized as " + name + " is on the exclude list");
+            }
+        } else {
+            if (type != "Group" && type != "Team" && triggerRule != "DeleteUser") {
+                if (roleExclude == "true") {
+                    this.log.warn(type + ": " + name + suffix + " will not be synchronized as " + name + " is not on the include list or role was not on the role exclude list");
+                } else {
+                    this.log.warn(type + ": " + name + suffix + " will not be synchronized as " + name + " is not on the include list or role was not on the role include list");
+                }
+            } else {
+                this.log.debug(type + ": " + name + suffix + " will not be synchronized as " + name + " is not on the include list");
+            }
+        }
+        return false;
+    },
+
+    /**
+     * Send the SOAP Request and process the response
+     * @param statusNode name of the node to that contains the status of the response
+     */
+    send: function (statusNode) {
+        this.callCount++;
+        this.log.debug('xMattersSOAPHelper-DEPRECATED.send. initial');
+        var soapResponse = this.soapMessage.executeAsync(true);
+        soapResponse.waitForResponse(60); // In Seconds, Wait at most 60 seconds to get response from ECC Queue/Mid Server
+        //Might throw exception timing out waiting for response in ECC queue
+        //this.log.debug('xMattersSOAPHelper-DEPRECATED.send. After wait.');
+
+        if (soapResponse.haveError()) {
+            throw "SOAP Response HTTP Error: " + soapResponse.getErrorMessage();
+        }
+
+        this.log.debug('xMattersSOAPHelper-DEPRECATED.send. pre parse response: statusNode: ' + statusNode);
+
+        // The second parameter here indicates this XML doc should be
+        // namespace aware.
+        var xmlResp = new XMLDocument2();
+        xmlResp.parseXML(soapResponse.getBody());
+
+        var status = xmlResp.getNodeText('//' + statusNode);
+        var faultstring = xmlResp.getNodeText("//ns:faultstring");
+
+        this.log.debug('xMattersSOAPHelper-DEPRECATED.send. post parse response: status: |' + status + '|');
+
+        if (status != "OK") {
+            var error = status;
+            if (faultstring !== null) {
+                throw error + " " + faultstring;
+            }
+            throw error;
+        }
+
+        if (this.log.isDebug()) {
+            this.log.debug('xMattersSOAPHelper-DEPRECATED.send finish. xmlResp: typeof ' + xmlResp);
+        }
+
+        return xmlResp;
+    },
+
+    /**
+     * This is a helper method to create SOAPMessages for Synchronization calls to xMatters
+     * It automatically sets the endpoint, user and password
+     * @param webservice name of the webservice
+     * @param operation name of the operation to be called
+     */
+    createSyncSOAPMessage: function (webservice, operation) {
+        this.soapMessage = new sn_ws.SOAPMessageV2(webservice, operation);
+        this.soapMessage.setEndpoint(gs.getProperty(this.appPrefix + '.' + "xmatters.soap.endpoint.webservices"));
+        this.setParameter('wsUsername', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.ws.user"));
+        this.setParameter('wsPassword', gs.getProperty(this.appPrefix + '.' + "xmatters.sync.ws.password"));
+    },
+
+    /**
+     * determine find any new team members (not already in xMatters)
+     * @param Array snUsers in ServiceNow group
+     * @param Array xmTeamMembers existing from xMatters
+     * @returns Array of new team members that need to be syncd to xMatters
+     */
+    getNewTeamMembers: function (snUsers, xmTeamMembers) {
+        var newTeamMembers = [];
+        for (var snUser in snUsers) {
+            this.log.debug("looking for SN User, '" + snUsers[snUser] + "', in team");
+
+            var alreadyInTeam = false;
+            for (var xmTeamMember in xmTeamMembers) {
+                if (snUsers[snUser] == xmTeamMembers[xmTeamMember].name) {
+                    alreadyInTeam = true;
+                    break;
+                }
+            }
+            if (!alreadyInTeam) {
+                this.log.debug("New team member, '" + snUsers[snUser] + "' found");
+                newTeamMembers.push(snUsers[snUser]);
+            }
+        }
+        return newTeamMembers;
+    },
+    
+    /***
+     *  Merge the ServiceNow group member list with the existing xMatters member list
+     */
+    mergeMemberLists: function (snUsers, xmTeamMembers) {
+        var memberListXML = "", start = this.timer();
+        var sDebug = "**** mergeMemberLists\n";
+
+        try {
+            var xmAddToTeam = [];
+            var xmAddToTeamFirst = [];
+            var snRemove = [];
+            for (var xMember in xmTeamMembers) {
+                for (var i in snUsers) {
+                    if (xmTeamMembers[xMember].name == snUsers[i]) {
+                        sDebug += "User in team: " + xmTeamMembers[xMember].name + "\n";
+                        xmAddToTeam.push(xmTeamMembers[xMember]);
+                        snRemove.push(snUsers[i]);
+                        break;
+                    }
+                }
+            }
+
+            // Add the ServiceNow users that have not been added yet
+            for (var j in snUsers) {
+                var bAddUser = true;
+                for (var snSkip in snRemove) {
+                    if (snRemove[snSkip] == snUsers[j]) {
+                        bAddUser = false;
+                        break;
+                    }
+                }
+
+                if (bAddUser) {
+                    var member = {};
+                    member.name = snUsers[j];
+                    member.delay = "0";
+                    member.inRotation = "false";
+                    member.type = "PERSON";
+
+                    sDebug += "Adding user to team: " + member.name + "\n";
+                    xmAddToTeamFirst.push(member);
+                }
+            }
+
+            var finalTeamMembers = xmAddToTeamFirst.concat(xmAddToTeam);
+
+            // Add the new users to xMatters Group/Team
+            for (var addMember in finalTeamMembers) {
+                memberListXML += "<member>";
+                memberListXML += "<delay>" + finalTeamMembers[addMember].delay + "</delay>" +
+                    "<inRotation>" + finalTeamMembers[addMember].inRotation + "</inRotation>" +
+                    "<targetName>" + finalTeamMembers[addMember].name + "</targetName>" +
+                    "<type>" + finalTeamMembers[addMember].type + "</type>";
+                memberListXML += "</member>";
+            }
+        } catch (e) {
+            sDebug += "\nError:\n" + e + "\n" + e.message;
+        }
+
+        sDebug += "memberListXML: " + memberListXML + "\nmergeMemberList took " + this.timer(start) + " ms.";
+
+        this.log.debug(sDebug);
+        return memberListXML;
+    },
+
+    /*
+     * Get the "syncable" groups for the Engage with xMatters Contact Group field
+     *
+     */
+    getxMGroupsQuery: function () {
+        if (gs.getProperty(this.appPrefix + '.' + "xmatters.sync.dynamically") == "true") {
+            soapHelper = new xMattersSOAPHelper-DEPRECATED();
+
+            var list = gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.include.exclude.list");
+            var bool = gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.exclude.list.boolean");
+
+            var groupRec = new GlideRecord('sys_user_group');
+            groupRec.addQuery('active', 'true');
+            groupRec.query();
+
+            groups = [];
+            while (groupRec.next()) {
+                if (soapHelper.checkIncludeExcludeList("Group", groupRec.name, list, bool)) {
+                    groups.push(groupRec.name.toString());
+                }
+            }
+
+            return groups;
+        } else {
+            return [];
+        }
+    },
+
+    /*
+     * Get the "syncable" users for the Engage with xMatters Contact User field
+     *
+     */
+    getxMUsersQuery: function (search) {
+        if (gs.getProperty(this.appPrefix + '.' + "xmatters.sync.dynamically") == "true") {
+            //soapHelper = new xMattersSOAPHelper-DEPRECATED();
+
+            var list = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.include.exclude.list");
+            var bool = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.exclude.list.boolean");
+
+            var userRec = new GlideRecord('sys_user');
+            userRec.addQuery('active', 'true');
+            userRec.addQuery('user_name', '!=', gs.getProperty(this.appPrefix + '.' + 'xmatters.api.user'));
+            //this.log.debug( 'STARTSWITH: ' + search );
+
+            if (!gs.nil(search))
+                userRec.addQuery('user_name', 'STARTSWITH', search);
+
+            userRec.query();
+
+            users = [];
+            while (userRec.next()) {
+                if (this.checkIncludeExcludeList("User", userRec.user_name, list, bool)) {
+                    users.push(userRec.user_name.toString());
+                }
+            }
+
+            return users;
+
+        } else
+            return [];
+
+    },
+
+
+    /*
+     * Get the "syncable" groups for the batch sync
+     *
+     */
+    getxMGroups: function () {
+        soapHelper = new xMattersSOAPHelper-DEPRECATED();
+
+        var list = gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.include.exclude.list");
+        var bool = gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.exclude.list.boolean");
+
+        var groupRec = new GlideRecord('sys_user_group');
+        groupRec.addQuery('active', 'true');
+        groupRec.orderBy('name');
+        groupRec.query();
+
+        groups = [];
+        while (groupRec.next()) {
+            if (soapHelper.checkIncludeExcludeList("Group", groupRec.name, list, bool)) { // we should not check list here if we want to delete groups in xMatters
+                groups.push(groupRec.name.toString());
+            }
+        }
+
+        return groups;
+    },
+
+    COUNTRY_CODES: {
+        "1": {"code": "1", "name": "United States", "iso_code": "US"},
+        "7": {"code": "7", "name": "Russia", "iso_code": "RU"},
+        "20": {"code": "20", "name": "Egypt", "iso_code": "EG"},
+        "27": {"code": "27", "name": "South Africa", "iso_code": "ZA"},
+        "30": {"code": "30", "name": "Greece", "iso_code": "GR"},
+        "31": {"code": "31", "name": "Netherlands", "iso_code": "NL"},
+        "32": {"code": "32", "name": "Belgium", "iso_code": "BE"},
+        "33": {"code": "33", "name": "France", "iso_code": "FR"},
+        "34": {"code": "34", "name": "Spain", "iso_code": "ES"},
+        "36": {"code": "36", "name": "Hungary", "iso_code": "HU"},
+        "39": {"code": "39", "name": "Italy", "iso_code": "IT"},
+        "40": {"code": "40", "name": "Romania", "iso_code": "RO"},
+        "41": {"code": "41", "name": "Switzerland", "iso_code": "CH"},
+        "43": {"code": "43", "name": "Austria", "iso_code": "AT"},
+        "44": {"code": "44", "name": "United Kingdom", "iso_code": "GB"},
+        "45": {"code": "45", "name": "Denmark", "iso_code": "DK"},
+        "46": {"code": "46", "name": "Sweden", "iso_code": "SE"},
+        "47": {"code": "47", "name": "Norway", "iso_code": "NO"},
+        "48": {"code": "48", "name": "Poland", "iso_code": "PL"},
+        "49": {"code": "49", "name": "Germany", "iso_code": "DE"},
+        "51": {"code": "51", "name": "Peru", "iso_code": "PE"},
+        "52": {"code": "52", "name": "Mexico", "iso_code": "MX"},
+        "53": {"code": "53", "name": "Cuba", "iso_code": "CU"},
+        "54": {"code": "54", "name": "Argentina", "iso_code": "AR"},
+        "55": {"code": "55", "name": "Brazil", "iso_code": "BR"},
+        "56": {"code": "56", "name": "Chile", "iso_code": "CL"},
+        "57": {"code": "57", "name": "Colombia", "iso_code": "CO"},
+        "58": {"code": "58", "name": "Venezuela", "iso_code": "VE"},
+        "60": {"code": "60", "name": "Malaysia", "iso_code": "MY"},
+        "61": {"code": "61", "name": "Australia", "iso_code": "AU"},
+        "62": {"code": "62", "name": "Indonesia", "iso_code": "ID"},
+        "63": {"code": "63", "name": "Philippines", "iso_code": "PH"},
+        "64": {"code": "64", "name": "New Zealand", "iso_code": "NZ"},
+        "65": {"code": "65", "name": "Singapore", "iso_code": "SG"},
+        "66": {"code": "66", "name": "Thailand", "iso_code": "TH"},
+        "81": {"code": "81", "name": "Japan", "iso_code": "JP"},
+        "82": {"code": "82", "name": "South Korea", "iso_code": "KR"},
+        "84": {"code": "84", "name": "Vietnam", "iso_code": "VN"},
+        "86": {"code": "86", "name": "China", "iso_code": "CN"},
+        "90": {"code": "90", "name": "Turkey", "iso_code": "TR"},
+        "91": {"code": "91", "name": "India", "iso_code": "IN"},
+        "92": {"code": "92", "name": "Pakistan", "iso_code": "PK"},
+        "93": {"code": "93", "name": "Afghanistan", "iso_code": "AF"},
+        "94": {"code": "94", "name": "Sri Lanka", "iso_code": "LK"},
+        "95": {"code": "95", "name": "Myanmar", "iso_code": "MM"},
+        "98": {"code": "98", "name": "Iran", "iso_code": "IR"},
+        "211": {"code": "211", "name": "South Sudan", "iso_code": "SS"},
+        "212": {"code": "212", "name": "Morocco", "iso_code": "MA"},
+        "213": {"code": "213", "name": "Algeria", "iso_code": "DZ"},
+        "216": {"code": "216", "name": "Tunisia", "iso_code": "TN"},
+        "218": {"code": "218", "name": "Libya", "iso_code": "LY"},
+        "220": {"code": "220", "name": "Gambia", "iso_code": "GM"},
+        "221": {"code": "221", "name": "Senegal", "iso_code": "SN"},
+        "222": {"code": "222", "name": "Mauritania", "iso_code": "MR"},
+        "223": {"code": "223", "name": "Mali", "iso_code": "ML"},
+        "224": {"code": "224", "name": "Guinea", "iso_code": "GN"},
+        "225": {"code": "225", "name": "Ivory Coast", "iso_code": "CI"},
+        "226": {"code": "226", "name": "Burkina Faso", "iso_code": "BF"},
+        "227": {"code": "227", "name": "Niger", "iso_code": "NE"},
+        "228": {"code": "228", "name": "Togo", "iso_code": "TG"},
+        "229": {"code": "229", "name": "Benin", "iso_code": "BJ"},
+        "230": {"code": "230", "name": "Mauritius", "iso_code": "MU"},
+        "231": {"code": "231", "name": "Liberia", "iso_code": "LR"},
+        "232": {"code": "232", "name": "Sierra Leone", "iso_code": "SL"},
+        "233": {"code": "233", "name": "Ghana", "iso_code": "GH"},
+        "234": {"code": "234", "name": "Nigeria", "iso_code": "NG"},
+        "235": {"code": "235", "name": "Chad", "iso_code": "TD"},
+        "236": {"code": "236", "name": "Central African Republic", "iso_code": "CF"},
+        "237": {"code": "237", "name": "Cameroon", "iso_code": "CM"},
+        "238": {"code": "238", "name": "Cape Verde", "iso_code": "CV"},
+        "239": {"code": "239", "name": "Sao Tome and Principe", "iso_code": "ST"},
+        "240": {"code": "240", "name": "Equatorial Guinea", "iso_code": "GQ"},
+        "241": {"code": "241", "name": "Gabon", "iso_code": "GA"},
+        "242": {"code": "242", "name": "Republic of the Congo", "iso_code": "CG"},
+        "243": {"code": "243", "name": "Democratic Republic of the Congo", "iso_code": "CD"},
+        "244": {"code": "244", "name": "Angola", "iso_code": "AO"},
+        "245": {"code": "245", "name": "Guinea - Bissau", "iso_code": "GW"},
+        "246": {"code": "246", "name": "British Indian Ocean Territory", "iso_code": "IO"},
+        "248": {"code": "248", "name": "Seychelles", "iso_code": "SC"},
+        "249": {"code": "249", "name": "Sudan", "iso_code": "SD"},
+        "250": {"code": "250", "name": "Rwanda", "iso_code": "RW"},
+        "251": {"code": "251", "name": "Ethiopia", "iso_code": "ET"},
+        "252": {"code": "252", "name": "Somalia", "iso_code": "SO"},
+        "253": {"code": "253", "name": "Djibouti", "iso_code": "DJ"},
+        "254": {"code": "254", "name": "Kenya", "iso_code": "KE"},
+        "255": {"code": "255", "name": "Tanzania", "iso_code": "TZ"},
+        "256": {"code": "256", "name": "Uganda", "iso_code": "UG"},
+        "257": {"code": "257", "name": "Burundi", "iso_code": "BI"},
+        "258": {"code": "258", "name": "Mozambique", "iso_code": "MZ"},
+        "260": {"code": "260", "name": "Zambia", "iso_code": "ZM"},
+        "261": {"code": "261", "name": "Madagascar", "iso_code": "MG"},
+        "262": {"code": "262", "name": "Mayotte", "iso_code": "YT"},
+        "263": {"code": "263", "name": "Zimbabwe", "iso_code": "ZW"},
+        "264": {"code": "264", "name": "Namibia", "iso_code": "NA"},
+        "265": {"code": "265", "name": "Malawi", "iso_code": "MW"},
+        "266": {"code": "266", "name": "Lesotho", "iso_code": "LS"},
+        "267": {"code": "267", "name": "Botswana", "iso_code": "BW"},
+        "268": {"code": "268", "name": "Swaziland", "iso_code": "SZ"},
+        "269": {"code": "269", "name": "Comoros", "iso_code": "KM"},
+        "290": {"code": "290", "name": "Saint Helena", "iso_code": "SH"},
+        "291": {"code": "291", "name": "Eritrea", "iso_code": "ER"},
+        "297": {"code": "297", "name": "Aruba", "iso_code": "AW"},
+        "298": {"code": "298", "name": "Faroe Islands", "iso_code": "FO"},
+        "299": {"code": "299", "name": "Greenland", "iso_code": "GL"},
+        "350": {"code": "350", "name": "Gibraltar", "iso_code": "GI"},
+        "351": {"code": "351", "name": "Portugal", "iso_code": "PT"},
+        "352": {"code": "352", "name": "Luxembourg", "iso_code": "LU"},
+        "353": {"code": "353", "name": "Ireland", "iso_code": "IE"},
+        "354": {"code": "354", "name": "Iceland", "iso_code": "IS"},
+        "355": {"code": "355", "name": "Albania", "iso_code": "AL"},
+        "356": {"code": "356", "name": "Malta", "iso_code": "MT"},
+        "357": {"code": "357", "name": "Cyprus", "iso_code": "CY"},
+        "358": {"code": "358", "name": "Finland", "iso_code": "FI"},
+        "359": {"code": "359", "name": "Bulgaria", "iso_code": "BG"},
+        "370": {"code": "370", "name": "Lithuania", "iso_code": "LT"},
+        "371": {"code": "371", "name": "Latvia", "iso_code": "LV"},
+        "372": {"code": "372", "name": "Estonia", "iso_code": "EE"},
+        "373": {"code": "373", "name": "Moldova", "iso_code": "MD"},
+        "374": {"code": "374", "name": "Armenia", "iso_code": "AM"},
+        "375": {"code": "375", "name": "Belarus", "iso_code": "BY"},
+        "376": {"code": "376", "name": "Andorra", "iso_code": "AD"},
+        "377": {"code": "377", "name": "Monaco", "iso_code": "MC"},
+        "378": {"code": "378", "name": "San Marino", "iso_code": "SM"},
+        "379": {"code": "379", "name": "Vatican", "iso_code": "VA"},
+        "380": {"code": "380", "name": "Ukraine", "iso_code": "UA"},
+        "381": {"code": "381", "name": "Serbia", "iso_code": "RS"},
+        "382": {"code": "382", "name": "Montenegro", "iso_code": "ME"},
+        "383": {"code": "383", "name": "Kosovo", "iso_code": "XK"},
+        "385": {"code": "385", "name": "Croatia", "iso_code": "HR"},
+        "386": {"code": "386", "name": "Slovenia", "iso_code": "SI"},
+        "387": {"code": "387", "name": "Bosnia and Herzegovina", "iso_code": "BA"},
+        "389": {"code": "389", "name": "Macedonia", "iso_code": "MK"},
+        "420": {"code": "420", "name": "Czech Republic", "iso_code": "CZ"},
+        "421": {"code": "421", "name": "Slovakia", "iso_code": "SK"},
+        "423": {"code": "423", "name": "Liechtenstein", "iso_code": "LI"},
+        "500": {"code": "500", "name": "Falkland Islands", "iso_code": "FK"},
+        "501": {"code": "501", "name": "Belize", "iso_code": "BZ"},
+        "502": {"code": "502", "name": "Guatemala", "iso_code": "GT"},
+        "503": {"code": "503", "name": "El Salvador", "iso_code": "SV"},
+        "504": {"code": "504", "name": "Honduras", "iso_code": "HN"},
+        "505": {"code": "505", "name": "Nicaragua", "iso_code": "NI"},
+        "506": {"code": "506", "name": "Costa Rica", "iso_code": "CR"},
+        "507": {"code": "507", "name": "Panama", "iso_code": "PA"},
+        "508": {"code": "508", "name": "Saint Pierre and Miquelon", "iso_code": "PM"},
+        "509": {"code": "509", "name": "Haiti", "iso_code": "HT"},
+        "590": {"code": "590", "name": "Saint Martin", "iso_code": "MF"},
+        "591": {"code": "591", "name": "Bolivia", "iso_code": "BO"},
+        "592": {"code": "592", "name": "Guyana", "iso_code": "GY"},
+        "593": {"code": "593", "name": "Ecuador", "iso_code": "EC"},
+        "595": {"code": "595", "name": "Paraguay", "iso_code": "PY"},
+        "597": {"code": "597", "name": "Suriname", "iso_code": "SR"},
+        "598": {"code": "598", "name": "Uruguay", "iso_code": "UY"},
+        "599": {"code": "599", "name": "Curacao", "iso_code": "CW"},
+        "670": {"code": "670", "name": "East Timor", "iso_code": "TL"},
+        "672": {"code": "672", "name": "Antarctica", "iso_code": "AQ"},
+        "673": {"code": "673", "name": "Brunei", "iso_code": "BN"},
+        "674": {"code": "674", "name": "Nauru", "iso_code": "NR"},
+        "675": {"code": "675", "name": "Papua New Guinea", "iso_code": "PG"},
+        "676": {"code": "676", "name": "Tonga", "iso_code": "TO"},
+        "677": {"code": "677", "name": "Solomon Islands", "iso_code": "SB"},
+        "678": {"code": "678", "name": "Vanuatu", "iso_code": "VU"},
+        "679": {"code": "679", "name": "Fiji", "iso_code": "FJ"},
+        "680": {"code": "680", "name": "Palau", "iso_code": "PW"},
+        "681": {"code": "681", "name": "Wallis and Futuna", "iso_code": "WF"},
+        "682": {"code": "682", "name": "Cook Islands", "iso_code": "CK"},
+        "683": {"code": "683", "name": "Niue", "iso_code": "NU"},
+        "685": {"code": "685", "name": "Samoa", "iso_code": "WS"},
+        "686": {"code": "686", "name": "Kiribati", "iso_code": "KI"},
+        "687": {"code": "687", "name": "New Caledonia", "iso_code": "NC"},
+        "688": {"code": "688", "name": "Tuvalu", "iso_code": "TV"},
+        "689": {"code": "689", "name": "French Polynesia", "iso_code": "PF"},
+        "690": {"code": "690", "name": "Tokelau", "iso_code": "TK"},
+        "691": {"code": "691", "name": "Micronesia", "iso_code": "FM"},
+        "692": {"code": "692", "name": "Marshall Islands", "iso_code": "MH"},
+        "850": {"code": "850", "name": "North Korea", "iso_code": "KP"},
+        "852": {"code": "852", "name": "Hong Kong", "iso_code": "HK"},
+        "853": {"code": "853", "name": "Macao", "iso_code": "MO"},
+        "855": {"code": "855", "name": "Cambodia", "iso_code": "KH"},
+        "856": {"code": "856", "name": "Laos", "iso_code": "LA"},
+        "880": {"code": "880", "name": "Bangladesh", "iso_code": "BD"},
+        "886": {"code": "886", "name": "Taiwan", "iso_code": "TW"},
+        "960": {"code": "960", "name": "Maldives", "iso_code": "MV"},
+        "961": {"code": "961", "name": "Lebanon", "iso_code": "LB"},
+        "962": {"code": "962", "name": "Jordan", "iso_code": "JO"},
+        "963": {"code": "963", "name": "Syria", "iso_code": "SY"},
+        "964": {"code": "964", "name": "Iraq", "iso_code": "IQ"},
+        "965": {"code": "965", "name": "Kuwait", "iso_code": "KW"},
+        "966": {"code": "966", "name": "Saudi Arabia", "iso_code": "SA"},
+        "967": {"code": "967", "name": "Yemen", "iso_code": "YE"},
+        "968": {"code": "968", "name": "Oman", "iso_code": "OM"},
+        "970": {"code": "970", "name": "Palestine", "iso_code": "PS"},
+        "971": {"code": "971", "name": "United Arab Emirates", "iso_code": "AE"},
+        "972": {"code": "972", "name": "Israel", "iso_code": "IL"},
+        "973": {"code": "973", "name": "Bahrain", "iso_code": "BH"},
+        "974": {"code": "974", "name": "Qatar", "iso_code": "QA"},
+        "975": {"code": "975", "name": "Bhutan", "iso_code": "BT"},
+        "976": {"code": "976", "name": "Mongolia", "iso_code": "MN"},
+        "977": {"code": "977", "name": "Nepal", "iso_code": "NP"},
+        "992": {"code": "992", "name": "Tajikistan", "iso_code": "TJ"},
+        "993": {"code": "993", "name": "Turkmenistan", "iso_code": "TM"},
+        "994": {"code": "994", "name": "Azerbaijan", "iso_code": "AZ"},
+        "995": {"code": "995", "name": "Georgia", "iso_code": "GE"},
+        "996": {"code": "996", "name": "Kyrgyzstan", "iso_code": "KG"},
+        "998": {"code": "998", "name": "Uzbekistan", "iso_code": "UZ"}
+    },
+    TIMEZONES: {
+        'ACT': null,
+        'AET': null,
+        'AGT': null,
+        'ART': null,
+        'AST': null,
+        'Africa/Abidjan': null,
+        'Africa/Accra': null,
+        'Africa/Addis_Ababa': null,
+        'Africa/Algiers': null,
+        'Africa/Asmara': null,
+        'Africa/Asmera': null,
+        'Africa/Bamako': null,
+        'Africa/Bangui': null,
+        'Africa/Banjul': null,
+        'Africa/Bissau': null,
+        'Africa/Blantyre': null,
+        'Africa/Brazzaville': null,
+        'Africa/Bujumbura': null,
+        'Africa/Cairo': null,
+        'Africa/Casablanca': null,
+        'Africa/Ceuta': null,
+        'Africa/Conakry': null,
+        'Africa/Dakar': null,
+        'Africa/Dar_es_Salaam': null,
+        'Africa/Djibouti': null,
+        'Africa/Douala': null,
+        'Africa/El_Aaiun': null,
+        'Africa/Freetown': null,
+        'Africa/Gaborone': null,
+        'Africa/Harare': null,
+        'Africa/Johannesburg': null,
+        'Africa/Juba': null,
+        'Africa/Kampala': null,
+        'Africa/Khartoum': null,
+        'Africa/Kigali': null,
+        'Africa/Kinshasa': null,
+        'Africa/Lagos': null,
+        'Africa/Libreville': null,
+        'Africa/Lome': null,
+        'Africa/Luanda': null,
+        'Africa/Lubumbashi': null,
+        'Africa/Lusaka': null,
+        'Africa/Malabo': null,
+        'Africa/Maputo': null,
+        'Africa/Maseru': null,
+        'Africa/Mbabane': null,
+        'Africa/Mogadishu': null,
+        'Africa/Monrovia': null,
+        'Africa/Nairobi': null,
+        'Africa/Ndjamena': null,
+        'Africa/Niamey': null,
+        'Africa/Nouakchott': null,
+        'Africa/Ouagadougou': null,
+        'Africa/Porto-Novo': null,
+        'Africa/Sao_Tome': null,
+        'Africa/Timbuktu': null,
+        'Africa/Tripoli': null,
+        'Africa/Tunis': null,
+        'Africa/Windhoek': null,
+        'America/Adak': null,
+        'America/Anchorage': null,
+        'America/Anguilla': null,
+        'America/Antigua': null,
+        'America/Araguaina': null,
+        'America/Argentina/Buenos_Aires': null,
+        'America/Argentina/Catamarca': null,
+        'America/Argentina/ComodRivadavia': null,
+        'America/Argentina/Cordoba': null,
+        'America/Argentina/Jujuy': null,
+        'America/Argentina/La_Rioja': null,
+        'America/Argentina/Mendoza': null,
+        'America/Argentina/Rio_Gallegos': null,
+        'America/Argentina/Salta': null,
+        'America/Argentina/San_Juan': null,
+        'America/Argentina/San_Luis': null,
+        'America/Argentina/Tucuman': null,
+        'America/Argentina/Ushuaia': null,
+        'America/Aruba': null,
+        'America/Asuncion': null,
+        'America/Atikokan': null,
+        'America/Atka': null,
+        'America/Bahia': null,
+        'America/Bahia_Banderas': null,
+        'America/Barbados': null,
+        'America/Belem': null,
+        'America/Belize': null,
+        'America/Blanc-Sablon': null,
+        'America/Boa_Vista': null,
+        'America/Bogota': null,
+        'America/Boise': null,
+        'America/Buenos_Aires': null,
+        'America/Cambridge_Bay': null,
+        'America/Campo_Grande': null,
+        'America/Cancun': null,
+        'America/Caracas': null,
+        'America/Catamarca': null,
+        'America/Cayenne': null,
+        'America/Cayman': null,
+        'America/Chicago': null,
+        'America/Chihuahua': null,
+        'America/Coral_Harbour': null,
+        'America/Cordoba': null,
+        'America/Costa_Rica': null,
+        'America/Creston': null,
+        'America/Cuiaba': null,
+        'America/Curacao': null,
+        'America/Danmarkshavn': null,
+        'America/Dawson': null,
+        'America/Dawson_Creek': null,
+        'America/Denver': null,
+        'America/Detroit': null,
+        'America/Dominica': null,
+        'America/Edmonton': null,
+        'America/Eirunepe': null,
+        'America/El_Salvador': null,
+        'America/Ensenada': null,
+        'America/Fort_Wayne': null,
+        'America/Fortaleza': null,
+        'America/Glace_Bay': null,
+        'America/Godthab': null,
+        'America/Goose_Bay': null,
+        'America/Grand_Turk': null,
+        'America/Grenada': null,
+        'America/Guadeloupe': null,
+        'America/Guatemala': null,
+        'America/Guayaquil': null,
+        'America/Guyana': null,
+        'America/Halifax': null,
+        'America/Havana': null,
+        'America/Hermosillo': null,
+        'America/Indiana/Indianapolis': null,
+        'America/Indiana/Knox': null,
+        'America/Indiana/Marengo': null,
+        'America/Indiana/Petersburg': null,
+        'America/Indiana/Tell_City': null,
+        'America/Indiana/Vevay': null,
+        'America/Indiana/Vincennes': null,
+        'America/Indiana/Winamac': null,
+        'America/Indianapolis': null,
+        'America/Inuvik': null,
+        'America/Iqaluit': null,
+        'America/Jamaica': null,
+        'America/Jujuy': null,
+        'America/Juneau': null,
+        'America/Kentucky/Louisville': null,
+        'America/Kentucky/Monticello': null,
+        'America/Knox_IN': null,
+        'America/Kralendijk': null,
+        'America/La_Paz': null,
+        'America/Lima': null,
+        'America/Los_Angeles': null,
+        'America/Louisville': null,
+        'America/Lower_Princes': null,
+        'America/Maceio': null,
+        'America/Managua': null,
+        'America/Manaus': null,
+        'America/Marigot': null,
+        'America/Martinique': null,
+        'America/Matamoros': null,
+        'America/Mazatlan': null,
+        'America/Mendoza': null,
+        'America/Menominee': null,
+        'America/Merida': null,
+        'America/Metlakatla': null,
+        'America/Mexico_City': null,
+        'America/Miquelon': null,
+        'America/Moncton': null,
+        'America/Monterrey': null,
+        'America/Montevideo': null,
+        'America/Montreal': null,
+        'America/Montserrat': null,
+        'America/Nassau': null,
+        'America/New_York': null,
+        'America/Nipigon': null,
+        'America/Nome': null,
+        'America/Noronha': null,
+        'America/North_Dakota/Beulah': null,
+        'America/North_Dakota/Center': null,
+        'America/North_Dakota/New_Salem': null,
+        'America/Ojinaga': null,
+        'America/Panama': null,
+        'America/Pangnirtung': null,
+        'America/Paramaribo': null,
+        'America/Phoenix': null,
+        'America/Port-au-Prince': null,
+        'America/Port_of_Spain': null,
+        'America/Porto_Acre': null,
+        'America/Porto_Velho': null,
+        'America/Puerto_Rico': null,
+        'America/Rainy_River': null,
+        'America/Rankin_Inlet': null,
+        'America/Recife': null,
+        'America/Regina': null,
+        'America/Resolute': null,
+        'America/Rio_Branco': null,
+        'America/Rosario': null,
+        'America/Santa_Isabel': null,
+        'America/Santarem': null,
+        'America/Santiago': null,
+        'America/Santo_Domingo': null,
+        'America/Sao_Paulo': null,
+        'America/Scoresbysund': null,
+        'America/Shiprock': null,
+        'America/Sitka': null,
+        'America/St_Barthelemy': null,
+        'America/St_Johns': null,
+        'America/St_Kitts': null,
+        'America/St_Lucia': null,
+        'America/St_Thomas': null,
+        'America/St_Vincent': null,
+        'America/Swift_Current': null,
+        'America/Tegucigalpa': null,
+        'America/Thule': null,
+        'America/Thunder_Bay': null,
+        'America/Tijuana': null,
+        'America/Toronto': null,
+        'America/Tortola': null,
+        'America/Vancouver': null,
+        'America/Virgin': null,
+        'America/Whitehorse': null,
+        'America/Winnipeg': null,
+        'America/Yakutat': null,
+        'America/Yellowknife': null,
+        'Antarctica/Casey': null,
+        'Antarctica/Davis': null,
+        'Antarctica/DumontDUrville': null,
+        'Antarctica/Macquarie': null,
+        'Antarctica/Mawson': null,
+        'Antarctica/McMurdo': null,
+        'Antarctica/Palmer': null,
+        'Antarctica/Rothera': null,
+        'Antarctica/South_Pole': null,
+        'Antarctica/Syowa': null,
+        'Antarctica/Troll': null,
+        'Antarctica/Vostok': null,
+        'Arctic/Longyearbyen': null,
+        'Asia/Aden': null,
+        'Asia/Almaty': null,
+        'Asia/Amman': null,
+        'Asia/Anadyr': null,
+        'Asia/Aqtau': null,
+        'Asia/Aqtobe': null,
+        'Asia/Ashgabat': null,
+        'Asia/Ashkhabad': null,
+        'Asia/Baghdad': null,
+        'Asia/Bahrain': null,
+        'Asia/Baku': null,
+        'Asia/Bangkok': null,
+        'Asia/Beirut': null,
+        'Asia/Bishkek': null,
+        'Asia/Brunei': null,
+        'Asia/Calcutta': null,
+        'Asia/Chita': null,
+        'Asia/Choibalsan': null,
+        'Asia/Chongqing': null,
+        'Asia/Chungking': null,
+        'Asia/Colombo': null,
+        'Asia/Dacca': null,
+        'Asia/Damascus': null,
+        'Asia/Dhaka': null,
+        'Asia/Dili': null,
+        'Asia/Dubai': null,
+        'Asia/Dushanbe': null,
+        'Asia/Gaza': null,
+        'Asia/Harbin': null,
+        'Asia/Hebron': null,
+        'Asia/Ho_Chi_Minh': null,
+        'Asia/Hong_Kong': null,
+        'Asia/Hovd': null,
+        'Asia/Irkutsk': null,
+        'Asia/Istanbul': null,
+        'Asia/Jakarta': null,
+        'Asia/Jayapura': null,
+        'Asia/Jerusalem': null,
+        'Asia/Kabul': null,
+        'Asia/Kamchatka': null,
+        'Asia/Karachi': null,
+        'Asia/Kashgar': null,
+        'Asia/Kathmandu': null,
+        'Asia/Katmandu': null,
+        'Asia/Khandyga': null,
+        'Asia/Kolkata': null,
+        'Asia/Krasnoyarsk': null,
+        'Asia/Kuala_Lumpur': null,
+        'Asia/Kuching': null,
+        'Asia/Kuwait': null,
+        'Asia/Macao': null,
+        'Asia/Macau': null,
+        'Asia/Magadan': null,
+        'Asia/Makassar': null,
+        'Asia/Manila': null,
+        'Asia/Muscat': null,
+        'Asia/Nicosia': null,
+        'Asia/Novokuznetsk': null,
+        'Asia/Novosibirsk': null,
+        'Asia/Omsk': null,
+        'Asia/Oral': null,
+        'Asia/Phnom_Penh': null,
+        'Asia/Pontianak': null,
+        'Asia/Pyongyang': null,
+        'Asia/Qatar': null,
+        'Asia/Qyzylorda': null,
+        'Asia/Rangoon': null,
+        'Asia/Riyadh': null,
+        'Asia/Saigon': null,
+        'Asia/Sakhalin': null,
+        'Asia/Samarkand': null,
+        'Asia/Seoul': null,
+        'Asia/Shanghai': null,
+        'Asia/Singapore': null,
+        'Asia/Srednekolymsk': null,
+        'Asia/Taipei': null,
+        'Asia/Tashkent': null,
+        'Asia/Tbilisi': null,
+        'Asia/Tehran': null,
+        'Asia/Tel_Aviv': null,
+        'Asia/Thimbu': null,
+        'Asia/Thimphu': null,
+        'Asia/Tokyo': null,
+        'Asia/Ujung_Pandang': null,
+        'Asia/Ulaanbaatar': null,
+        'Asia/Ulan_Bator': null,
+        'Asia/Urumqi': null,
+        'Asia/Ust-Nera': null,
+        'Asia/Vientiane': null,
+        'Asia/Vladivostok': null,
+        'Asia/Yakutsk': null,
+        'Asia/Yekaterinburg': null,
+        'Asia/Yerevan': null,
+        'Atlantic/Azores': null,
+        'Atlantic/Bermuda': null,
+        'Atlantic/Canary': null,
+        'Atlantic/Cape_Verde': null,
+        'Atlantic/Faeroe': null,
+        'Atlantic/Faroe': null,
+        'Atlantic/Jan_Mayen': null,
+        'Atlantic/Madeira': null,
+        'Atlantic/Reykjavik': null,
+        'Atlantic/South_Georgia': null,
+        'Atlantic/St_Helena': null,
+        'Atlantic/Stanley': null,
+        'Australia/ACT': null,
+        'Australia/Adelaide': null,
+        'Australia/Brisbane': null,
+        'Australia/Broken_Hill': null,
+        'Australia/Canberra': null,
+        'Australia/Currie': null,
+        'Australia/Darwin': null,
+        'Australia/Eucla': null,
+        'Australia/Hobart': null,
+        'Australia/LHI': null,
+        'Australia/Lindeman': null,
+        'Australia/Lord_Howe': null,
+        'Australia/Melbourne': null,
+        'Australia/NSW': null,
+        'Australia/North': null,
+        'Australia/Perth': null,
+        'Australia/Queensland': null,
+        'Australia/South': null,
+        'Australia/Sydney': null,
+        'Australia/Tasmania': null,
+        'Australia/Victoria': null,
+        'Australia/West': null,
+        'Australia/Yancowinna': null,
+        'BET': null,
+        'BST': null,
+        'Brazil/Acre': null,
+        'Brazil/DeNoronha': null,
+        'Brazil/East': null,
+        'Brazil/West': null,
+        'CAT': null,
+        'CET': null,
+        'CNT': null,
+        'CST': null,
+        'CST6CDT': null,
+        'CTT': null,
+        'Canada/Atlantic': null,
+        'Canada/Central': null,
+        'Canada/East-Saskatchewan': null,
+        'Canada/Eastern': null,
+        'Canada/Mountain': null,
+        'Canada/Newfoundland': null,
+        'Canada/Pacific': null,
+        'Canada/Saskatchewan': null,
+        'Canada/Yukon': null,
+        'Chile/Continental': null,
+        'Chile/EasterIsland': null,
+        'Cuba': null,
+        'EAT': null,
+        'ECT': null,
+        'EET': null,
+        'EST': null,
+        'EST5EDT': null,
+        'Egypt': null,
+        'Eire': null,
+        'Etc/GMT': null,
+        'Etc/GMT+0': null,
+        'Etc/GMT+1': null,
+        'Etc/GMT+10': null,
+        'Etc/GMT+11': null,
+        'Etc/GMT+12': null,
+        'Etc/GMT+2': null,
+        'Etc/GMT+3': null,
+        'Etc/GMT+4': null,
+        'Etc/GMT+5': null,
+        'Etc/GMT+6': null,
+        'Etc/GMT+7': null,
+        'Etc/GMT+8': null,
+        'Etc/GMT+9': null,
+        'Etc/GMT-0': null,
+        'Etc/GMT-1': null,
+        'Etc/GMT-10': null,
+        'Etc/GMT-11': null,
+        'Etc/GMT-12': null,
+        'Etc/GMT-13': null,
+        'Etc/GMT-14': null,
+        'Etc/GMT-2': null,
+        'Etc/GMT-3': null,
+        'Etc/GMT-4': null,
+        'Etc/GMT-5': null,
+        'Etc/GMT-6': null,
+        'Etc/GMT-7': null,
+        'Etc/GMT-8': null,
+        'Etc/GMT-9': null,
+        'Etc/GMT0': null,
+        'Etc/Greenwich': null,
+        'Etc/UCT': null,
+        'Etc/UTC': null,
+        'Etc/Universal': null,
+        'Etc/Zulu': null,
+        'Europe/Amsterdam': null,
+        'Europe/Andorra': null,
+        'Europe/Athens': null,
+        'Europe/Belfast': null,
+        'Europe/Belgrade': null,
+        'Europe/Berlin': null,
+        'Europe/Bratislava': null,
+        'Europe/Brussels': null,
+        'Europe/Bucharest': null,
+        'Europe/Budapest': null,
+        'Europe/Busingen': null,
+        'Europe/Chisinau': null,
+        'Europe/Copenhagen': null,
+        'Europe/Dublin': null,
+        'Europe/Gibraltar': null,
+        'Europe/Guernsey': null,
+        'Europe/Helsinki': null,
+        'Europe/Isle_of_Man': null,
+        'Europe/Istanbul': null,
+        'Europe/Jersey': null,
+        'Europe/Kaliningrad': null,
+        'Europe/Kiev': null,
+        'Europe/Lisbon': null,
+        'Europe/Ljubljana': null,
+        'Europe/London': null,
+        'Europe/Luxembourg': null,
+        'Europe/Madrid': null,
+        'Europe/Malta': null,
+        'Europe/Mariehamn': null,
+        'Europe/Minsk': null,
+        'Europe/Monaco': null,
+        'Europe/Moscow': null,
+        'Europe/Nicosia': null,
+        'Europe/Oslo': null,
+        'Europe/Paris': null,
+        'Europe/Podgorica': null,
+        'Europe/Prague': null,
+        'Europe/Riga': null,
+        'Europe/Rome': null,
+        'Europe/Samara': null,
+        'Europe/San_Marino': null,
+        'Europe/Sarajevo': null,
+        'Europe/Simferopol': null,
+        'Europe/Skopje': null,
+        'Europe/Sofia': null,
+        'Europe/Stockholm': null,
+        'Europe/Tallinn': null,
+        'Europe/Tirane': null,
+        'Europe/Tiraspol': null,
+        'Europe/Uzhgorod': null,
+        'Europe/Vaduz': null,
+        'Europe/Vatican': null,
+        'Europe/Vienna': null,
+        'Europe/Vilnius': null,
+        'Europe/Volgograd': null,
+        'Europe/Warsaw': null,
+        'Europe/Zagreb': null,
+        'Europe/Zaporozhye': null,
+        'Europe/Zurich': null,
+        'GB': null,
+        'GB-Eire': null,
+        'GMT': null,
+        'GMT0': null,
+        'Greenwich': null,
+        'HST': null,
+        'Hongkong': null,
+        'IET': null,
+        'IST': null,
+        'Iceland': null,
+        'Indian/Antananarivo': null,
+        'Indian/Chagos': null,
+        'Indian/Christmas': null,
+        'Indian/Cocos': null,
+        'Indian/Comoro': null,
+        'Indian/Kerguelen': null,
+        'Indian/Mahe': null,
+        'Indian/Maldives': null,
+        'Indian/Mauritius': null,
+        'Indian/Mayotte': null,
+        'Indian/Reunion': null,
+        'Iran': null,
+        'Israel': null,
+        'JST': null,
+        'Jamaica': null,
+        'Japan': null,
+        'Kwajalein': null,
+        'Libya': null,
+        'MET': null,
+        'MIT': null,
+        'MST': null,
+        'MST7MDT': null,
+        'Mexico/BajaNorte': null,
+        'Mexico/BajaSur': null,
+        'Mexico/General': null,
+        'NET': null,
+        'NST': null,
+        'NZ': null,
+        'NZ-CHAT': null,
+        'Navajo': null,
+        'PLT': null,
+        'PNT': null,
+        'PRC': null,
+        'PRT': null,
+        'PST': null,
+        'PST8PDT': null,
+        'Pacific/Apia': null,
+        'Pacific/Auckland': null,
+        'Pacific/Bougainville': null,
+        'Pacific/Chatham': null,
+        'Pacific/Chuuk': null,
+        'Pacific/Easter': null,
+        'Pacific/Efate': null,
+        'Pacific/Enderbury': null,
+        'Pacific/Fakaofo': null,
+        'Pacific/Fiji': null,
+        'Pacific/Funafuti': null,
+        'Pacific/Galapagos': null,
+        'Pacific/Gambier': null,
+        'Pacific/Guadalcanal': null,
+        'Pacific/Guam': null,
+        'Pacific/Honolulu': null,
+        'Pacific/Johnston': null,
+        'Pacific/Kiritimati': null,
+        'Pacific/Kosrae': null,
+        'Pacific/Kwajalein': null,
+        'Pacific/Majuro': null,
+        'Pacific/Marquesas': null,
+        'Pacific/Midway': null,
+        'Pacific/Nauru': null,
+        'Pacific/Niue': null,
+        'Pacific/Norfolk': null,
+        'Pacific/Noumea': null,
+        'Pacific/Pago_Pago': null,
+        'Pacific/Palau': null,
+        'Pacific/Pitcairn': null,
+        'Pacific/Pohnpei': null,
+        'Pacific/Ponape': null,
+        'Pacific/Port_Moresby': null,
+        'Pacific/Rarotonga': null,
+        'Pacific/Saipan': null,
+        'Pacific/Samoa': null,
+        'Pacific/Tahiti': null,
+        'Pacific/Tarawa': null,
+        'Pacific/Tongatapu': null,
+        'Pacific/Truk': null,
+        'Pacific/Wake': null,
+        'Pacific/Wallis': null,
+        'Pacific/Yap': null,
+        'Poland': null,
+        'Portugal': null,
+        'ROK': null,
+        'SST': null,
+        'Singapore': null,
+        'SystemV/AST4': null,
+        'SystemV/AST4ADT': null,
+        'SystemV/CST6': null,
+        'SystemV/CST6CDT': null,
+        'SystemV/EST5': null,
+        'SystemV/EST5EDT': null,
+        'SystemV/HST10': null,
+        'SystemV/MST7': null,
+        'SystemV/MST7MDT': null,
+        'SystemV/PST8': null,
+        'SystemV/PST8PDT': null,
+        'SystemV/YST9': null,
+        'SystemV/YST9YDT': null,
+        'Turkey': null,
+        'UCT': null,
+        'US/Alaska': null,
+        'US/Aleutian': null,
+        'US/Arizona': null,
+        'US/Central': null,
+        'US/East-Indiana': null,
+        'US/Eastern': null,
+        'US/Hawaii': null,
+        'US/Indiana-Starke': null,
+        'US/Michigan': null,
+        'US/Mountain': null,
+        'US/Pacific': null,
+        'US/Pacific-New': null,
+        'US/Samoa': null,
+        'UTC': null,
+        'Universal': null,
+        'VST': null,
+        'W-SU': null,
+        'WET': null,
+        'Zulu': null
+    }
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:57:19</sys_created_on>
+        <sys_id>25c205cb7b02f1008e0b707d784d4daa</sys_id>
+        <sys_mod_count>94</sys_mod_count>
+        <sys_name>xMattersSOAPHelper-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_25c205cb7b02f1008e0b707d784d4daa</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 22:20:11</sys_updated_on>
+    </sys_script_include>
+</record_update>

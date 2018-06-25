@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description/>
+        <direct>true</direct>
+        <endpoint>x_xma_xmatters_xm_config_property_template.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+    <div class="form-group row xm-row">
+        <div class="xm-label" ng-class="systemProperty.getChildLabelClasses()">
+            <label for="{{systemProperty.identifier}}" title="{{systemProperty.identifier}}">
+                {{systemProperty.label}}
+            </label>
+            <sup>
+                <a class="xm-help" tooltip="" data-toggle="tooltip" data-original-title="{{systemProperty.helpText}}"
+                   data-placement="top" href="#">
+                    <span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span>
+                </a>
+            </sup>
+        </div>
+        <div ng-switch="systemProperty.getType()" class="xm-input" ng-class="systemProperty.getChildInputClasses();">
+            <div ng-switch-when="password">
+                <div ng-if="systemProperty.showPassword"><!--  class="input-group"> -->
+                    <xm-input-group xm-property="systemProperty"
+                                    xm-icon="['fa','fa-eye']"
+                                    xm-tooltip="'Hide'"
+                                    xm-is-password="false"
+                                    xm-click="systemProperty.toggleShowPassword"/>
+                </div>
+                <div ng-if="!systemProperty.showPassword"><!--  class="input-group"> -->
+                    <xm-input-group xm-property="systemProperty"
+                                    xm-icon="['fa','fa-eye-slash']"
+                                    xm-tooltip="'Show'"
+                                    xm-is-password="true"
+                                    xm-click="systemProperty.toggleShowPassword"/>
+                </div>
+            </div>
+            <div ng-switch-when="choicelist">
+                <select ng-model="systemProperty.value"
+                        class="form-control"
+                        id="{{systemProperty.identifier}}"
+                        name="{{systemProperty.identifier}}"
+                        ng-required="systemProperty.isRequired">
+                    <option ng-repeat="choice in systemProperty.choices">{{choice}}</option>
+                </select>
+            </div>
+            <div ng-switch-when="custom_choice">
+                <select ng-model="systemProperty.value"
+                        class="form-control"
+                        id="{{systemProperty.identifier}}"
+                        name="{{systemProperty.identifier}}"
+                        ng-required="systemProperty.isRequired">
+                    <option ng-repeat="choice in systemProperty.options.optionList" value="{{choice.value}}">
+                        {{choice.label}}
+                    </option>
+                </select>
+            </div>
+            <div ng-switch-when="custom_tag_input">
+                <tags-input ng-model="systemProperty.selected"
+                            id="{{systemProperty.identifier}}"
+                            name="{{systemProperty.identifier}}"
+                            class="bootstrap"
+                            display-property="value"
+                            key-property="value"
+                            replace-spaces-with-dashes="false"
+                            ng-required="systemProperty.isRequired"
+                            placeholder="{{systemProperty.placeholder}}">
+                    <auto-complete ng-if="systemProperty.options.isValid"
+                                   source="systemProperty.options.sourceFunc( $query )"
+                                   display-property="value"></auto-complete>
+                </tags-input>
+            </div>
+            <div ng-switch-when="custom_typeahead">
+                <input type="text"
+                       id="{{systemProperty.identifier}}"
+                       name="{{systemProperty.identifier}}"
+                       ng-model="systemProperty.value"
+                       uib-typeahead="item.value for item in systemProperty.options.sourceFunc($viewValue) | limitTo:5"
+                       typeahead-min-length="2"
+                       typeahead-wait-ms="100"
+                       class="form-control xm-full-width"
+                       ng-required="systemProperty.isRequired"
+                       placeholder="{{systemProperty.placeholder}}" />
+            </div>
+            <div ng-switch-when="boolean" class="checkbox">
+                <label>
+                    <xm-checkbox xm-id="systemProperty.identifier" xm-model="systemProperty.value"></xm-checkbox>
+                </label>
+            </div>
+            <div ng-switch-when="custom_url">
+                <input type="url"
+                       class="form-control xm-full-width"
+                       id="{{systemProperty.identifier}}"
+                       name="{{systemProperty.identifier}}"
+                       ng-model="systemProperty.value"
+                       ng-required="systemProperty.isRequired"
+                       placeholder="{{systemProperty.placeholder}}" />
+            </div>
+            <div ng-switch-when="custom_invalid_options" class="input-group">
+                <xm-input-group xm-property="systemProperty"
+                                xm-icon="['fa','fa-exclamation-triangle']"
+                                xm-tooltip="systemProperty.options.getErrorMsg()" />
+            </div>
+            <div ng-switch-default="">
+                <input type="text"
+                       ng-model="systemProperty.value"
+                       class="form-control xm-full-width"
+                       id="{{systemProperty.identifier}}"
+                       name="{{systemProperty.identifier}}"
+                       ng-required="systemProperty.isRequired"
+                       placeholder="{{systemProperty.placeholder}}" />
+            </div>
+            <div class="xm-error" ng-messages="formCtrl[systemProperty.identifier].$error">
+                <div ng-message="required">This field is required.</div>
+                <div ng-message="url">Invalid URL</div>
+            </div>
+        </div>
+    </div>
+</j:jelly>
+]]></html>
+        <name>xm_config_property_template</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-11 00:00:21</sys_created_on>
+        <sys_id>ab91cce70f0de2009ea83b8ce1050eae</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>xm_config_property_template</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_ab91cce70f0de2009ea83b8ce1050eae</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-06-23 22:24:43</sys_updated_on>
+    </sys_ui_page>
+</record_update>

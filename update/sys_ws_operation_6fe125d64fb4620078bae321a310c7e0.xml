@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl>621607f34f59e2008472a88ca310c7d4</enforce_acl>
+        <http_method>POST</http_method>
+        <name>xm_incident</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+	var conf = new xMattersConfig();
+	var log = new xMattersLogger(conf.LOGLEVEL, 'xMattersRESTProcessor');
+	
+	try {
+		var callback = new xMattersCallback( request, conf, true );
+		var incidentId = callback.getIncidentId();
+
+		var incidentQuery = new GlideRecord('incident');
+		incidentQuery.addQuery('sys_id', incidentId);
+		incidentQuery.query();
+		
+		if(incidentQuery.next()) {
+		var incidentRec = new GlideRecord(gs.getCurrentScopeName() + '_xmatters_incident');
+		incidentRec.initialize();
+		incidentRec.incident_sys_id = incidentId;
+
+		incidentRec.work_notes = callback.getWorkNotes();
+
+		if( callback.isResponseCallback() ) {
+			var xmResponse = callback.getResponse();
+			if (xmResponse === "Assign to me" || xmResponse === "Accept") {
+				incidentRec.incident_state = "2";
+				incidentRec.assigned_to = callback.getRecipientSNowUsername();
+			} else if (xmResponse === "Resolve") {
+				incidentRec.incident_state = "6";
+				incidentRec.assigned_to = callback.getRecipientSNowUsername();
+			}
+		}
+		incidentRec.update();
+		} else {
+			log.warn('Could not find incident with id: ' + incidentId + '. Will not process callback for event: ' + callback.eventId);
+		}
+		
+		response.setContentType('text/plain');
+		response.setStatus(200);
+		response.getStreamWriter().writeString( 'Ok' );
+	} catch( e ) {
+		response.setError( e );
+	}
+})(request, response);]]></operation_script>
+        <operation_uri>/api/x_xma_xmatters/xm/incident</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/incident</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-25 23:36:32</sys_created_on>
+        <sys_id>6fe125d64fb4620078bae321a310c7e0</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>xm_incident</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ws_operation_6fe125d64fb4620078bae321a310c7e0</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-02-15 17:04:45</sys_updated_on>
+        <web_service_definition display_value="xMatters">f92c19d64fb4620078bae321a310c703</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+</record_update>

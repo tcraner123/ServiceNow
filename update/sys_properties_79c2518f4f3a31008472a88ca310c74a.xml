@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>ServiceNow API User: Enter the login name of the ServiceNow user to use when authenticating communications with the ServiceNow API.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.api.user</name>
+        <read_roles/>
+        <suffix>xmatters.api.user</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-03-19 03:55:03</sys_created_on>
+        <sys_id>79c2518f4f3a31008472a88ca310c74a</sys_id>
+        <sys_mod_count>36</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.api.user</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_79c2518f4f3a31008472a88ca310c74a</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-06-21 16:13:33</sys_updated_on>
+        <type>string</type>
+        <value>xmatters</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=79c2518f4f3a31008472a88ca310c74a"/>
+</record_update>

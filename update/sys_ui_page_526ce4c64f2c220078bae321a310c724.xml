@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script><![CDATA[angular.module('xmatters.batchSync', [
+    'xm.glide-ajax',
+    'xm.custom-directives'
+])
+    .controller('BatchSync', ['$scope', 'GlideAjax', function ($scope, GlideAjax) {
+        $scope.entityType = 'Users';
+        $scope.btnClicked = false;
+        $scope.ajaxComplete = false;
+        $scope.workers = [];
+        $scope.setExternalKey = {
+            id: 'set-external-key',
+            value: false
+        };
+
+        var searchParams = document.URL.match(/type=([^\&]+)/);
+        if (searchParams.length) {
+            var myType = searchParams[1] + '';
+            $scope.entityType = myType[0].toUpperCase() + myType.slice(1).toLowerCase();
+        }
+
+        $scope.click = function () {
+            $scope.btnClicked = true;
+
+            var methodName = 'ajax' + $scope.entityType + 'Sync';
+
+            var ga = new GlideAjax('xMattersAjaxBatchSync');
+            ga.addParam('sysparm_name', methodName);
+            ga.addParam('sysparm_set_external_key', $scope.setExternalKey.value);
+            ga.setScope('x_xma_xmatters');
+            ga.send()
+                .then(function (response) {
+                    $scope.ajaxComplete = true;
+                    $scope.count = response.count;
+                });
+        };
+    }]);
+]]></client_script>
+        <description/>
+        <direct>false</direct>
+        <endpoint>x_xma_xmatters_xm_batch_load.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:g2="null">
+    <g2:evaluate var="jvar_stamp">
+        var gr = new GlideRecord('sys_ui_script');
+        gr.orderByDesc('sys_updated_on');
+        gr.query();
+        gr.next();
+        gr.getValue('sys_updated_on');
+    </g2:evaluate>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.css" rel="stylesheet"></link>
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css" rel="stylesheet"></link>
+
+    <g:requires name="x_xma_xmatters.angular.min.jsdbx"/>
+    <g:requires name="x_xma_xmatters.angular-ui-bootstrap.min.jsdbx"/>
+    <g:requires name="x_xma_xmatters.xm_mod_glide_ajax.jsdbx" params="cache=$[jvar_stamp]"/>
+    <g:requires name="x_xma_xmatters.xm_mod_property_directive.jsdbx" params="cache=$[jvar_stamp]"/>
+
+    <style>
+        HTML[data-doctype=true] BODY.non_standard_lists {
+            padding: 0 20px 0 20px;
+        }
+
+        body {
+            font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+            padding-top: 0;
+        }
+
+        .xm-btn-default, .xm-btn-default:focus, .xm-btn-default:hover {
+            font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+            color: #343d47;
+            background-color: rgba(255, 255, 255, 0.45);
+            border-color: #bdc0c4;
+        }
+
+        label.not-bold {
+            font-weight: normal;
+        }
+
+        i.xm-btn-icon {
+            margin-left: 10px;
+        }
+        
+        .xm-row {
+            display: table-row;
+        }
+        
+        .xm-cell {
+            display: table-cell;
+        }
+        
+        .xm-middle {
+            vertical-align: middle;
+        }
+        
+        .xm-checkbox-label {
+            max-width: 600px;
+        }
+        
+        .xm-pad-top {
+            padding-top: 10px;
+        }
+        
+        /* Checkbox support -- from xm_config ui page */
+        .xm-check-stack {
+            font-size: 20px;
+            line-height: 1em;
+            height: 1em;
+        }
+
+        .xm-checkmark {
+            color: #248fff;
+            left: 3px;
+            bottom: 3px;
+        }
+    </style>
+
+    <div ng-app="xmatters.batchSync"
+         ng-controller="BatchSync"
+         class="ng-cloak container-fluid">
+
+        <h1>Batch Load {{entityType}}</h1>
+
+        <form name="batchLoadForm" class="form-inline" novalidate="">
+        <div class="row-fluid">
+            <p>
+                Batch loading {{ entityType | lowercase }} can take a long time
+                to complete if there are many {{ entityType | lowercase }} to sync.
+            </p>
+
+            <p ng-if="entityType == 'Groups'">
+                <strong>Note: Synchronize all users to xMatters before loading groups.</strong>
+            </p>
+
+            <div class="xm-row" ng-if="entityType == 'Groups' || entityType == 'Users'">
+                <div class="xm-cell xm-middle">
+                    <xm-checkbox xm-id="setExternalKey.id" xm-model="setExternalKey.value"></xm-checkbox>
+                </div>
+                <div class="xm-cell xm-checkbox-label"><label class="not-bold" for="set-external-key">Set synchronized {{ entityType | lowercase }} to externally owned. This facilitates removing {{ entityType | lowercase }} from xMatters when they are deleted in ServiceNow or should no longer be synchronized.</label></div>
+            </div>
+        </div>
+
+        <div class="row-fluid" ng-if="!btnClicked">
+            <strong>Do you want to continue?</strong>
+            <div class="xm-pad-top">
+                <button type="button" class="btn btn-default xm-btn-default"
+                        ng-disabled="btnClicked"
+                        ng-click="click()">
+                    Load {{ entityType }}
+                    <i class="fa fa-fw xm-btn-icon" aria-hidden="true"
+                       ng-class="{'fa-user': entityType=='Users', 'fa-users': entityType=='Groups', 'fa-gears': entityType=='Properties'}"> </i>
+                </button>
+            </div>
+        </div>
+
+        <div class="panel panel-default" ng-if="btnClicked"
+             ng-class="{success: ajaxComplete, info: !ajaxComplete}">
+            <div class="panel-body">
+                <span class="spinner" ng-hide="ajaxComplete">
+                    <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+                </span>
+                <span ng-show="ajaxComplete">
+                    <ng-pluralize count="count"
+                                  when="{'0': 'There are no {{entityType | lowercase}} to sync',
+                                         'one': '1 record will be synced to xMatters',
+                                         'other': '{} {{entityType | lowercase}} will be synced to xMatters'}">
+                    </ng-pluralize>
+
+                    <p ng-if="entityType == 'Users' ${AMP}${AMP} count">
+                         Please wait until all users have been loaded to start the Batch Load Groups script.
+                    </p>
+                </span>
+            </div>
+        </div>
+        </form>
+
+    </div>
+
+</j:jelly>]]></html>
+        <name>xm_batch_load</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 14:45:24</sys_created_on>
+        <sys_id>526ce4c64f2c220078bae321a310c724</sys_id>
+        <sys_mod_count>10</sys_mod_count>
+        <sys_name>xm_batch_load</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_526ce4c64f2c220078bae321a310c724</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-05-03 20:34:59</sys_updated_on>
+    </sys_ui_page>
+</record_update>

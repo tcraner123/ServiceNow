@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_user_role">
+    <sys_user_role action="INSERT_OR_UPDATE">
+        <assignable_by display_value="x_xma_xmatters.xmatters_admin" name="x_xma_xmatters.xmatters_admin">637789de4f7462008472a88ca310c79f</assignable_by>
+        <can_delegate>true</can_delegate>
+        <description>Role for REST call access control from xMatters</description>
+        <elevated_privilege>false</elevated_privilege>
+        <grantable>true</grantable>
+        <includes_roles/>
+        <name>x_xma_xmatters.xmatters_rest</name>
+        <scoped_admin>false</scoped_admin>
+        <suffix>xmatters_rest</suffix>
+        <sys_class_name>sys_user_role</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-24 18:45:36</sys_created_on>
+        <sys_id>466ffe734f59e2008472a88ca310c756</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters_rest</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_user_role_466ffe734f59e2008472a88ca310c756</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-24 18:45:36</sys_updated_on>
+    </sys_user_role>
+</record_update>

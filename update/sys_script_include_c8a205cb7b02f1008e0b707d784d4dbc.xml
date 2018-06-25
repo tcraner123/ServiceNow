@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersLogger</api_name>
+        <client_callable>false</client_callable>
+        <description>This include is designed to manage the logging of messages for xMatters integration processes.</description>
+        <name>xMattersLogger</name>
+        <script><![CDATA[/**
+ * Logger for events in the xMatters integration
+ *
+ * @type {Object}
+ */
+var xMattersLogger = Class.create();
+
+xMattersLogger.prototype = {
+
+    /**
+     * Initialize the logger object
+     *
+     * @param {boolean|string} debugging enabled if true or "DEBUG"; disabled otherwise
+     * @param {string} source prefix log lines as originating from "source"
+     * @param {string} traceId an identifier for tracing process threads in ServiceNow logs
+     */
+    initialize: function(debugging, source, traceId) {
+        this.type = 'xMattersLogger';
+        this.debugging = (debugging === true || debugging === 'DEBUG');
+        this.source = (source === null) ? '' : source + ': ';
+        this.setLogTraceId(traceId);
+    },
+
+    /**
+     * Check if we are debugging
+     *
+     * @returns {boolean}
+     */
+    isDebug: function() {
+        return this.debugging;
+    },
+
+    /**
+     * Generate an identifier to grouping/ordering log results
+     *
+     * @param {string} idMajor the major sort indentifier; if not included, defaults to current timestamp
+     * @param {string} idMinor the minor sort identifier; if not included, defaults to value of traceId
+     * @param {boolean} debug true if this line is for a debug message
+     * @returns {string} the identifier to prefix to the log line
+     */
+    getLineId: function(idMajor, idMinor, debug) {
+        idMajor = (typeof idMajor === 'undefined') ? new Date().getTime() : idMajor;
+        idMinor = (typeof idMinor === 'undefined') ? this.getLogTraceId() : idMinor;
+
+        var lineId = idMajor + " | xMLog-" + idMinor;
+        if (debug) {
+            lineId += " | DEBUG";
+        }
+        return '[' + lineId + "]:\n";
+    },
+
+    /**
+     * Format a log message
+     *
+     * @param {string} idMajor the major sort indentifier; if not included, defaults to current timestamp
+     * @param {string} idMinor the minor sort identifier; if not included, defaults to value of traceId
+     * @param {boolean} debug true if this is a debug message
+     * @returns {string} the formatted log message
+     */
+    formatMessage: function (message, idMajor, idMinor, debug) {
+        return this.getLineId(idMajor, idMinor, debug) + this.source + message;
+    },
+
+    /**
+     * Write a message to the debug log level
+     *
+     * @param {string} message to write
+     * @param {string} idMajor major grouping for log statement ordering (typically a timestamp)
+     * @param {string} idMinor minor number within log grouping
+     */
+
+    debug: function(message, idMajor, idMinor) {
+        if (this.isDebug()){
+            gs.info(this.formatMessage(message, idMajor, idMinor, true));
+        }
+    },
+
+    /**
+     * Write a message to the info log level
+     *
+     * @param {string} message to write
+     * @param {string} idMajor major grouping for log statement ordering (typically a timestamp)
+     * @param {string} idMinor minor number within log grouping
+     */
+    info: function(message, idMajor, idMinor) {
+        gs.info(this.formatMessage(message, idMajor, idMinor));
+    },
+
+    /**
+     * Write a message to the warn log level
+     *
+     * @param {string} message to write
+     * @param {string} idMajor major grouping for log statement ordering (typically a timestamp)
+     * @param {string} idMinor minor number within log grouping
+     */
+    warn: function(message, idMajor, idMinor) {
+        gs.warn(this.formatMessage(message, idMajor, idMinor));
+    },
+
+    /**
+     * Write a message to the error log level
+     *
+     * @param {string} message to write
+     * @param {string} idMajor major grouping for log statement ordering (typically a timestamp)
+     * @param {string} idMinor minor number within log grouping
+     */
+    error: function(message, idMajor, idMinor) {
+        gs.error(this.formatMessage(message, idMajor, idMinor));
+    },
+
+    /**
+     * Format and log caught exceptions to the ERROR log level
+     *
+     * @param {string} methodName the method that caught the exception
+     * @param {Object} exception the exception to log
+     * @returns {string}
+     */
+    logException: function (methodName, exception) {
+        var subjectLine = [];
+        if (methodName) {
+            subjectLine.push(methodName);
+        }
+        subjectLine.push(exception.name ? exception.name : 'Unexpected exception');
+        if (exception.message) {
+            subjectLine.push(exception.message);
+        }
+
+        var messageDetails = [ subjectLine.join(': ') ];
+        for (var key in exception) {
+            if (key !== 'name' && key !== 'message') {
+                messageDetails.push(key + ': ' + exception[key]);
+            }
+        }
+        this.error(messageDetails.join("\n* "));
+    },
+
+    /**
+     * Returns a number current time or number of milliseconds since the given time
+     * @param {int} since time to compare
+     * @return {string} elapsed milliseconds from "since" time, if present; otherwise milliseconds since epoch
+     */
+    timer: function (since) {
+        return new Date().getTime() - (since ? since : 0);
+    },
+
+    /**
+     * Return the current context Id
+     *
+     * @returns {string} the current context ID
+     */
+    getLogTraceId: function () {
+        return this.traceId;
+    },
+
+    /**
+     * Set the context ID for filtering log messages
+     *
+     * @param {string} traceId the context ID to set, or a shortened UUID if empty
+     * @returns {null}
+     */
+    setLogTraceId: function (traceId) {
+        this.traceId = traceId ? traceId : gs.generateGUID().substring(0, 8);
+    },
+
+    /**
+     * Prepend a parent trace ID for filtering log messages
+     *
+     * @param {string} parentTraceId the trace ID of the parent
+     * @returns {null}
+     */
+    setParentLogTraceId: function (parentTraceId) {
+        var traceId = this.getLogTraceId();
+        if (parentTraceId && parentTraceId != traceId) {
+            this.setLogTraceId(parentTraceId + '-' + traceId);
+        }
+    }
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:56:39</sys_created_on>
+        <sys_id>c8a205cb7b02f1008e0b707d784d4dbc</sys_id>
+        <sys_mod_count>21</sys_mod_count>
+        <sys_name>xMattersLogger</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_c8a205cb7b02f1008e0b707d784d4dbc</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-18 21:30:17</sys_updated_on>
+    </sys_script_include>
+</record_update>

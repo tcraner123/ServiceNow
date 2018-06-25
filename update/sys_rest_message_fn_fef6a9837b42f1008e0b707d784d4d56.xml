@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_rest_message_fn">
+    <sys_rest_message_fn action="INSERT_OR_UPDATE">
+        <authentication_type>inherit_from_parent</authentication_type>
+        <basic_auth_password>XkIqcDQb9oKa2Y3P1ntn/Q==</basic_auth_password>
+        <basic_auth_profile/>
+        <basic_auth_user>ServiceNow</basic_auth_user>
+        <content>{&#13;
+	"properties": {&#13;
+		"assigned_to": "${assigned_to}",&#13;
+		"assignment_group": "${assignment_group}",&#13;
+		"caller": "${caller}",&#13;
+		"category": "${category}",&#13;
+		"configuration_item": "${configuration_item}",&#13;
+                "configuration_item_list": ${configuration_item_list},&#13;
+		"contact_type": "${contact_type}",&#13;
+		"impact": "${impact}",&#13;
+		"incident_id": "${incident_id}",&#13;
+		"location": "${location}",&#13;
+		"number": "${number}",&#13;
+		"opened": "${opened}",&#13;
+		"opened_by": "${opened_by}",&#13;
+		"priority": "${priority}",&#13;
+		"servicenowpassword": "${servicenowpassword}",&#13;
+		"servicenowurl": "${servicenowurl}",&#13;
+		"servicenowuser": "${servicenowuser}",&#13;
+		"short_description": "${short_description}",&#13;
+		"state": "${state}",&#13;
+		"sub_category": "${sub_category}",&#13;
+		"urgency": "${urgency}",&#13;
+		"trigger": "${trigger}",&#13;
+		"xmatters_url": "${xmatters_url}"&#13;
+	},&#13;
+	"recipients": [${recipients}],&#13;
+	"callbacks": [${callbacks}],&#13;
+        "priority": "${event_priority}",&#13;
+    "responses": [${responses}]&#13;
+}</content>
+        <function_name>post</function_name>
+        <http_method>post</http_method>
+        <lock>false</lock>
+        <oauth2_profile/>
+        <protocol_name/>
+        <qualified_name>xMatters ServiceNow REB [ post ]</qualified_name>
+        <rest_endpoint>http://ignore.this.url.here.com</rest_endpoint>
+        <rest_message display_value="xMatters ServiceNow REB">88e6a9837b42f1008e0b707d784d4d35</rest_message>
+        <sys_class_name>sys_rest_message_fn</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 22:35:21</sys_created_on>
+        <sys_id>fef6a9837b42f1008e0b707d784d4d56</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>post</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_rest_message_fn_fef6a9837b42f1008e0b707d784d4d56</sys_update_name>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2017-06-23 00:07:22</sys_updated_on>
+        <use_basic_auth>true</use_basic_auth>
+        <use_mid_server/>
+        <use_mutual_auth>false</use_mutual_auth>
+    </sys_rest_message_fn>
+</record_update>

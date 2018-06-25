@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update sys_domain="global" table="sys_script_client">
+    <sys_script_client action="INSERT_OR_UPDATE">
+        <active>false</active>
+        <applies_extended>false</applies_extended>
+        <condition/>
+        <description>Populate the conference bridge drop down. </description>
+        <field>active</field>
+        <global>true</global>
+        <messages/>
+        <name>xM Show/Hide Conference Items</name>
+        <order/>
+        <script><![CDATA[function onLoad() {
+	
+	g_form.setReadonly( 'recipients', true  );
+	
+    g_form.clearOptions( 'conference_bridge' );
+    g_form.addOption( 'conference_bridge', 'None', '-- None --' );
+    g_form.addOption( 'conference_bridge', 'Hosted', 'xMatters Hosted' );
+	
+	// This g_scratchpad variable is set in the 'xM Set client side vars' business rule
+	for( i=0; i<g_scratchpad.bridges.length; i++ )
+	  g_form.addOption( 'conference_bridge', g_scratchpad.bridges[i], g_scratchpad.bridges[i] );
+	
+	/*
+    g_form.setDisplay( 'u_conference',  false );
+	g_form.setDisplay( 'u_use_hosted', false );
+	
+	
+	useHosted = g_scratchpad.useHosted;
+	useConf   = g_form.getValue('u_conference');
+	
+	// This can be useful for debugging. It shows up in the browser's 
+	// developer console (F12 on chrome)
+	//console.log( 'useHosted: ' + (typeof useHosted ) + '. ' + useHosted );
+	
+	// If we are looking at the Conference Bridge form and the use hosted is NOT checked, then
+	// display the conference bridge field to enter the name of the conference bridge. 
+	if( useConf == 'true' && useHosted != 'true' ) {
+      g_form.setDisplay( 'u_conference_bridge',  true );
+		
+	}
+	// Otherwise, hide it and use the xM hosted bridge.
+	else {
+      g_form.setDisplay( 'u_conference_bridge',  false );
+		
+	}
+   */
+}]]></script>
+        <sys_class_name>sys_script_client</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 20:52:07</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>cd3f0d0f7b02f1008e0b707d784d4d68</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>xM Show/Hide Conference Items</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_client_cd3f0d0f7b02f1008e0b707d784d4d68</sys_update_name>
+        <sys_updated_by>waadmin</sys_updated_by>
+        <sys_updated_on>2016-09-06 19:45:31</sys_updated_on>
+        <table>x_xma_xmatters_engage_with_xmatters</table>
+        <type>onLoad</type>
+        <ui_type>10</ui_type>
+        <view/>
+    </sys_script_client>
+</record_update>

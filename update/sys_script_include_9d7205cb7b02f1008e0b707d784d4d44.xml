@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMattersGroupMemberSync-DEPRECATED</api_name>
+        <client_callable>false</client_callable>
+        <description>Helper class to manage the group member sync process to xMatters.</description>
+        <name>xMattersGroupMemberSync-DEPRECATED</name>
+        <script><![CDATA[gs.include("xMattersLogger");
+gs.include("xMattersSOAPHelper");
+gs.include("xMattersUserSync");
+
+var xMattersGroupMemberSync = Class.create();
+
+xMattersGroupMemberSync.prototype = {
+  
+  initialize : function() {
+    this.appPrefix = gs.getCurrentScopeName();
+    this.soapHelper = new xMattersSOAPHelper();
+    this.userSync = new xMattersUserSync();
+    this.log = new xMattersLogger(gs.getProperty(this.appPrefix + '.' + "xmatters.logging.level"), 'xMattersGroupMemberSync-DEPRECATED' );
+    this.groupName = null;
+    this.snMembers = null;
+    this.deleteMemberSyncResult = "Delete processing failed";
+    
+    this.TEAM_DOES_NOT_EXIST = "UNKNOWN_TEAM";
+    this.UNKNOWN_TEAM_IN_GROUP_WITH_TEAMS = "UNKNOWN_TEAM_IN_GROUP_WITH_TEAMS";
+    this.TEAM_ALREADY_EXISTS = "TEAM_NAME_IN_USE";
+	this.GROUP_DOES_NOT_EXIST = "UNKNOWN_GROUP";
+    this.seedOnly = gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.seed.only").toLowerCase() == "true";
+  },
+
+  syncMembership : function(groupName, userToDelete, groupInfo) {
+    var result, start = this.soapHelper.timer();
+    // make sure it is a string, not an database object
+    groupName = groupName.toString();
+    this.log.debug("Process group membership " + groupName + " started");
+    
+    if (!this.seedOnly) {
+      // check to see if the team is on the sync list otherwise do not process the group 
+      if(this.soapHelper.checkIncludeExcludeList("Team", groupName , gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.include.exclude.list"), gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.exclude.list.boolean"), "Team-GroupMember")) {
+        this.log.debug("Script Include to process group " + groupName + " members to xMatters");
+        this.groupName = groupName;
+        this.snMembers = this.getMemberList(groupName);
+        
+        var shouldAttemptUpdate = !this.checkIfDeleteRequired();
+        
+        if(shouldAttemptUpdate) {
+          result = this.attemptUpdateOtherwiseAdd(userToDelete, groupInfo);
+        } else {
+          result = this.deleteMemberSyncResult;
+        }
+      } else {
+        result = "Group " + groupName + " is not to be synced, will not process";
+      }
+    } else {
+      result = "Seed Only, will not be processed";
+    }
+    if (this.log.isDebug()) {
+      this.log.debug("Process group membership " + groupName + " ended in " + this.soapHelper.timer(start) + " ms. Result: " + result);
+    }
+    return result;
+  },
+  
+  getMemberList : function(groupName) {
+    this.log.debug("Members of group " + this.groupName + " to be processed");
+    
+    var grMember = new GlideRecord('sys_user_grmember');
+    grMember.addQuery('group.name', "=", groupName);
+
+    // add here conditions for users .user
+    var userFilterList = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.include.exclude.list");
+    var userExclude = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.exclude.list.boolean") == 'true';
+
+    var roleFilterList = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.roles.list");
+    var roleExclude = gs.getProperty(this.appPrefix + '.' + "xmatters.user.sync.exclude.roles.list.boolean") == 'true';
+    
+    // add include/exclude user list condition
+    var users = userFilterList.split(";"); 
+    for (var i=0; i<users.length; i++) {
+      users[i] = users[i].trim();
+    }   
+    grMember.addQuery('user.user_name', userExclude ? 'NOT IN' : 'IN', users.join());
+    
+    this.log.debug("Group " + groupName + " membership list query: " + grMember.getEncodedQuery());
+    grMember.query();
+	  
+    var members = [];    
+    while (grMember.next()) {
+      members.push(grMember.user.user_name.toString());
+    }
+
+    this.log.debug("Group " + groupName + " membership list: " + members.join());
+	  
+    // now in members array we have all members from the group that match the user list
+    // just add include/exclude role list condition
+    if (roleFilterList.trim().length > 0) {
+      var roles = roleFilterList.split(";");
+      for (var j=0; j<roles.length; j++) {
+        roles[j] = roles[j].trim();
+      }   
+      var grUserRoles = new GlideRecord('sys_user_has_role');
+      grUserRoles.addQuery('user.active', 'true');  
+	  grUserRoles.addQuery('role.name', 'IN', roles.join());  
+	  grUserRoles.addQuery('user.user_name','IN', members.join());
+	  grUserRoles.orderBy('user.user_name');  
+	  grUserRoles.query();
+      this.log.debug("Group " + groupName + " membership list query with role applied: " + grUserRoles.getEncodedQuery());
+		
+      var usersWithRoles = [];
+	  while(grUserRoles.next()) {  
+	    usersWithRoles.push(grUserRoles.user.user_name.toString());  
+	  }
+		
+	  var arrayUtil = new global.ArrayUtil();
+	  usersWithRoles = arrayUtil.unique( usersWithRoles );
+		
+      this.log.debug("Group " + groupName + ": " + usersWithRoles.length + " members found to match role list: " + roles.join());
+	  if (roleExclude) {
+		// remove from members array any users that are also in usersWithRoles
+		var membersWithoutRoles=[];
+        for (var n=0; n<members.length; n++) {
+          var username = members[n];
+          var found = false;
+          for (var k=0; k < usersWithRoles.length; k++) {
+            if (usersWithRoles[k] == username) {/* user has a role that needs to be excluded */
+              found = true;
+              break;
+		    }
+          }
+          if (!found) {
+            membersWithoutRoles.push(username);
+          }
+		}
+        members = membersWithoutRoles;
+      } else {
+        // return group members that have roles
+		members = usersWithRoles;
+	  }
+		this.log.debug("Group " + groupName + " membership list after applying role exclude/include list: " + members.join());
+    } else if (!roleExclude) {
+	  members = [];
+    }
+    
+    return members;
+  },
+  
+  checkIfDeleteRequired : function() {
+    if(this.snMembers.length == 0) {
+      // If grMember has no records, then we
+      // should delete the team and coverage in xM
+      try {
+        this.deleteMemberSyncResult = this.soapHelper.sendDeleteTeamSOAPMessage(this.groupName);
+        this.deleteMemberSyncResult += this.soapHelper.sendDeleteCoverageSOAPMessage(this.groupName);
+        return true;
+      } catch(e) {
+        this.deleteMemberSyncResult = e;
+      }
+    }
+    return false;
+  },
+  
+  attemptUpdateOtherwiseAdd : function(userToDelete, groupInfo) {
+      this.log.debug("attemptUpdateOtherwiseAdd for group " + this.groupName + " started");
+    try {
+      // returns the current team and process any deleted users
+      var team = this.soapHelper.processTeams( this.groupName, userToDelete, groupInfo );
+      this.log.debug("attemptUpdateOtherwiseAdd: processTeams with group " + this.groupName + " finished.");
+      
+      var memberList = this.soapHelper.mergeMemberLists( this.snMembers, team.members );
+      this.log.debug("attemptUpdateOtherwiseAdd: mergeMemberLists with group " + this.groupName + " finished.");
+      
+      this.log.debug("attemptUpdateOtherwiseAdd calling sendUpdateTeamSOAPMessage with group " + this.groupName + " and team " + team.name);
+      var start = this.soapHelper.timer();
+      var response = this.soapHelper.sendUpdateTeamSOAPMessage(this.groupName, memberList, team);
+      response += "\n";
+      response += this.soapHelper.sendUpdateCoverageSOAPMessage(this.groupName);
+      this.log.debug("attemptUpdateOtherwiseAdd sendUpdateTeamSOAPMessage for group " + this.groupName + " and team " + team.name + " took " + this.soapHelper.timer(start) + " ms.");
+      
+      return response;
+    } catch(e) {
+      if (e == this.TEAM_DOES_NOT_EXIST) {
+        this.log.warn(this.groupName + " Team does not exist. Attempting to ADD team with coverage");
+        try {
+          var response2 = this.soapHelper.sendAddTeamSOAPMessage(this.groupName, this.snMembers);
+          response2 += "\n";
+          response2 += this.soapHelper.sendAddCoverageSOAPMessage(this.groupName);
+          return response2;
+        } catch (e2) {
+          this.log.error("Failed to Add Team/Coverage for group " + this.groupName + ". Exception: " + e2);
+          return e2;
+        }
+      } else if (e == this.UNKNOWN_TEAM_IN_GROUP_WITH_TEAMS) {
+        this.log.warn(this.groupName + " Team does not exist. Attempting to ADD team without coverage");
+        try {
+          var response3 = this.soapHelper.sendAddTeamSOAPMessage(this.groupName, this.snMembers);
+          return response3;
+        } catch (e3) {
+          this.log.error("Failed to Add Team for group " + this.groupName + ". Exception: " + e3);
+          return e3;
+        }
+      } else if (e == this.GROUP_DOES_NOT_EXIST) {
+        this.log.warn("Group " + this.groupName + " does not exist. Attempting to ADD group");
+        try {
+		  // locate group
+          var grp = new GlideRecord("sys_user_group");
+          grp.addQuery( 'name', "=", this.groupName );
+          grp.query();
+          if (grp.next()) {
+			// add a group
+            var response4 = this.soapHelper.sendAddGroupSOAPMessage(grp);
+            response4 += "\n";
+            response4 += this.soapHelper.sendAddTeamSOAPMessage(this.groupName, null);
+            response4 += "\n";
+            response4 += this.soapHelper.sendAddCoverageSOAPMessage(this.groupName);
+			// ... and sync members 
+            return attemptUpdateOtherwiseAdd(userToDelete, null);
+		  } else {
+		    return "Unable to locate group " + this.groupName + " in ServiceNow";
+		  }
+        } catch (e4) {
+          this.log.error("Failed to Add group " + this.groupName + ". Exception: " + e4);
+          return e4;
+        }
+	  } else {
+        this.log.error("Failed to Update Team/Coverage for group " + this.groupName + ". Exception: " + e);
+        return e;
+      }
+    }
+  }
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:56:02</sys_created_on>
+        <sys_id>9d7205cb7b02f1008e0b707d784d4d44</sys_id>
+        <sys_mod_count>21</sys_mod_count>
+        <sys_name>xMattersGroupMemberSync-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_9d7205cb7b02f1008e0b707d784d4d44</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 22:18:02</sys_updated_on>
+    </sys_script_include>
+</record_update>

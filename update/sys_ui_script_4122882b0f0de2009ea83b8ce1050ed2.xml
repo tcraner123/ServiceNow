@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_mod_property_factory</name>
+        <script><![CDATA[angular.module( 'xm.property-factory', [ 'xm.property-config', 'xm.config-options-provider' ] );
+angular.module('xm.property-factory').service( 'propertyFactory', function propertyFactory( propertyConfig, ConfigOptionsProvider ) {
+	var propertyFactory = {};
+
+	function XMProperty( systemProperty, configuration ) {
+		this.systemProperty = systemProperty;
+		this.id = systemProperty.sys_id;
+		this.name = systemProperty.name;
+		this.identifier = systemProperty.name;
+		this.type = systemProperty.type;
+		this.order = systemProperty.order;
+		this.value = systemProperty.value;
+		this.propertyType = systemProperty.type;
+		this.originalValue = systemProperty.value;
+		this.isFirstColumn = true;
+		this.isRequired = false;
+		this.hasCustomOptions = false;
+		if( typeof configuration !== 'undefined' && configuration !== null ) {
+			this.configuration = configuration;
+			this.configuration.hasOptions = (typeof this.configuration.optionName !== 'undefined' &&
+												 this.configuration.optionName !== null);
+			this.hasConfiguration = true;
+		} else {
+			this.hasConfiguration = false;
+		}
+		return this;
+	}
+
+	XMProperty.prototype.getType = function() {
+		if( this.hasOptions && !this.options.isValid ) {
+			return 'custom_invalid_options';
+		} else {
+			return this.type;
+		}
+	};
+
+	XMProperty.prototype.getLabel = function() {
+		var label = this.systemProperty.description;
+		var descriptionPieces = splitAndCleanString( this.systemProperty.description, ':' );
+		if( descriptionPieces.length > 1 ) {
+			label = descriptionPieces[0];
+		}
+		return label;
+	};
+
+	XMProperty.prototype.getHelpText = function() {
+		var helpText = '';
+		var descriptionPieces = splitAndCleanString( this.systemProperty.description, ':' );
+		if( descriptionPieces.length > 1 ) {
+			descriptionPieces.shift();
+			var text = descriptionPieces.join( ':' ).trim();
+			var capitalizeFirst = text.charAt(0).toUpperCase();
+			helpText = capitalizeFirst + text.slice(1);
+		}
+		return helpText;
+	};
+
+	XMProperty.prototype.init = function() {
+		this.label = this.getLabel();
+		this.helpText = this.getHelpText();
+		if( this.type === 'boolean' ) {
+			this.value = this.value === 'true';
+		}
+		this.choices = splitAndCleanString( this.systemProperty.choices, ',' );
+		if( this.hasConfiguration && (this.configuration.isTagsInput || this.configuration.isUrl ) ) {
+			this.columns = 2;
+		} else {
+			this.columns = 1;
+		}
+		if( this.hasConfiguration ) {
+			if( this.configuration.isDeviceName ) {
+				this.type = 'custom_choice';
+				this.deviceType = this.configuration.deviceType;
+				this.hasOptions = true;
+				this.options = ConfigOptionsProvider.getOptionsByName( this.deviceType + '_device_names' );
+			} else if( this.configuration.isUrl ) {
+				this.type = 'custom_url';
+			} else if( this.configuration.isTagsInput ) {
+				this.type = 'custom_tag_input';
+				if( typeof this.configuration.delimiter === 'string' ){
+					this.delimiter = this.configuration.delimiter;
+				} else {
+					this.delimiter = ';';
+				}
+				this.selected = splitAndCleanString( this.value, this.delimiter );
+			} else if( this.configuration.isChoice ) {
+				this.hasOptions = this.configuration.hasOptions;
+				this.type = 'custom_choice';
+			} else if( this.configuration.isTypeahead ) {
+				this.type = 'custom_typeahead';
+			}
+			if( typeof this.configuration.placeholder === 'string' ){
+				this.placeholder = this.configuration.placeholder;
+			} else {
+				this.placeholder = '';
+			}
+			if( this.configuration.hasOptions ) {
+				this.hasOptions = true;
+				this.options = ConfigOptionsProvider.getOptionsByName( this.configuration.optionName );
+			}
+			if( this.configuration.isRequired ) {
+				this.isRequired = true;
+			}
+			this.subCategory = this.configuration.subCategory;
+		}
+	};
+
+	XMProperty.prototype.resetValue = function() {
+		this.value = this.originalValue;
+	};
+
+	XMProperty.prototype.saveLocalValue = function() {
+		this.originalValue = this.value;
+	};
+
+	XMProperty.prototype.getParentClasses = function() {
+		if( this.columns === 1 ) {
+			var paddingClear;
+			if( this.isFirstColumn ) {
+				paddingClear = 'xm-no-right-padding';
+			} else {
+				paddingClear = 'xm-no-left-padding';
+			}
+			return 'col-md-6 col-sm-12 ' + paddingClear;
+		} else if( this.columns === 2 ) {
+			return 'col-md-12 col-sm-12';
+		} else {
+			throw 'Invalid number of columns';
+		}
+	};
+
+	XMProperty.prototype.getChildLabelClasses = function() {
+		if( this.columns === 1 ) {
+			return 'col-md-4 col-sm-4';
+		} else if( this.columns === 2 ) {
+			return 'col-md-2 col-sm-4';
+		} else {
+			throw 'Invalid number of columns';
+		}
+	};
+
+	XMProperty.prototype.getChildInputClasses = function() {
+		if( this.columns === 1 ) {
+			return 'col-md-8 col-sm-8';
+		} else if( this.columns === 2 ) {
+			return 'col-md-10 col-sm-8';
+		} else {
+			throw 'Invalid number of columns';
+		}
+	};
+
+	XMProperty.prototype.getUpdatedProperty = function() {
+		var sysPropObject = this.systemProperty;
+		if( this.type === 'custom_tag_input' ) {
+			var values = [];
+			for( var i = 0; i < this.selected.length; i++ ) {
+				values.push( this.selected[i].value );
+			}
+			sysPropObject.value = values.join( this.delimiter );
+			this.value = sysPropObject.value;
+		} else {
+			sysPropObject.value = this.value;
+		}
+		return sysPropObject;
+	};
+
+	XMProperty.prototype.setIsFirstColumn = function( isFirstColumn ) {
+		this.isFirstColumn = isFirstColumn;
+	};
+
+	XMProperty.prototype.toggle = function() {
+		if( this.type === 'boolean' ) {
+			this.value = !this.value;
+		} else {
+            jslog( 'Invalid type for toggle method: ' + this.type );
+		}
+	};
+
+	XMProperty.prototype.toggleShowPassword = function( xmProp ) {
+		if( xmProp.type === 'password' ) {
+			xmProp.showPassword = !xmProp.showPassword;
+		} else {
+			jslog( 'Invalid type for toggle show password method:: ' + xmProp.type );
+		}
+	};
+
+	propertyFactory.buildProperties = function( sysProps ) {
+		var enrichedProperties = [];
+		for( var i = 0; i < sysProps.length; i++ ) {
+			enrichedProperties.push( this.buildProperty( sysProp ) );
+		}
+		return enrichedProperties;
+	};
+
+
+	propertyFactory.buildProperty = function( sysProp ) {
+		var prop = new XMProperty( sysProp, propertyConfig[ sysProp.name ] );
+		prop.init();
+		return prop;
+	};
+
+
+	function splitAndCleanString( str, delimiter ) {
+		var result = str;
+		if( typeof str === 'string' && str !== null && str.trim() !== '' ) {
+			var splits = str.split(delimiter);
+			result = [];
+			for( var i = 0; i < splits.length; i++ ) {
+				var trimmedSplit = splits[i].trim();
+				if( trimmedSplit.length > 0 ) {
+					result.push( trimmedSplit );
+				}
+			}
+		}
+		return result;
+	}
+
+	return propertyFactory;
+} );]]></script>
+        <script_name>xm_mod_property_factory</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-11 00:02:41</sys_created_on>
+        <sys_id>4122882b0f0de2009ea83b8ce1050ed2</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_mod_property_factory</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_4122882b0f0de2009ea83b8ce1050ed2</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-05-03 20:34:59</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

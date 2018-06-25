@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMattersGroupSync-DEPRECATED</api_name>
+        <client_callable>false</client_callable>
+        <description>Helper class to manage the group sync process to xMatters.</description>
+        <name>xMattersGroupSync-DEPRECATED</name>
+        <script><![CDATA[gs.include("xMattersLogger");
+gs.include("xMattersSOAPHelper");
+gs.include("xMattersGroupMemberSync");
+
+var xMattersGroupSync = Class.create();
+
+xMattersGroupSync.prototype = {
+  
+  initialize : function() {
+    this.appPrefix = gs.getCurrentScopeName();
+    this.soapHelper = new xMattersSOAPHelper();
+    this.memberSync = new xMattersGroupMemberSync();
+    this.log = new xMattersLogger( gs.getProperty(this.appPrefix + '.' + "xmatters.logging.level"), 'xMattersGroupSync-DEPRECATED' );
+    
+    this.GROUP_DOES_NOT_EXIST = "UNKNOWN_GROUP";
+    this.GROUP_ALREADY_EXISTS = "GROUP_NAME_IN_USE";
+    this.seedOnly = gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.seed.only").toLowerCase() == "true";
+  },
+  /**
+  * Synchronize a list of groups.
+  * @param usersToSync a list of usernames to sync
+  * @return ?
+  */
+  syncGroups : function( groupsToSync ) {
+    var start = new Date(), id = start.getTime();
+    this.log.debug(id + ": Loading groups " + groupsToSync + " started at " + start);
+    
+    var grp = new GlideRecord("sys_user_group");
+    grp.addEncodedQuery( 'nameIN' + groupsToSync.join( ',' ) );
+    grp.query();
+    
+    var groupCount = 0;
+    while (grp.next()) {
+      this.log.debug("Loading Group " + grp.name + "...");
+      var groupInfo = {}; // save group information returned by xMatters and pass it to syncMembership later
+
+      var time = this.soapHelper.timer();
+      var response = this.syncGroup(grp, grp.name, "UpdateGroup", true, groupInfo);
+      this.log.debug("Group sync for " + grp.name + " took " + this.soapHelper.timer(time) + " ms.");
+      
+      if (!String(response).startsWith("Group not synchronized")) {
+        this.log.debug("Syncing Group Members");
+        // Retrieve all of the group members and attempt to sync with xMatters        
+        this.memberSync.syncMembership(grp.name, null, groupInfo);
+      }
+    
+      groupCount++;
+    
+      this.log.debug(id+": Loaded group " + grp.name + ". SOAP calls used by process so far: " + this.soapHelper.soapCallCount + ", membership SOAP Calls: " + this.memberSync.soapHelper.soapCallCount);
+    }
+    this.log.warn(id+": Worker completed syncing " + groupCount + " of " + groupsToSync.length + " groups at "+ (new Date())+ ". Time elapsed: " + this.soapHelper.timer(start.getTime()) + " ms. SOAP calls: " + (this.soapHelper.soapCallCount + this.memberSync.soapHelper.soapCallCount));    
+  },
+  
+  /**
+  * Synchronize the group with xMatters
+  * @param record the current group record
+  * @param groupName name of the group being modified
+  * @param triggerRule String defining the action to take
+  * @param deleteIfNotIncluded If the group is not included in the include/exclude list we should
+  */
+  syncGroup : function(record, groupName, triggerRule, deleteIfNotIncluded, groupInfo) {
+    
+    if (this.soapHelper.checkIncludeExcludeList("Group", groupName, gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.include.exclude.list"), gs.getProperty(this.appPrefix + '.' + "xmatters.group.sync.exclude.list.boolean"))) {
+      if (this.seedOnly) {
+        return this.seedOnlyGroup(record);
+      }
+      else if (triggerRule == "AddGroup") {
+        return this.addGroup(record);
+      }
+      else if (triggerRule == "UpdateGroup") {
+        return this.updateGroup(record, groupName, groupInfo);
+      }
+      else {
+        return this.deleteGroup(groupName);
+      }
+    } else if ((triggerRule == "UpdateGroup" || triggerRule == "AddGroup") && (deleteIfNotIncluded == null || deleteIfNotIncluded == "true") && !this.seedOnly && this.soapHelper.checkIfGroupExistsInXmatters(groupName)) {
+      this.log.debug("User " + groupName + " did not match the synchornization list but they exist in xMatters and will be deleted.");
+      this.deleteGroup(groupName);
+      return "Group not synchronized and deleted from xMatters";
+    }
+    return "Group not synchronized";
+  },
+  
+  seedOnlyGroup : function(record) {
+    try {
+      var response = this.soapHelper.sendAddGroupSOAPMessage(record);
+      response += "\n";
+      response += this.soapHelper.sendAddTeamSOAPMessage(record.name, null);
+      response += "\n";
+      response += this.soapHelper.sendAddCoverageSOAPMessage(record.name);
+      return response;
+    } catch (e) {
+      if (e == this.GROUP_ALREADY_EXISTS) {
+        this.log.warn("Failed to seed group " + record.name + ": " + e);
+        return e;
+      }
+    }
+  },
+  
+  addGroup : function(record) {
+    try {
+      var response = this.soapHelper.sendAddGroupSOAPMessage(record);
+      response += "\n";
+      response += this.soapHelper.sendAddTeamSOAPMessage(record.name, null);
+      response += "\n";
+      response += this.soapHelper.sendAddCoverageSOAPMessage(record.name);
+      return response;
+    } catch (e) {
+      if (e == this.GROUP_ALREADY_EXISTS) {
+        this.log.warn(record.name + " already exists. Attempting to UPDATE");
+        try {
+          return this.soapHelper.sendUpdateGroupSOAPMessage(record, record.name);
+        } catch (e2) {
+          this.log.error("Failed to Update Group " + record.name + ": " + e2+ ': ' + e2.message );
+          return e2;
+        }
+      } else {
+        this.log.error("Failed to Add Group " + record.name + ": " + e);
+        return e;
+      }
+    }
+  },
+  
+  updateGroup : function(record, previousGroupName, groupInfo) {
+    try {
+      return this.soapHelper.sendUpdateGroupSOAPMessage(record, previousGroupName, groupInfo);
+    } catch (e) {
+      if (e == this.GROUP_DOES_NOT_EXIST) {
+        this.log.warn(previousGroupName + " does not exist. Attempting to ADD");
+        try {
+          var response = this.soapHelper.sendAddGroupSOAPMessage(record);
+          response += "\n";
+          response += this.soapHelper.sendAddTeamSOAPMessage(record.name, null);
+          response += "\n";
+          response += this.soapHelper.sendAddCoverageSOAPMessage(record.name);
+          return response;
+        } catch (e2) {
+          this.log.error("Failed to Add Group " + record.name + ": " + e2 + ': ' + e2.message );
+          return e2;
+        }
+      } else {
+        this.log.warn("Failed to Update Group " + previousGroupName + ": " + e);
+        return;
+      }
+    }
+  },
+  
+  deleteGroup : function(groupName) {
+    try {
+      return this.soapHelper.sendDeleteGroupSOAPMessage(groupName);
+    } catch (e) {
+      this.log.error("Failed to Delete Group " + groupName + ": " + e + ': ' + e.message );
+      return e;
+    }
+  }
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:56:16</sys_created_on>
+        <sys_id>ce8205cb7b02f1008e0b707d784d4d19</sys_id>
+        <sys_mod_count>14</sys_mod_count>
+        <sys_name>xMattersGroupSync-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_ce8205cb7b02f1008e0b707d784d4d19</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 22:18:39</sys_updated_on>
+    </sys_script_include>
+</record_update>

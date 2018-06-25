@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMBatchStarter-DEPRECATED</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>xMBatchStarter-DEPRECATED</name>
+        <script><![CDATA[var xMBatchStarter = Class.create();
+xMBatchStarter.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+    type: 'xMBatchStarter-DEPRECATED',
+
+    start: function () {
+        appPrefix = gs.getCurrentScopeName() + '.';
+
+        gs.info('MyWorkStarter? appPrefix: ' + appPrefix);
+        var worker = new GlideScriptedHierarchicalWorker();
+        worker.setProgressName("Testing Worker");
+
+        worker.setBackground(true);
+        // specify a script include and method to call, with whatever parameters you need
+        worker.setScriptIncludeName(appPrefix + "xMBackgroundBatchSync");
+        worker.setScriptIncludeMethod("run");
+        worker.putMethodArg("arg1", "foo");
+        worker.putMethodArg("arg2", "bar");
+
+        worker.start();
+
+        gs.info("getProgressID = " + worker.getProgressID());
+        return worker.getProgressID();
+    }
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-05 00:04:26</sys_created_on>
+        <sys_id>91094d290f01a2009ea83b8ce1050e37</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>xMBatchStarter-DEPRECATED</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_91094d290f01a2009ea83b8ce1050e37</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 22:21:03</sys_updated_on>
+    </sys_script_include>
+</record_update>

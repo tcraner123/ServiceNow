@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Inform with xMatters Form Endpoint: specifies the REST URL endpoint for the ServiceNow Communication Plan's Inform with xMatters form&#13;
+</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.inform.endpoint</name>
+        <read_roles/>
+        <suffix>inform.endpoint</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-03 18:09:52</sys_created_on>
+        <sys_id>184f9255db1d3200a34fd421cf9619fe</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>x_xma_xmatters.inform.endpoint</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_184f9255db1d3200a34fd421cf9619fe</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-03-21 22:50:20</sys_updated_on>
+        <type>string</type>
+        <value>https://demo-tc.xmatters.com/api/integration/1/functions/e15a2c40-ae51-42e7-90e7-69ed6a6ccb41/triggers?apiKey=75f6ae99-d1de-4226-a447-9d6b8705a577</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=184f9255db1d3200a34fd421cf9619fe"/>
+</record_update>

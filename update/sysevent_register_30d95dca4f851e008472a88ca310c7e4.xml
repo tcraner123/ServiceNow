@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sysevent_register">
+    <sysevent_register action="INSERT_OR_UPDATE">
+        <description>Used for Incidents ending in 3, 4 or 5</description>
+        <event_name>x_xma_xmatters.incident.action.B</event_name>
+        <fired_by/>
+        <queue>x_xma_xmatters.incident.action.B</queue>
+        <suffix>incident.action.B</suffix>
+        <sys_class_name>sysevent_register</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-01-20 18:23:28</sys_created_on>
+        <sys_id>30d95dca4f851e008472a88ca310c7e4</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>x_xma_xmatters.incident.action.B</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sysevent_register_30d95dca4f851e008472a88ca310c7e4</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-02-02 18:34:57</sys_updated_on>
+        <table/>
+    </sysevent_register>
+</record_update>

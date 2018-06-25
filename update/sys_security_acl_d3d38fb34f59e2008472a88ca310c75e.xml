@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_security_acl">
+    <sys_security_acl action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <admin_overrides>true</admin_overrides>
+        <advanced>false</advanced>
+        <condition/>
+        <description>Default access control on xm_task_temp</description>
+        <name>x_xma_xmatters_xm_task_temp</name>
+        <operation display_value="read">read</operation>
+        <script/>
+        <sys_class_name>sys_security_acl</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-24 19:03:25</sys_created_on>
+        <sys_id>d3d38fb34f59e2008472a88ca310c75e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters_xm_task_temp</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_security_acl_d3d38fb34f59e2008472a88ca310c75e</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-24 19:03:25</sys_updated_on>
+        <type display_value="record">record</type>
+    </sys_security_acl>
+</record_update>

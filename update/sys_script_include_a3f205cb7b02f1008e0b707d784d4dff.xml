@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMRecipientSelectAjax-DEPRECATED</api_name>
+        <client_callable>true</client_callable>
+        <description>Helper for the "Add Recipients" UI Action. </description>
+        <name>xMRecipientSelectAjax-DEPRECATED</name>
+        <script><![CDATA[gs.include("xMattersSOAPHelper");
+
+var xMRecipientSelectAjax = Class.create();
+
+xMRecipientSelectAjax.prototype = Object.extendsObject( global.AbstractAjaxProcessor, {
+	
+		getUsers: function() {
+		var userRole = new GlideRecord('sys_user_has_role');
+		userRole.addQuery('role.name', gs.getProperty( 'x_xma_xmatters.xmatters.user.sync.roles.list' ) );
+		userRole.orderBy('name');
+		userRole.query();
+
+		gs.info( 'Made it to xMRecipientSelectAjax-DEPRECATED.getUsers!' );
+		
+		var arrayUtil = new global.ArrayUtil();
+		var list = [];
+		var names = [];
+		
+		while ( userRole.next() ) {
+			
+			if( !arrayUtil.contains( names, userRole.user.name.getDisplayValue() ) ) {
+				user = {
+					'name': userRole.user.name.getDisplayValue(),
+					'username': userRole.user.user_name.getDisplayValue(),
+					'type': 'user'
+				};
+				list.push( user );
+				names.push( userRole.user.name.getDisplayValue() );
+			}
+		}
+		
+		gs.info( 'Users: ' + new global.JSON().encode( list ) );
+		return new global.JSON().encodeArray(list);
+		
+	},
+	
+	
+	getGroups: function() {
+		var groupRole = new GlideRecord('sys_group_has_role');
+		groupRole.addQuery('role.name', gs.getProperty( 'x_xma_xmatters.xmatters.user.sync.group.roles.list' ) );
+		groupRole.orderBy('name');
+		groupRole.query();
+		
+		var arrayUtil = new global.ArrayUtil();
+		var list = [];
+		var names = [];
+		while ( groupRole.next() ) {
+			if( !arrayUtil.contains( names, groupRole.group.name.getDisplayValue() ) ) {
+				group = {
+					'name': groupRole.group.name.getDisplayValue(),
+					'type': 'group'
+				};
+				list.push( group );
+				names.push( groupRole.group.name.getDisplayValue() );
+			}
+		}
+		
+		return new global.JSON().encodeArray(list);
+		
+	}
+	
+	/*
+	//Get and return a list of groups (name and sys_id)
+	populateAvailable: function() {
+		
+		var soapHelper = new xMattersSOAPHelper();
+		
+		var item;
+		var str = '';
+		var list = soapHelper.getxMGroups();
+		for( var i in list ) {
+			item = this.newItem();
+			item.setAttribute('value', list[i] );
+			item.setAttribute('text', list[i] + ' (G)' );
+			item.setAttribute( 'itemType', 'group' );
+			
+			//str.concat( 'item[' + i + ']: ' + list[i] + '\n' );
+		}
+		
+		// This can cause performance issues if
+		// the list of sync'able users is "large"
+		//list = soapHelper.getxMUsers();
+		list = [];
+		for( var k in list ) {
+			item = this.newItem();
+			item.setAttribute('value', list[k] );
+			item.setAttribute('text', list[k] + ' (U)' );
+			item.setAttribute('itemType', 'user' );
+			//str.concat( 'item[' + k + ']: ' + list[k] + '\n' );
+		}
+		
+	}*/
+	
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:58:15</sys_created_on>
+        <sys_id>a3f205cb7b02f1008e0b707d784d4dff</sys_id>
+        <sys_mod_count>20</sys_mod_count>
+        <sys_name>xMRecipientSelectAjax-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_a3f205cb7b02f1008e0b707d784d4dff</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 22:22:13</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update>
+    <sys_choice action="INSERT_OR_UPDATE" field="send_priority" table="x_xma_xmatters_engage_with_xmatters" version="3">
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>send_priority</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>low</label>
+            <language>en</language>
+            <name>x_xma_xmatters_engage_with_xmatters</name>
+            <sequence>1</sequence>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2015-03-18 18:38:39</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>9ca3d7b24f3a31008472a88ca310c75e</sys_id>
+            <sys_mod_count>3</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2015-03-18 18:38:59</sys_updated_on>
+            <value>low</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>send_priority</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>medium</label>
+            <language>en</language>
+            <name>x_xma_xmatters_engage_with_xmatters</name>
+            <sequence>2</sequence>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2015-03-18 18:39:02</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>b8a317b24f3a31008472a88ca310c76b</sys_id>
+            <sys_mod_count>2</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2015-03-18 18:39:09</sys_updated_on>
+            <value>medium</value>
+        </sys_choice>
+        <sys_choice action="INSERT_OR_UPDATE">
+            <dependent_value/>
+            <element>send_priority</element>
+            <hint/>
+            <inactive>false</inactive>
+            <label>high</label>
+            <language>en</language>
+            <name>x_xma_xmatters_engage_with_xmatters</name>
+            <sequence>3</sequence>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2015-03-18 18:39:13</sys_created_on>
+            <sys_domain>global</sys_domain>
+            <sys_domain_path>/</sys_domain_path>
+            <sys_id>cab3d7b24f3a31008472a88ca310c7c5</sys_id>
+            <sys_mod_count>2</sys_mod_count>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2015-03-18 18:39:19</sys_updated_on>
+            <value>high</value>
+        </sys_choice>
+        <sys_choice_set action="INSERT_OR_UPDATE">
+            <element>send_priority</element>
+            <name>x_xma_xmatters_engage_with_xmatters</name>
+            <sys_class_name>sys_choice_set</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2015-03-18 18:38:39</sys_created_on>
+            <sys_id>c76c085edb32130036e6dd30cf96192b</sys_id>
+            <sys_mod_count>65</sys_mod_count>
+            <sys_name>send_priority</sys_name>
+            <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+            <sys_update_name>sys_choice_x_xma_xmatters_engage_with_xmatters_send_priority</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2016-12-28 15:38:17</sys_updated_on>
+        </sys_choice_set>
+    </sys_choice>
+</record_update>

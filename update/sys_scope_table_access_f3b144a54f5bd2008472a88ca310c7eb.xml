@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_scope_table_access">
+    <sys_scope_table_access action="INSERT_OR_UPDATE">
+        <create_access>false</create_access>
+        <delete_access>false</delete_access>
+        <example_stack_trace>Default-thread-6
+	com.glide.sys.fencing.dependency.ScopeAccessProvider$ScopeAccessCache.getCurrentStackTrace(ScopeAccessProvider.java:231)
+	com.glide.sys.fencing.dependency.ScopeAccessProvider$ScopeAccessCache.record(ScopeAccessProvider.java:200)
+	com.glide.sys.fencing.dependency.ScopeAccessProvider$ScopeAccessCache.access$100(ScopeAccessProvider.java:80)
+	com.glide.sys.fencing.dependency.ScopeAccessProvider.recordAccess(ScopeAccessProvider.java:63)
+	com.glide.sys.fencing.dependency.ScopeAccessRecorder.record(ScopeAccessRecorder.java:13)
+	com.glide.script.fencing.access.ScopedTableAccess.hasRightsTo(ScopedTableAccess.java:89)
+	com.glide.script.fencing.access.ScopedTableAccess.hasRightsToTable(ScopedTableAccess.java:39)
+	com.glide.script.fencing.ScopedGlideRecord.jsFunction_query(ScopedGlideRecord.java:157)
+	sun.reflect.GeneratedMethodAccessor739.invoke(Unknown Source)
+	sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+	java.lang.reflect.Method.invoke(Method.java:597)
+	org.mozilla.javascript.FunctionObject.doInvoke(FunctionObject.java:597)
+	org.mozilla.javascript.FunctionObject.call(FunctionObject.java:504)
+	org.mozilla.javascript.ScriptRuntime.call(ScriptRuntime.java:1227)
+	org.mozilla.javascript.gen.c5311.call(sys_script_include.d6d8ed614f4712008472a88ca310c757:527)
+	org.mozilla.javascript.ScriptRuntime.call(ScriptRuntime.java:1227)
+	org.mozilla.javascript.gen.c5308.call(sys_script_include.d6d8ed614f4712008472a88ca310c757:423)
+	org.mozilla.javascript.ScriptRuntime.call(ScriptRuntime.java:1227)
+	org.mozilla.javascript.gen.c5264.call(sys_script.1fca1e074fb4c2008472a88ca310c700:1)
+	org.mozilla.javascript.gen.c5264.exec(sys_script.1fca1e074fb4c2008472a88ca310c700)
+	com.glide.script.ScriptEvaluator.execute(ScriptEvaluator.java:233)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:105)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:72)
+	com.glide.script.fencing.GlideScopedEvaluator.evaluateScript(GlideScopedEvaluator.java:318)
+	com.glide.script.fencing.GlideScopedEvaluator.evaluateScript(GlideScopedEvaluator.java:283)
+	com.glide.script.fencing.GlideScopedEvaluator.evaluateScript(GlideScopedEvaluator.java:254)
+	com.glide.script.fencing.GlideScopedEvaluator.evaluateScript(GlideScopedEvaluator.java:242)
+	com.glide.script.BusinessRule.evaluateCondition(BusinessRule.java:462)
+	com.glide.script.BusinessRule.conditionMet(BusinessRule.java:411)
+	com.glide.script.BusinessRule.runBusinessRule(BusinessRule.java:184)
+	com.glide.script.BusinessRule.run(BusinessRule.java:173)
+	com.glide.script.GlideRecordBusinessRules.run(GlideRecordBusinessRules.java:84)
+	com.glide.script.GlideRecord.runScripts(GlideRecord.java:1175)
+	com.glide.script.GlideRecord.runScriptsAndEngines(GlideRecord.java:1125)
+	com.glide.script.GlideRecord.postChange(GlideRecord.java:4507)
+	com.glide.script.GlideRecord.postUpdate(GlideRecord.java:4475)
+	com.glide.script.GlideRecord.updateWithoutResettingOperation(GlideRecord.java:4087)
+	com.glide.script.GlideRecord.update(GlideRecord.java:4011)
+	com.glide.script.GlideRecord.jsFunction_update(GlideRecord.java:3831)
+	sun.reflect.GeneratedMethodAccessor344.invoke(Unknown Source)
+	sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+	java.lang.reflect.Method.invoke(Method.java:597)
+	org.mozilla.javascript.FunctionObject.doInvoke(FunctionObject.java:597)
+	org.mozilla.javascript.FunctionObject.call(FunctionObject.java:504)
+	org.mozilla.javascript.ScriptRuntime.call(ScriptRuntime.java:1227)
+	org.mozilla.javascript.gen.c3691.call(&lt;refname&gt;:2)
+	org.mozilla.javascript.gen.c3691.exec(&lt;refname&gt;)
+	com.glide.script.ScriptEvaluator.execute(ScriptEvaluator.java:233)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:105)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:72)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:63)
+	com.glide.script.Evaluator.evaluateString(Evaluator.java:91)
+	com.glide.script.GlideRhinoHelper.evaluateAsString(GlideRhinoHelper.java:130)
+	com.glide.script.ActionScript.conditionalEval(ActionScript.java:83)
+	com.glide.script.ActionScript.execute(ActionScript.java:69)
+	com.glide.script.ActionScriptProcessor.processScript(ActionScriptProcessor.java:139)
+	com.glide.script.Action.process(Action.java:115)
+	com.glide.ui.RedirectTransaction.invokeAction(RedirectTransaction.java:421)
+	com.glide.ui.RedirectTransaction.handleActions(RedirectTransaction.java:388)
+	com.glide.ui.RedirectTransaction.inboundActions(RedirectTransaction.java:224)
+	com.glide.ui.RedirectTransaction.process(RedirectTransaction.java:93)
+	com.glide.ui.GlideServletUITransaction.process(GlideServletUITransaction.java:73)
+	com.glide.processors.AProcessor.runProcessor(AProcessor.java:409)
+	com.glide.processors.AProcessor.processTransaction(AProcessor.java:183)
+	com.glide.processors.ProcessorRegistry.process(ProcessorRegistry.java:165)
+	com.glide.ui.GlideServletTransaction.process(GlideServletTransaction.java:32)
+	com.glide.sys.ServletTransaction.run(ServletTransaction.java:34)
+	java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:895)
+	java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:918)
+	java.lang.Thread.run(Thread.java:682)
+</example_stack_trace>
+        <read_access>true</read_access>
+        <source_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</source_scope>
+        <sys_class_name>sys_scope_table_access</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-05-09 19:02:58</sys_created_on>
+        <sys_id>f3b144a54f5bd2008472a88ca310c7eb</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>sys_group_has_role</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_scope_table_access_f3b144a54f5bd2008472a88ca310c7eb</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-05-09 19:02:58</sys_updated_on>
+        <table_name>sys_group_has_role</table_name>
+        <target_scope display_value="Global">global</target_scope>
+        <write_access>false</write_access>
+    </sys_scope_table_access>
+</record_update>

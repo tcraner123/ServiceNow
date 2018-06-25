@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersBackgroundBatchSync</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersBackgroundBatchSync</name>
+        <script><![CDATA[/**
+ * This script will attempt to load all users, devices, groups and teams into xMatters.
+ */
+gs.include('xMattersLogger');
+gs.include('xMattersConfig');
+gs.include('xMattersDataHelper');
+gs.include('xMattersPersonCollection');
+gs.include('xMattersGroupCollection');
+
+var xMattersBackgroundBatchSync = Class.create();
+xMattersBackgroundBatchSync.prototype = {
+
+    type: 'xMattersBackgroundBatchSync',
+
+    /**
+     * initialize xMattersBackgroundBatchSync object
+     *
+     * @param {null|Object} config the xMatters config object
+     * @param {null|Object} dataHelper the xMatters data helper object
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        this.appPrefix = gs.getCurrentScopeName();
+
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersBackgroundBatchSync', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Sync users from ServiceNow to xMatters
+     *
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @returns {number} the count of users being synced
+     */
+    syncUsers: function (setExternalKey) {
+        var timer = this.log.timer();
+        this.log.debug('syncUsers: Starting (setExternalKey == ' + setExternalKey + ')');
+
+        var personCollection = new xMattersPersonCollection(this.config, this.dataHelper,
+            this.log.getLogTraceId());
+
+        // Get the list of 'sync-able' users
+        var userList = personCollection.getSyncableUsers();
+        var numUsers = userList.length;
+
+        this.log.debug('syncUsers: Preparing to sync ' + numUsers + ' users (' +
+            this.log.timer(timer) + 'ms lookup)');
+
+        var numUserProcesses, userBucketSize;
+        if (this.config.MAX_USER_PROCESSES > 0) {
+            numUserProcesses = this.config.MAX_USER_PROCESSES;
+            userBucketSize = Math.ceil(numUsers / numUserProcesses);
+
+        } else {
+            // Determine the total number of API calls that will be needed
+            var numApiCalls = numUsers * this.config.CALLS_PER_USER;
+
+            // Figure out how many 'buckets' will be needed based on the number of API calls
+            numUserProcesses = Math.ceil(numApiCalls / this.config.MAX_CALLS_PER_PROCESS);
+
+            // How many API calls in each bucket?
+            userBucketSize = this.config.MAX_CALLS_PER_PROCESS / this.config.CALLS_PER_USER;
+        }
+        this.log.debug('syncUsers: numUserProcesses: ' + numUserProcesses +
+            ', userBucketSize: ' + userBucketSize);
+        this.log.debug('syncUsers: Syncing these users to xMatters: [' + userList.join() + ']');
+
+        // Keeping an array of these workers seems like a good idea... might be useful some day.
+        var workers = [];
+        for (var n = 0; n < numUserProcesses; n++) {
+            var slice = userList.slice(n * userBucketSize, (n + 1) * userBucketSize);
+            if (slice.length > 0) {
+                this.log.debug('syncUsers: Slice: ' + n + ': ' + slice);
+                workers.push(personCollection.syncUsersAsync(slice, setExternalKey));
+            }
+        }
+
+        this.log.debug('syncUsers: Foreground process complete. ' + workers.length +
+            ' background workers started. (' + this.log.timer(timer) + 'ms elapsed)');
+
+        return numUsers;
+    },
+
+    /**
+     * Sync groups from ServiceNow to xMatters
+     *
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @returns {number} the number of groups being synced
+     */
+    syncGroups: function (setExternalKey) {
+        var timer = this.log.timer();
+        this.log.debug('syncGroups: Starting (setExternalKey == ' + setExternalKey + ')');
+
+        var groupCollection = new xMattersGroupCollection(this.config, this.dataHelper,
+            this.log.getLogTraceId());
+
+        // Get the list of 'sync-able' groups
+        var groupList = groupCollection.getSyncableGroups();
+        var numGroups = groupList.length;
+
+        this.log.debug('syncGroups: Preparing to sync ' + numGroups + ' groups (' +
+            this.log.timer(timer) + 'ms lookup)');
+
+        // Determine the total number of API calls that will be needed
+        var numApiCalls = numGroups * this.config.CALLS_PER_GROUP;
+
+        // Figure out how many 'buckets' will be needed based on the number of API calls
+        var numGroupProcesses = Math.ceil(numApiCalls / this.config.MAX_CALLS_PER_PROCESS);
+
+        // How many API calls in each bucket?
+        var groupBucketSize = this.config.MAX_CALLS_PER_PROCESS / this.config.CALLS_PER_GROUP;
+
+        this.log.debug('syncGroups: numGroupProcesses: ' + numGroupProcesses +
+            ', groupBucketSize: ' + groupBucketSize);
+        this.log.debug('syncGroups: Syncing these groups to xMatters: [' + groupList.join() + ']');
+
+        var workers = [];
+        for (var n = 0; n < numGroupProcesses; n++) {
+            var slice = groupList.slice(n * groupBucketSize, (n + 1) * groupBucketSize);
+            if (slice.length > 0) {
+                this.log.debug('syncGroups: Slice: ' + n + ': ' + slice);
+                workers.push(groupCollection.syncGroupsAsync(slice, setExternalKey));
+            }
+        }
+
+        this.log.debug('syncGroups: Foreground process complete. ' + workers.length +
+            ' background workers started. (' + this.log.timer(timer) + 'ms elapsed)');
+
+        return numGroups;
+    },
+
+    /**
+     * Sync configuration items from ServiceNow to xMatters
+     *
+     * @returns {number} the count of CIs being synced
+     */
+    syncProperties: function () {
+        var timer = this.log.timer();
+        this.log.debug('syncGroups: Starting');
+
+        var properties = new xMattersProperties(this.config, this.log.getLogTraceId());
+
+        // Get the list of 'sync-able' groups
+        var uuid = this.config.CI_LIST_UUID;
+        var ciList = properties.getSyncableCIs();
+        var numCIs = ciList.length;
+        var workers = [];
+
+        if (numCIs > 0) {
+            this.log.debug('syncProperties: Preparing to sync ' + numCIs + ' configuration items (' +
+                this.log.timer(timer) + 'ms lookup)');
+
+            this.log.debug('syncProperties: Loading these CIs into xMatters: [' + ciList.join() + ']');
+
+            workers.push(properties.syncPropertyValuesAsync(uuid, ciList));
+
+        } else {
+            this.log.warn('syncProperties: No properties to sync');
+            return 0;
+        }
+
+        this.log.debug('syncProperties: Foreground process complete. ' + workers.length +
+            ' background workers started. (' + this.log.timer(timer) + 'ms elapsed)');
+
+        return numCIs;
+    }
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-03-11 17:49:08</sys_created_on>
+        <sys_id>37c407644f7a31000e9fa88ca310c7d8</sys_id>
+        <sys_mod_count>30</sys_mod_count>
+        <sys_name>xMattersBackgroundBatchSync</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_37c407644f7a31000e9fa88ca310c7d8</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-18 21:30:17</sys_updated_on>
+    </sys_script_include>
+</record_update>

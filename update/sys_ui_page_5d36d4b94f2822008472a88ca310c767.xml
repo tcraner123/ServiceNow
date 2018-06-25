@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description/>
+        <direct>true</direct>
+        <endpoint>x_xma_xmatters_xm_engage_with_xmatters.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<style>
+/* Extra small devices (phones, less than 768px) */
+/* No media query since this is the default in Bootstrap */
+.xm-dialog-form {
+	width: 400px;
+	height: 650px;
+}
+
+/* Small devices (tablets, 768px and up) */
+@media (min-width: 768px) { 
+	.xm-dialog-form {
+		width: 500px;
+		height: 650px;
+	}
+}
+
+/* Medium devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+	.xm-dialog-form {
+		width: 700px;
+		height: 500px;
+	}
+}
+
+/* Large devices (large desktops, 1200px and up) */
+@media (min-width: 1200px) { 
+	.xm-dialog-form {
+		width: 750px;
+		height: 500px;
+	}
+}
+.xm-embed-iframe {
+  height: 100%;
+}
+</style>
+	<div class="xm-dialog-form">
+		<div class="embed-responsive xm-embed-iframe">
+			<iframe name="dialog_frame" id="dialog_frame" src="/x_xma_xmatters_xm_engage_with_xmatters_content.do?sysparm_nostack=true&amp;incident_id=${HTML:sysparm_sysID}" class="embed-responsive-item"></iframe>
+		</div>
+	</div>
+    <script>
+	(function() {
+		var childMessageListener = function(event) {
+			if( event.origin !== window.location.origin ) {
+				console.log("Received message from unexpected origin: " + event.origin);
+			   return;
+			} else {
+				var data = event.data;
+				if(data.type === 'DIALOG_CLOSE') {
+					if(data.message) {
+						g_form.addInfoMessage(data.message);
+					}
+					GlideDialogWindow.get().destroy();
+				} else {
+					console.log("Unhandled message type: " + data.type);
+				}
+			}
+		}
+
+		if(window.addEventListener) {
+			addEventListener('message', childMessageListener, false);
+		} else {
+			attachEvent("onmessage", childMessageListener);
+		}
+	})();
+	</script>
+</j:jelly>]]></html>
+        <name>xm_engage_with_xmatters</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-11 18:29:34</sys_created_on>
+        <sys_id>5d36d4b94f2822008472a88ca310c767</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>xm_engage_with_xmatters</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_5d36d4b94f2822008472a88ca310c767</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-06-23 22:24:44</sys_updated_on>
+    </sys_ui_page>
+</record_update>

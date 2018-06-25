@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_mod_location_service</name>
+        <script><![CDATA[angular.module('xm.location-service', [])
+    .service('LocationService', function () {
+        var locService = {
+            searchParams: {}
+        };
+        var pieces = window.location.search.slice( 1 ).split( '&' );
+        for( var i = 0; i < pieces.length; i++ ) {
+            var paramSplit = pieces[i].split( '=' );
+            locService.searchParams[ paramSplit[0] ] = paramSplit[1];
+        }
+        return locService;
+    });
+]]></script>
+        <script_name>xm_mod_location_service</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 15:04:29</sys_created_on>
+        <sys_id>d1e03c824f6c220078bae321a310c703</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_mod_location_service</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_d1e03c824f6c220078bae321a310c703</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-04 23:34:57</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

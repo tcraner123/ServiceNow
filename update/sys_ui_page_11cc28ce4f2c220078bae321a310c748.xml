@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description/>
+        <direct>false</direct>
+        <endpoint>x_xma_xmatters_xm_config.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<script language="javascript" src="x_xma_xmatters.angular.min.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.angular-ui-bootstrap.min.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_app_config.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_glide_ajax.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_tooltip.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_xmatters_service.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_property_config.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_property_factory.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_config_category.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_property_directive.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.xm_mod_conf_opt_service.jsdbx" />
+<script language="javascript" src="x_xma_xmatters.ng-tags-input.min.jsdbx" />
+
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css" rel="stylesheet"></link>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"></link>
+<style>
+	HTML[data-doctype=true] BODY.non_standard_lists {
+		padding: 0 20px 0 20px;
+	}
+	body {
+		font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	    padding-top: 0;
+	}
+
+/** Navigation Styling */
+
+	.nav-tabs li:last-of-type, .nav-tabs li:first-of-type {
+		border-radius: 0;
+	}
+
+	.nav-tabs li {
+	    height: 50px;
+	    border: 1px solid #dedede;
+	    background-color: #f6f6f6;
+	    border-radius: 0;
+	    text-align: center;
+	    font-size: 16px;
+		color: #464646;
+	}
+	.nav-tabs li a:hover {
+		color: #248fff;
+	}
+	.nav-tabs li:hover, .nav-tabs li.active:hover {
+	    border: 1px solid #dedede;
+	}
+	.nav-tabs li a {
+		border: none !important;
+		background: transparent !important;
+		border-radius: 0;
+	}
+
+	.nav-tabs li.active, .nav-tabs li.active:hover {
+	    height: 50px;
+	    background-color: #ffffff;
+	    border-bottom: 0;
+	    border-top-color: #dedede;
+		color: #248fff;
+	}
+
+	.nav-tabs li.active a, .nav-tabs li.active a:hover, .nav-tabs li.active a:focus {
+		color: #248fff;
+	}
+
+	/** panel styling */
+	.tab-content .tab-pane {
+	    border: solid 1px #dedede;
+	    padding: 20px;
+	}
+
+	.xm-row {
+		width: 100%;
+		margin-bottom: 15px !important;
+		vertical-align: middle;
+	}
+
+	.xm-input input.xm-full-width {
+		width: 100% !important;
+	}
+
+	.xm-input select {
+		width: 100% !important;
+	}
+
+	.xm-input .input-group {
+		width: 100% !important;
+	}
+
+	.xm-align-right {
+		text-align: right;
+	}
+
+	div.tooltip.top {
+		max-width: 550px;
+	}
+
+	.xm-label div.tooltip-inner {
+		min-width: 500px;
+	}
+
+	div.tooltip-inner {
+		max-width: 75%;
+		min-width: 50px;
+	}
+
+	.input-group-btn.xm-group-right button {
+		height:34px;
+		margin-left: -2px;
+		border-left: 0;
+		color: #1c8bff;
+	}
+
+	.input-group-btn.xm-group-right button:hover {
+		background: 0;
+		box-shadow: none;
+		border-left: 0;
+	}
+
+	.xm-input-group input:focus {
+		border-color: rgb(204, 204, 204);
+	}	
+
+	.xm-input-group input:focus.ng-invalid {
+		border-color: red;
+	}	
+
+	.xm-input-group input, .xm-input-group input:focus {
+		box-shadow: none;
+		border-right: 0;
+	}
+
+	.xm-input-group .xm-group-right button:hover {
+		border-top-right-radius: 4px !important;
+		border-bottom-right-radius: 4px !important;
+		margin-left: -2px;
+		border-color: #cccccc;
+	}
+
+	.xm-input-group.ng-invalid .xm-group-right button {
+		border-color: red;
+	}
+
+	.form-inline .input-group .input-group-btn.xm-group-right {
+		width: 15px;
+	}
+
+	.xm-tags-input-group .input-group-btn .btn {
+	   height: 34px;
+	}
+
+	.xm-input-group-btn {
+		background-color: #f6f6f6;
+		border: solid 1px #cccccc;
+		width: 106px;
+	}
+
+	a.xm-chevron, i.xm-chevron {
+		right: 65px;
+		position: absolute;
+		color: rgb(52, 61, 71);
+		font-size: 18px;
+	}
+
+	div.xm-rule {
+		display: inline-block;
+		width: 100%;
+		height: 2px;
+		border: solid 1px #ededed;
+	}
+
+	i.xm-btn-icon {
+		margin-left: 10px;
+	}
+
+	input.ng-invalid {
+		border: 1px red solid;
+	}
+
+	a.xm-help {
+		margin-left: 5px;
+		display: inline-block !important;	
+	}
+
+	@media (min-width: 992px) {
+		div.xm-no-right-padding {
+			padding-right: 0;
+		}
+
+		div.xm-no-left-padding {
+			padding-left: 0;
+		}
+
+		.xm-label {
+			text-align: right;
+		}
+	}
+
+	.xm-check-stack {
+		font-size: 20px;
+		line-height: 1em;
+		height: 1em;
+	}
+	
+	.xm-checkmark {
+		color: #248fff;
+		left: 3px;
+		bottom: 3px;
+	}
+
+	/* from CSS stylesheet */
+
+	.xm-label {
+		font-size: 13px;
+		font-weight: normal;
+	}
+
+	.tags {
+	    border: 1px solid #ccc !important;
+	}
+
+	tags-input .tags {
+	     box-shadow: none !important;
+	}
+
+	tags-input .tags .tag-item {
+	    background: #445465;
+	    border: 0;
+	}
+
+	tags-input .tags .tag-item .remove-button {
+	    color: white;
+	}
+
+	tags-input .tags .tag-item .remove-button:hover {
+	    color: #bec1c6;;
+	}
+
+	tags-input .tags .tag-item.selected {
+		background-color: #ae1b1f;
+	}
+
+	.xm-left {
+	     float: left;
+	}
+
+	.xm-right {
+	    float: right;
+	}
+
+	.xm-tag-feedback {
+	   right: 10px;
+	}
+	
+	.xm-error {
+		padding-top: 3px;
+		color: red;
+		font-size: 13px;
+		height: 15px;
+	}
+	.xm-btn-default, .xm-btn-default:focus, .xm-btn-default:hover {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	    color: #343d47;
+	    background-color: rgba(255, 255, 255, 0.45);
+	    border-color: #bdc0c4;
+	}
+	tags-input .tags .tag-item {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	}
+	tags-input .tags .input {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	}
+	tags-input .autocomplete .suggestion-item {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	}
+	h4.xm-header {
+	     font-size: 21px;
+	     font-weight: normal;
+	     margin-top: 0;
+	}
+	.xm-left-icon {
+	    margin-right: 5px;
+	}
+	.xm-right-icon {
+	    margin-left: 0;
+	}
+	.xm-right-icon .remove-button .fa {
+	     font-size: 14px;
+	     vertical-align: text-top;
+	}
+	.form-control-feedback .fa {
+	     color: rgb(52, 61, 71);
+	}
+	.xm-success-message {
+	    max-width: 80%;
+	    min-width: 375px;
+	    padding: 0 40px;
+	}
+
+	.xm-modal-body {
+		padding-top: 25px;
+		padding-bottom: 0px;
+	}
+
+	.xm-modal-footer {
+		border-top: 0;
+		text-align: left;
+	}
+
+	.xm-right-button {
+		margin-left: 10px;
+	}
+
+</style>
+<div ng-app="config">
+	<div ng-controller="ConfigCtlr" ng-cloak="">
+		<h1>Configure xMatters - ServiceNow Integration</h1>	
+		<uib-tabset active="active">
+			<uib-tab ng-repeat="cat in categories" index="$index" heading="{{cat.title}}" select="cat.activate()" deselect="cat.deselect( $event, $selectedIndex )">
+				<xm-category xm-category="cat" xm-active="setActive"></xm-category>
+			</uib-tab>
+  		</uib-tabset>
+	</div>
+</div>
+</j:jelly>]]></html>
+        <name>xm_config</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 14:46:28</sys_created_on>
+        <sys_id>11cc28ce4f2c220078bae321a310c748</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>xm_config</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_11cc28ce4f2c220078bae321a310c748</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-06-23 22:24:43</sys_updated_on>
+    </sys_ui_page>
+</record_update>

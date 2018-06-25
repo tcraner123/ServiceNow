@@ -1,0 +1,897 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersGroupMembership</api_name>
+        <client_callable>false</client_callable>
+        <description>Sync group memberships from ServiceNow to xMatters</description>
+        <name>xMattersGroupMembership</name>
+        <script><![CDATA[gs.include('xMattersConfig');
+gs.include('xMattersDataEvent');
+gs.include('xMattersDataHelper');
+gs.include('xMattersGroup');
+
+/**
+ * xMattersGroupMembership model for managing batch group syncing
+ * @type {Object}
+ */
+var xMattersGroupMembership = Class.create();
+
+xMattersGroupMembership.prototype = {
+
+    /**
+     * Initialize the xMattersGroupMembership object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersGroupMembership', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Asynchronously sync group membership
+     *
+     * @param {Object} group sys_user_group record or group name of ServiceNow GlideRecord
+     * @param {Object} userRec (optional) sys_user record ServiceNow GlideRecord
+     * @returns {Array} backgroup worker progressID
+     */
+    syncMembershipAsync: function (group, userRec) {
+        var groupName = (typeof group === 'string') ? group : group.name.getDisplayValue();
+        var username = userRec ? userRec[this.config.USERNAMEFIELD].getDisplayValue() : '';
+        var logTraceId = this.log.getLogTraceId();
+        if (this.config.USE_PROGRESS_WORKERS) {
+            var worker = new GlideScriptedHierarchicalWorker();
+            worker.setProgressName("x_xma_xmatters.xMattersGroupMembership syncMembership: " + groupName);
+
+            worker.setBackground(true);
+            worker.setScriptIncludeName("x_xma_xmatters.xMattersGroupMembership");
+            worker.setScriptIncludeMethod("syncMembership");
+            worker.putMethodArg("group", groupName);
+            worker.putMethodArg("user", username);
+            worker.putMethodArg("parentLogTraceId", logTraceId);
+
+            worker.start();
+
+            return worker.getProgressID();
+        } else {
+            var xde = new xMattersDataEvent(this.config, logTraceId);
+            xde.queueSyncMembershipEvent(group || userRec, groupName, username);
+        }
+    },
+
+    /**
+     * Asynchronously sync members and add them to the group shift/roster
+     *
+     * @param {Array} users list of usernames to sync
+     * @param {string} groupName of the group
+     * @param {string} recipientType (optional) defaults to PERSON
+     * @param {null|string} shiftName to use or null to use default
+     * @returns {*}
+     */
+    syncAndAddMembersAsync: function (users, groupName, recipientType, shiftName) {
+        var encodedUsers = new global.JSON().encode(users);
+        var logTraceId = this.log.getLogTraceId();
+        var safeRecipientType = recipientType ? recipientType : null;
+        var safeShiftName = shiftName !== null ? shiftName : null;
+        if (this.config.USE_PROGRESS_WORKERS) {
+            var worker = new GlideScriptedHierarchicalWorker();
+            worker.setProgressName("x_xma_xmatters.xMattersGroupMembership.syncAndAddMembers");
+
+            worker.setBackground(true);
+            worker.setScriptIncludeName("x_xma_xmatters.xMattersGroupMembership");
+            worker.setScriptIncludeMethod("syncAndAddMembers");
+            worker.putMethodArg("users", encodedUsers);
+            worker.putMethodArg("groupName", groupName);
+            worker.putMethodArg('recipientType', safeRecipientType);
+            // an empty string for shiftName represents "no shift" (i.e. roster-only) and
+            // is treated differently from null, which will means "use the default shift"
+            worker.putMethodArg('shiftName', safeShiftName);
+
+            worker.putMethodArg('parentLogTraceId', logTraceId);
+
+            worker.start();
+            return worker.getProgressID();
+        } else {
+            var xde = new xMattersDataEvent(this.config, logTraceId);
+            xde.queueSyncAndAddMembersEvent(encodedUsers, groupName, safeShiftName, safeRecipientType);
+        }
+    },
+
+    /**
+     * Asynchronously remove members from a group
+     *
+     * @param {string} groupName of the group from which to remove the member
+     * @param {Array} members list of usernames to remove
+     * @returns {*}
+     */
+    removeMembersAsync: function (groupName, members) {
+        var encodedMembers = new global.JSON().encode(members);
+        var logTraceId = this.log.getLogTraceId();
+        if (this.config.USE_PROGRESS_WORKERS) {
+            var worker = new GlideScriptedHierarchicalWorker();
+            worker.setProgressName("x_xma_xmatters.xMattersGroupMembership.removeMembers");
+
+            worker.setBackground(true);
+            worker.setScriptIncludeName("x_xma_xmatters.xMattersGroupMembership");
+            worker.setScriptIncludeMethod("removeMembers");
+            worker.putMethodArg("groupName", groupName);
+            worker.putMethodArg("members", encodedMembers);
+            worker.putMethodArg('parentLogTraceId', logTraceId);
+
+            worker.start();
+            return worker.getProgressID();
+        } else {
+            var xde = new xMattersDataEvent(this.config, logTraceId);
+            xde.queueRemoveMembershipsEvent(encodedMembers, groupName);
+            
+        }
+    },
+
+    /**
+     * Sync ServiceNow group membership to xMatters
+     *
+     * Here, we retrieve the group member list from ServiceNow and then:
+     * 1) get the group roster + shifts from xMatters
+     * 2) compare the members of the group roster with
+     *    our members from ServiceNow
+     * 3) for any SNOW members added/updated in group AND
+     *    already in the XM roster, do nothing
+     * 4) for any SNOW members added/updated in group but NOT
+     *    in the xM group roster, add them to the 24x7 shift,
+     *    if available; otherwise, add them to the roster
+     * 5) for and SNOW members being removed from the group
+     *    remove them from the xMatters roster (including
+     *    any shifts)
+
+     * @param {Object|string} group sys_user_group record ServiceNow GlideRecord OR group name
+     * @param {Object|string} user (optional) sys_user record ServiceNow GlideRecord OR username
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns {Array} array of backgroup worker progressIDs and usernames being synced
+     */
+    syncMembership: function (group, user, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            var groupRec = group;
+            if (typeof group == 'string') {
+                groupRec = new GlideRecord('sys_user_group');
+                if (!(groupRec.get('name', group))) {
+                    this.log.error('syncMembership: Failed to find group: "' + group + '" in ServiceNow');
+                    return [];
+                }
+            }
+            var groupName = groupRec.name.getDisplayValue();
+
+            this.log.debug('syncMembership: Worker started for group: "' + groupName + '"');
+
+            var userRec = user;
+            if (typeof user == 'string') {
+                if (user === '') {
+                    userRec = null;
+                } else {
+                    userRec = new GlideRecord('sys_user');
+                    if (!(userRec.get(this.config.USERNAMEFIELD, user))) {
+                        userRec = null;
+                    }
+                }
+            }
+
+            var defaultShift = this.getShift(groupName, this.config.SHIFTNAME);
+            var shiftName = 'name' in defaultShift ? defaultShift.name : '';
+
+            this.log.debug('syncMembership: Default shift for group: "' + groupName + '" is: "' + shiftName + '"');
+
+            // get the group roster
+            var roster = this.getxMattersRoster(groupName);
+            var xMPerson = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+
+            var groupMemberRec = new GlideRecord('sys_user_grmember');
+            groupMemberRec.addQuery('group', groupRec.sys_id);
+            if (userRec) {
+                groupMemberRec.addQuery('user', userRec.sys_id);
+            }
+            groupMemberRec.query();
+
+            // find any members in ServiceNow
+            var username,
+                membersToSync = [],
+                groupMembers = [],
+                removeUsers = [],
+                removeMembers = [],
+                progressIds = [];
+
+            if (userRec && !groupMemberRec.hasNext()) {
+                // user no longer in group
+                username = xMPerson.getxMattersUsername(userRec);
+
+                // check if person needs to be removed
+                if (!xMPerson.isSyncableUser(userRec)) {
+                    this.log.debug('syncMembership: Attempting to remove no-longer-syncable user: "' + username + '"');
+                    xMPerson.removeUser(username);
+
+                } else {
+                    this.log.debug('syncMembership: Removing user: "' + username + '" from group: "' + groupName + '"');
+                    this.removeMember(groupName, username);
+                }
+
+                return [];
+            }
+
+            while (groupMemberRec.next()) {
+                username = groupMemberRec.user[this.config.USERNAMEFIELD].getDisplayValue();
+
+                if (!xMPerson.isSyncableUser(username)) {
+                    removeUsers.push(username);
+
+                } else if (!this.memberIsInList(username, roster)) {
+                    membersToSync.push(username);
+                }
+                groupMembers.push(username);
+            }
+            this.log.debug('syncMembership: Total group members: [' + groupMembers.join() + ']');
+            this.log.debug('syncMembership: Members to sync: [' + membersToSync.join() + ']');
+            this.log.debug('syncMembership: Unsyncable users (for removal): [' + removeUsers.join() + ']');
+
+            // process additions/removals in workers... spawning multiple workers to start
+            var totalToProcess,
+                bucketSize,
+                numApiCalls,
+                numProcesses,
+                slice,
+                n;
+
+            if (membersToSync.length) {
+                totalToProcess = membersToSync.length;
+
+                if (this.config.MAX_USER_PROCESSES > 0) {
+                    numProcesses = this.config.MAX_USER_PROCESSES;
+                    bucketSize = Math.ceil(totalToProcess / numProcesses);
+                } else {
+                    bucketSize = Math.ceil(this.config.MAX_CALLS_PER_PROCESS / this.config.CALLS_PER_USER);
+                    numApiCalls = totalToProcess * this.config.CALLS_PER_USER;
+                    numProcesses = Math.ceil(numApiCalls / this.config.MAX_CALLS_PER_PROCESS);
+                }
+                for (n = 0; n < numProcesses; ++n) {
+                    slice = membersToSync.slice(n * bucketSize, (n + 1) * bucketSize);
+                    if (slice.length > 0) {
+                        this.log.debug('syncMembership: Slice: ' + n + ': [' + slice.join() + ']');
+                        progressIds.push(this.syncAndAddMembersAsync(slice, groupName, 'PERSON', shiftName));
+                    }
+                }
+            }
+
+            // if syncing whole membership (not just a single member), remove any
+            // sync-created members in xMatters roster no longer in group
+            if (!userRec) {
+
+                for (var i = 0; i < roster.length; ++i) {
+                    username = roster[i];
+
+                    // remove xMatters user, if no longer syncable
+                    var userRec2 = new GlideRecord('sys_user');
+                    userRec2.get(this.config.USERNAMEFIELD, username);
+
+                    if (!xMPerson.isSyncableUser(userRec2)) {
+                        removeUsers.push(username);
+
+                    } else if (!this.memberIsInList(username, groupMembers)) {
+                        this.log.debug('syncMembership: Removing existing roster member: "' + username +
+                            '" not present in group: "' + groupName + '"');
+                        removeMembers.push(username);
+                    }
+
+                }
+
+                if (removeUsers.length) {
+                    var xMPersonCollection = new xMattersPersonCollection(this.config, this.dataHelper, this.log.getLogTraceId());
+
+                    totalToProcess = removeUsers.length;
+
+                    if (this.config.MAX_USER_PROCESSES > 0) {
+                        numProcesses = this.config.MAX_USER_PROCESSES;
+                        bucketSize = Math.ceil(totalToProcess / numProcesses);
+                    } else {
+                        bucketSize = this.config.MAX_CALLS_PER_PROCESS / this.config.CALLS_PER_USER_DELETE;
+                        numApiCalls = totalToProcess * this.config.CALLS_PER_USER_DELETE;
+                        numProcesses = Math.ceil(numApiCalls / this.config.MAX_CALLS_PER_PROCESS);
+                    }
+                    for (n = 0; n < numProcesses; ++n) {
+                        slice = removeUsers.slice(n * bucketSize, (n + 1) * bucketSize);
+                        if (slice.length > 0) {
+                            this.log.debug('syncMembership: Slice: ' + n + ': [' + slice.join() + ']');
+                            progressIds.push(xMPersonCollection.removeUsersAsync(slice));
+                        }
+                    }
+                }
+
+                if (removeMembers.length) {
+                    totalToProcess = removeMembers.length;
+
+                    if (this.config.MAX_USER_PROCESSES > 0) {
+                        numProcesses = this.config.MAX_USER_PROCESSES;
+                        bucketSize = Math.ceil(totalToProcess / numProcesses);
+                    } else {
+                        bucketSize = this.config.MAX_CALLS_PER_PROCESS / this.config.CALLS_PER_MEMBER_DELETE;
+                        numApiCalls = totalToProcess * this.config.CALLS_PER_MEMBER_DELETE;
+                        numProcesses = Math.ceil(numApiCalls / this.config.MAX_CALLS_PER_PROCESS);
+                    }
+                    for (n = 0; n < numProcesses; ++n) {
+                        slice = removeMembers.slice(n * bucketSize, (n + 1) * bucketSize);
+                        if (slice.length > 0) {
+                            this.log.debug('syncMembership: Slice: ' + n + ': [' + slice.join() + ']');
+                            progressIds.push(this.removeMembersAsync(groupName, slice));
+                        }
+                    }
+                }
+            }
+
+            return progressIds;
+
+        } catch (e) {
+            this.log.logException('syncMembership', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Check if a member is present in a member list
+     *
+     * @param {string} username of the member to check
+     * @param {Array} roster list of group members to search
+     * @returns {boolean}
+     */
+    memberIsInList: function (username, roster) {
+        var arrayUtil = new global.ArrayUtil();
+        return arrayUtil.contains(roster, username);
+    },
+
+    /**
+     * Sync members and add them to the group shift/roster
+     *
+     * If shiftName is passed as null, the member will be added
+     * to the default shift. Otherwise, the member will be added
+     * to the named shift.
+     *
+     * If shiftName is an empty string, the member will only be
+     * added to the group roster.
+     *
+     * @param {Array} users list of usernames to sync
+     * @param {string} groupName of the group
+     * @param {string} recipientType (optional) defaults to PERSON
+     * @param {null|string} shiftName (optional) to use or null to use default
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns {*}
+     */
+    syncAndAddMembers: function (users, groupName, recipientType, shiftName, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            var xmperson = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+
+            var usersArr = users;
+            if (typeof users === 'string') {
+                usersArr = new global.JSON().decode(users);
+            }
+
+            this.log.debug('syncAndAddMembers: Worker started for ' + usersArr.length + ' users');
+            this.log.debug('syncAndAddMembers: User list: [' + usersArr.join() + ']');
+
+            var userRec = new GlideRecord('sys_user');
+            userRec.addEncodedQuery(this.config.USERNAMEFIELD + 'IN' + usersArr.join());
+            userRec.orderBy(this.config.USERNAMEFIELD);
+            userRec.query();
+
+            var syncedMembers = [], unsyncableMembers = [], failedMembers = [];
+            var moreMembersToSync = [];
+            while (userRec.next()) {
+                var username = xmperson.getxMattersUsername(userRec);
+                if (xmperson.isSyncableUser(userRec)) {
+                    var xMMember = xmperson.syncUser(userRec);
+                    if (!xMMember) {
+                        // we may fail in creating a user if there is a
+                        // race between user role sync and group member sync...
+                        // See if we can simply retrieve the member.
+                        xMMember = xmperson.getPersonFromxM(username);
+                    }
+
+                    if (xMMember) {
+                        this.log.debug('syncAndAddMembers: Sync of user: "' + username + '" completed');
+
+                    } else {
+                        failedMembers.push(username);
+                        this.log.warn('syncAndAddMembers: Failed to sync user: "' + username + '" for group: "' +
+                            groupName + '" membership. Continuing with next user in the list.');
+
+                        // end this worker, if aproaching the limit
+                        if (this.config.MAX_CALLS_PER_PROCESS - this.dataHelper.getCallCount() < this.config.CALLS_PER_USER) {
+                            while (userRec.next()) {
+                                moreMembersToSync.push(xmperson.getxMattersUsername(userRec));
+                            }
+
+                            break;
+                        }
+                        continue;
+                    }
+
+                    if (typeof shiftName == 'string' && shiftName === '') {
+                        this.log.debug('syncAndAddMembers: Adding user: "' + username + '" to group: "' + groupName + '" roster');
+                        this.addMemberToRoster(groupName, xMMember.id, recipientType);
+
+                    } else {
+                        this.log.debug('syncAndAddMembers: Adding user: "' + username + '" to group: "' + groupName +
+                            '" shift: "' + shiftName + '"');
+                        this.addMemberToShift(groupName, xMMember.id, recipientType, shiftName);
+                    }
+
+                    syncedMembers.push(username);
+
+                    this.log.debug('syncAndAddMembers: Processed ' +
+                        (syncedMembers.length + unsyncableMembers.length + failedMembers.length) +
+                        ' users for group: "' + groupName +
+                        '". Number of REST calls: ' + this.dataHelper.getCallCount());
+
+                    // end this worker, if aproaching the limit
+                    if (this.config.MAX_CALLS_PER_PROCESS - this.dataHelper.getCallCount() < this.config.CALLS_PER_USER) {
+                        while (userRec.next()) {
+                            moreMembersToSync.push(xmperson.getxMattersUsername(userRec));
+                        }
+
+                        break;
+                    }
+
+                } else {
+                    unsyncableMembers.push(username);
+                    this.log.debug('syncAndAddMembers: Not adding non-syncable member: "' + username +
+                        '" to group: "' + groupName + '"');
+                }
+            }
+
+            if (moreMembersToSync.length > 0) {
+                this.log.debug('syncAndAddMembers: Worker is close to REST calls quota and will sync ' +
+                    moreMembersToSync.length + ' users: [' + moreMembersToSync.join() +
+                    '] in a separate process');
+
+                this.syncAndAddMembersAsync(moreMembersToSync, groupName, recipientType, shiftName);
+            }
+
+            var logMsg = 'syncAndAddMembers: Worker ending for group: "' + groupName + '" after processing ' +
+                (syncedMembers.length + unsyncableMembers.length + failedMembers.length) +
+                ' users: ' + syncedMembers.length + ' synced, ' + failedMembers.length + ' failed (' +
+                this.log.timer(start) + 'ms elapsed)';
+            if (this.log.isDebug()) {
+                if (syncedMembers.length) {
+                    logMsg += '\n> Synced members: [' + syncedMembers.join() + ']';
+                }
+                if (unsyncableMembers.length) {
+                    logMsg += '\n> Unsyncable members: [' + unsyncableMembers.join() + ']';
+                }
+                if (failedMembers.length) {
+                    logMsg += '\n> Failed syncs: [' + failedMembers.join() + ']';
+                }
+                this.log.debug(logMsg);
+
+            } else {
+                if (syncedMembers.length) {
+                    logMsg += '\n> Synced members: [' + syncedMembers.slice(0, 50).join() + ']';
+                    logMsg += (syncedMembers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                if (unsyncableMembers.length) {
+                    logMsg += '\n> Unsyncable members: [' + unsyncableMembers.slice(0, 50).join() + ']';
+                    logMsg += (unsyncableMembers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                if (failedMembers.length) {
+                    logMsg += '\n> Failed syncs: [' + failedMembers.slice(0, 50).join() + ']';
+                    logMsg += (failedMembers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                this.log.info(logMsg);
+            }
+
+        } catch (e) {
+            this.log.logException('syncAndAddMembers', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Add a member to a shift in xMatters
+     *
+     * @param {string} groupName of the xMatters group
+     * @param {string} memberID of the member to add
+     * @param {string} recipientType (optional) of the member object; one of PERSON,
+     *    GROUP or DEVICE; defaults to PERSON
+     * @param {string} shiftName (optional) of the shift; defaults to value from config
+     * @returns {*} response object returned from xMatters
+     */
+    addMemberToShift: function (groupName, memberID, recipientType, shiftName) {
+        recipientType = recipientType || 'PERSON';
+
+        if (!shiftName) {
+            shiftName = this.config.SHIFTNAME;
+        }
+
+        var path = '/groups/' + encodeURIComponent(groupName) +
+            '/shifts/' + encodeURIComponent(shiftName) + '/members';
+
+        var response = this.dataHelper.post(path, {
+            recipient: {
+                id: memberID,
+                recipientType: recipientType
+            }
+        });
+
+        if (response.status == 409 && response.body.indexOf('is already a member of the shift') != -1) {
+            this.log.debug('addMemberToShift: A ' + recipientType.toLowerCase() + ' with ID: "' + memberID +
+                '" already exists in group: "' + groupName + '" shift: "' + shiftName +
+                    '". Duplicate will not be added');
+            return {};
+
+        } else if (!this.dataHelper.isSucessfulResponse(response)) {
+            var respData = new global.JSON().decode(response.respData);
+            this.log.error('addMemberToShift: Failed adding user: "' + memberID + '" to group: "' +
+                groupName + '" shift: "' + shiftName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return {};
+        }
+
+        this.log.debug('addMemberToShift: User: "' + memberID + '" successfully added to group: "' +
+            groupName + '" shift: "' + shiftName + '"');
+
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * Add a member to a group roster in xMatters
+     *
+     * @param {string} groupName of the xMatters group
+     * @param {string} memberID of the member to add
+     * @param {string} recipientType (optional) of the member object; one of PERSON,
+     *    GROUP or DEVICE; defaults to PERSON
+     * @returns {*} response object returned from xMatters
+     */
+    addMemberToRoster: function (groupName, memberID, recipientType) {
+        recipientType = recipientType || 'PERSON';
+
+        var path = '/groups/' + encodeURIComponent(groupName) + '/members';
+        var response = this.dataHelper.post(path, {
+            id: memberID,
+            recipientType: recipientType
+        });
+
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('addMemberToRoster: Failed adding user: "' + memberID + '" to group: "' +
+                groupName + '" roster' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return {};
+        }
+
+        this.log.debug('addMemberToRoster: User: "' + memberID + '" successfully added to group: "' +
+            groupName + '" roster');
+
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * Remove members from group
+     *
+     * If any members being removed from the group leave the corresponding user
+     * in a state where it is no longer sync-able with xMatters, the user will
+     * be removed, IF the user in xMatters was originally created as a result of a
+     * sync operation.
+     *
+     * @param {string} groupName of group from which to remove members
+     * @param {Array} members list of members to remove from group
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns {void}
+     */
+    removeMembers: function (groupName, members, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            var membersArr = members;
+            if (typeof members === 'string') {
+                membersArr = new global.JSON().decode(members);
+            }
+
+            this.log.debug('removeMembers: Worker started for ' + membersArr.length + ' members');
+            this.log.debug('removeMembers: Member list: [' + membersArr.join() + ']');
+
+            var removedMembers = [], failedMembers = [];
+            var moreMembersToRemove = [];
+            for (var i = 0; i < membersArr.length; ++i) {
+                var username = membersArr[i];
+                this.log.debug('removeMembers: Removing member: "' + username + '"');
+
+                if (this.removeMember(groupName, username)) {
+                    removedMembers.push(username);
+                    this.log.debug('removeMembers: Removal of member: "' + username + '" complete');
+
+                } else {
+                    failedMembers.push(username);
+                    this.log.warn('removeMembers: Failed to remove member: "' + username + '". Continuing with next user in the list.');
+                }
+
+                this.log.debug('removeMembers: ' + (removedMembers.length + failedMembers.length) +
+                    ' members processed. Number of REST calls: ' + this.dataHelper.getCallCount());
+
+                if (i + 1 < membersArr.length &&
+                    this.config.MAX_CALLS_PER_PROCESS - this.dataHelper.getCallCount() < this.config.CALLS_PER_MEMBER_DELETE) {
+                    moreMembersToRemove = membersArr.slice(i + 1);
+                    break;
+                }
+            }
+
+            if (moreMembersToRemove.length > 0) {
+                this.log.debug('removeMembers: Worker is close to REST calls quota and will remove ' +
+                    moreUsersToRemove.length + ' members: [' + moreMembersToRemove.join() +
+                    '] in a separate process');
+
+                this.removeMembersAsync(groupName, moreMembersToRemove);
+            }
+
+            var logMsg = 'removeMembers: Worker ending for group: "' + groupName + '" after processing ' +
+                (removedMembers.length + failedMembers.length) +
+                ' users: ' + removedMembers.length + ' removed, ' + failedMembers.length + ' failed (' +
+                this.log.timer(start) + 'ms elapsed)';
+            if (this.log.isDebug()) {
+                if (removedMembers.length) {
+                    logMsg += '\n> Removed members: [' + removedMembers.join() + ']';
+                }
+                if (failedMembers.length) {
+                    logMsg += '\n> Failed removals: [' + failedMembers.join() + ']';
+                }
+                this.log.debug(logMsg);
+
+            } else {
+                if (removedMembers.length) {
+                    logMsg += '\n> Removed members: [' + removedMembers.slice(0, 50).join() + ']';
+                    logMsg += (removedMembers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                if (failedMembers.length) {
+                    logMsg += '\n> Failed removals: [' + failedMembers.slice(0, 50).join() + ']';
+                    logMsg += (failedMembers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                this.log.info(logMsg);
+            }
+
+        } catch (e) {
+            this.log.logException('removeMembers', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Synchronously remove members from a group
+     *
+     * @param {string} groupName of the group from which to remove the member
+     * @param {string} memberID or username of member to remove
+     * @returns {boolean} true if removal successful; false otherwise
+     */
+    removeMember: function (groupName, memberID) {
+        var path = '/groups/' + encodeURIComponent(groupName) +
+            '/members/' + encodeURIComponent(memberID);
+
+        var response = this.dataHelper.remove(path);
+
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('removeMember: Failed removing member: "' + memberID + '" from group: "' + groupName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return false;
+        }
+
+        this.log.debug('removeMember: Successfully removed member: "' + memberID + '" from group: "' + groupName + '"');
+
+        return true;
+    },
+
+    /**
+     * Add a new shift to a given group in xMatters
+     *
+     * If the shift already exists, return the existing one
+     *
+     * @param {string} groupName (or ID) of the group in which to create the script
+     * @param {string} shiftName (optional) of the shift to add
+     * @returns {*}
+     */
+    addShift: function (groupName, shiftName) {
+        shiftName = shiftName || this.config.SHIFTNAME;
+
+        this.log.debug('addShift: Attempting to add shift ' + shiftName + ' to group: ' + groupName);
+
+        var response = this.dataHelper.post('/groups/' + encodeURIComponent(groupName) + '/shifts', {
+            name: shiftName
+        });
+
+        // If it already exists, then get the details
+        if (response.status == 409) {
+            this.log.debug('addShift: Shift: "' + shiftName + '" already exists for group: "' + groupName + '"');
+            return this.getShift(groupName, shiftName);
+
+        } else if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('addShift: Failed adding shift: "' + shift + '" to group: "' + groupName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return null;
+        }
+
+        this.log.debug('addShift: Successfully added new shift: "' + shiftName + '" to group: "' + groupName + '"');
+
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * Get a shift from given group in xMatters
+     *
+     * @param groupName or ID of the group to search
+     * @param shiftName or ID of the shift to retrieve
+     * @returns {*}
+     */
+    getShift: function (groupName, shiftName) {
+        shiftName = shiftName || this.config.SHIFTNAME;
+
+        var response = this.dataHelper.get(
+            '/groups/' + encodeURIComponent(groupName) + '/shifts/' + encodeURIComponent(shiftName)
+        );
+
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('getShift: Could not find shift: "' + shiftName + '" for group: "' + groupName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return {};
+        }
+
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * Get the roster of a given group
+     *
+     * This method is pagination-aware and will use recursion as required
+     *
+     * @param {string} groupName name of the group to look up
+     * @param {?number} offset the offset within the result to retrieve
+     * @param {?number} limit the max number of results to retrieve
+     * @returns {*}
+     */
+    getxMattersRoster: function (groupName, offset, limit) {
+        offset = offset || 0;
+        limit = limit || 1000;
+        var response = this.dataHelper.get(
+            '/groups/' + encodeURIComponent(groupName) + '/members', {
+                embed: 'shifts',
+                offset: offset,
+                limit: limit
+            });
+
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('getxMattersRoster: Failed getting roster members for group: "' + groupName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return [];
+        }
+
+        var roster = [];
+        var json = new global.JSON().decode(response.body);
+
+        var resultCount = json.count;
+        var totalMembers = json.total;
+
+        if (json.data) {
+            for (var i = 0; i < json.data.length; i++) {
+                if (json.data[i].member) {
+                    roster.push(json.data[i].member.targetName);
+                }
+            }
+        }
+
+        var arrayUtil = new global.ArrayUtil();
+        roster = arrayUtil.unique(roster);
+
+        this.log.debug('getxMattersRoster: Retrieved ' + resultCount + ' of ' + totalMembers +
+            ' roster members for group: "' + groupName + '"');
+
+        // fetch more if there are additional results
+        if (json.links.next) {
+            new global.ArrayUtil().concat(roster, this.getxMattersRoster(groupName, offset + limit, limit));
+        }
+
+        return roster;
+    },
+
+    /**
+     * Get active group members in ServiceNow group
+     *
+     * @param {string} groupName the group from which to retrieve users
+     * @returns {Array} of users in the group
+     */
+    getServiceNowMembers: function (groupName) {
+        var members = [];
+
+        if (groupName) {
+            var grMemberRec = new GlideRecord('sys_user_grmember');
+            grMemberRec.addQuery('group.name', groupName);
+            grMemberRec.addQuery('user.active', 'true');
+            grMemberRec.query();
+            while (grMemberRec.next()) {
+                members.push(grMemberRec.user[this.config.USERNAMEFIELD].getDisplayValue());
+            }
+        }
+
+        this.log.debug('getServiceNowMembers: Retrieved ' + members.length +
+            ' active ServiceNow members for group: "' + groupName + '"');
+
+        return members;
+    },
+
+    /**
+     * Get a consolidated list of group members from both ServiceNow and xMatters
+     *
+     * @param {string} groupName the group membership to retrieve from both systems
+     * @returns array a union of the members from both systems
+     */
+    getMembersConsolidated: function (groupName) {
+        var arrayUtil = new global.ArrayUtil();
+        var xMembers = this.getxMattersRoster(groupName);
+        var sMembers = this.getServiceNowMembers(groupName);
+
+        return arrayUtil.union(xMembers, sMembers);
+    },
+
+    /**
+     * Determine if a sync is required on a sys_user_grmember record change
+     *
+     * If the group is syncable, then we will want to sync the group membership
+     * for the given user, whether this is an addition to or removal from the
+     * group membership
+     *
+     * @param groupMemberRec the "current" sys_user_grmember record
+     * @returns {boolean}
+     */
+    isSyncRequired: function (groupMemberRec) {
+        var group = new xMattersGroup(this.config, this.dataHelper, this.log.getLogTraceId());
+        return group.isSyncableGroup(groupMemberRec.group);
+    },
+
+    type: 'xMattersGroupMembership'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-11 17:32:11</sys_created_on>
+        <sys_id>b8f8c4394f2822008472a88ca310c780</sys_id>
+        <sys_mod_count>14</sys_mod_count>
+        <sys_name>xMattersGroupMembership</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_b8f8c4394f2822008472a88ca310c780</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:59</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,651 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_mod_conf_opt_service</name>
+        <script><![CDATA[angular.module('xm.config-options-provider', [ 'xm.glide-ajax', 'xm.xmatters-service' ])
+    .service('ConfigOptionsProvider', function ( $q, GlideAjax, XMService ) {
+        var options = {};
+
+        function XMOption() {
+            this.isValid = false;
+            this.errors = [];
+            this.displayProperty = 'label';
+            this.keyProperty = 'value';
+            this.isQuery = false;
+            this.optionList = [];
+            this.optionQuery = function($query){ return []; };
+            return this;
+        }
+
+        XMOption.prototype.sourceFunc = function( $query ) {
+            if( this.isQuery ) {
+                return this.optionQuery( $query );
+            } else {
+                var opts = this.optionList.filter( function( item ) {
+                    return item.value.toLowerCase().indexOf( $query.toLowerCase() ) > -1;
+                } );
+                // console.log( opts );
+                return opts;
+            }
+        };
+
+        XMOption.prototype.addOption = function( value, label ) {
+            this.optionList.push(buildOption(value, label));
+        };
+
+        XMOption.prototype.addError = function( msg ) {
+            this.errors.push( msg );
+        };
+
+        XMOption.prototype.getErrorMsg = function( msg ) {
+            return 'The system is currently unable to provide options. ' +
+                'You can either follow the help text or attempt to resolve the error: ' +
+                this.errors.join( ' | ' );
+        };
+
+        function buildOption(value, label) {
+            if( typeof label === 'undefined' || label === null ) {
+                label = value;
+            }
+            return {
+                value: value,
+                label: label
+            };
+        }
+
+        function getQueryOption( queryFunc ) {
+            var opt = new XMOption();
+            opt.isValid = true;
+            opt.isQuery = true;
+            opt.optionQuery = queryFunc;
+            return opt;
+        }
+
+        // Method is available to load all servicenow users at once if desired
+        // wrapped in a promise in order to allow chain loading
+        var loadServiceNowUsers = function() {
+            var deferred = $q.defer();
+            // console.log("loading snow users...");
+            options.snow_users = new XMOption();
+            var ga = new GlideAjax( 'xMattersAjaxConfig' );
+            ga.addParam( 'sysparm_name', 'getServiceNowUsers' );
+            ga.setScope( 'x_xma_xmatters' );
+            ga.send().then( function(response){
+                if( response.success ) {
+                    var userOptions = options.snow_users;
+                    for( var i = 0; i < response.data.length; i++ ) {
+                        userOptions.addOption( response.data[i].name );
+                    }
+                    userOptions.isValid = true;
+                    jslog('Found ' + userOptions.optionList.length + ' users');
+                } else {
+                    jslog( response );
+                }
+                deferred.resolve();
+            } ).catch( function( e ){
+                jslog( e );
+                deferred.resolve();
+            } );
+            return deferred.promise;
+        };
+
+        // Method is available to load all xm device names at once if desired
+        // wrapped in a promise in order to allow chain loading
+        var loadXMDeviceNames = function() {
+            var deferred = $q.defer();
+            // console.log("loading device names...");
+            options.default_device_name = new XMOption();
+            XMService.getDeviceNames().then( function( result ) {
+                jslog( 'Processing Device Name result' );
+                // console.log( result );
+                for( var i = 0; i < result.length; i++ ) {
+                    var deviceName = result[i];
+                    var optionName = deviceName.deviceType + '_device_names';
+                    if( !options.hasOwnProperty( optionName ) ) {
+                        options[ optionName ] = new XMOption();
+                        options[ optionName ].addOption( '', '-- Select a Device name --' );
+                    }
+                    options[ optionName ].addOption( deviceName.name );
+                    options[ optionName ].isValid = true;
+                }
+                deferred.resolve();
+            } ).catch( function( reason ) {
+                deferred.resolve();
+                options.default_device_name.addError( 'Unable to retrieve device names from xMatters at this time.' );
+            } );
+            return deferred.promise;
+        };
+
+        // Able to load users on demand
+        var setupServiceNowUserOptions = function() {
+            var cache = {};
+            options.snow_users = getQueryOption( function( $query ) {
+                if( cache.hasOwnProperty($query) ) {
+                    return cache[$query];
+                } else {
+                    var ga = new GlideAjax( 'xMattersAjaxConfig' );
+                    ga.setScope( 'x_xma_xmatters' );
+                    ga.addParam( 'sysparm_name', 'searchServiceNowUsers' );
+                    ga.addParam( 'search_term', encodeURIComponent( $query ) );
+                    return ga.send().then(function(response){
+                        var items = [];
+                        if( response.success ) {
+                            for( var i = 0; i < response.data.length; i++ ) {
+                                items.push( buildOption( response.data[i].name ) );
+                            }
+                        } else {
+                            jslog( response );
+                        }
+                        cache[$query] = items;
+                        return items;
+                    });
+                }
+            } );
+        };
+
+        loadXMDeviceNames();
+        setupServiceNowUserOptions();
+
+        // load languages
+        (function() {
+            options.language_short = new XMOption();
+            options.language_full = new XMOption();
+
+            options.language_short.addOption( '', '-- Select Language --' );
+            options.language_short.addOption( 'en', 'English (en)' );
+            options.language_short.addOption( 'fr', 'French (fr)' );
+            options.language_short.addOption( 'es', 'Spanish (es)' );
+            options.language_full.addOption( '', '-- Select Language --' );
+            options.language_full.addOption( 'Albanian' );
+            options.language_full.addOption( 'Arabic' );
+            options.language_full.addOption( 'Belarusian' );
+            options.language_full.addOption( 'Brazilian Portuguese' );
+            options.language_full.addOption( 'Bulgarian' );
+            options.language_full.addOption( 'Cantonese' );
+            options.language_full.addOption( 'Catalan' );
+            options.language_full.addOption( 'Croatian' );
+            options.language_full.addOption( 'Czech' );
+            options.language_full.addOption( 'Danish' );
+            options.language_full.addOption( 'Dutch' );
+            options.language_full.addOption( 'English' );
+            options.language_full.addOption( 'English UK' );
+            options.language_full.addOption( 'Estonian' );
+            options.language_full.addOption( 'Finnish' );
+            options.language_full.addOption( 'French' );
+            options.language_full.addOption( 'German' );
+            options.language_full.addOption( 'Greek' );
+            options.language_full.addOption( 'Hebrew' );
+            options.language_full.addOption( 'Hindi' );
+            options.language_full.addOption( 'Hungarian' );
+            options.language_full.addOption( 'Icelandic' );
+            options.language_full.addOption( 'Italian' );
+            options.language_full.addOption( 'Japanese' );
+            options.language_full.addOption( 'Korean' );
+            options.language_full.addOption( 'Latvian' );
+            options.language_full.addOption( 'Lithuanian' );
+            options.language_full.addOption( 'Macedonian' );
+            options.language_full.addOption( 'Mandarin' );
+            options.language_full.addOption( 'Norwegian' );
+            options.language_full.addOption( 'Polish' );
+            options.language_full.addOption( 'Portuguese' );
+            options.language_full.addOption( 'Romanian' );
+            options.language_full.addOption( 'Russian' );
+            options.language_full.addOption( 'Slovak' );
+            options.language_full.addOption( 'Slovenian' );
+            options.language_full.addOption( 'Spanish' );
+            options.language_full.addOption( 'Swedish' );
+            options.language_full.addOption( 'Thai' );
+            options.language_full.addOption( 'Turkish' );
+            options.language_full.addOption( 'Ukrainian' );
+            options.language_full.addOption( 'Vietnamese' );
+
+            options.language_short.isValid = true;
+            options.language_full.isValid = true;
+        })();
+
+        // load timezones
+        (function() {
+            options.time_zones = new XMOption();
+            options.time_zones.addOption( '', '-- Select Timezone --' );
+
+            options.time_zones.addOption( "Africa/Abidjan" );
+            options.time_zones.addOption( "Africa/Accra" );
+            options.time_zones.addOption( "Africa/Addis_Ababa" );
+            options.time_zones.addOption( "Africa/Algiers" );
+            options.time_zones.addOption( "Africa/Asmera" );
+            options.time_zones.addOption( "Africa/Bamako" );
+            options.time_zones.addOption( "Africa/Bangui" );
+            options.time_zones.addOption( "Africa/Banjul" );
+            options.time_zones.addOption( "Africa/Bissau" );
+            options.time_zones.addOption( "Africa/Blantyre" );
+            options.time_zones.addOption( "Africa/Brazzaville" );
+            options.time_zones.addOption( "Africa/Bujumbura" );
+            options.time_zones.addOption( "Africa/Cairo" );
+            options.time_zones.addOption( "Africa/Casablanca" );
+            options.time_zones.addOption( "Africa/Ceuta" );
+            options.time_zones.addOption( "Africa/Conakry" );
+            options.time_zones.addOption( "Africa/Dakar" );
+            options.time_zones.addOption( "Africa/Dar_es_Salaam" );
+            options.time_zones.addOption( "Africa/Djibouti" );
+            options.time_zones.addOption( "Africa/Douala" );
+            options.time_zones.addOption( "Africa/El_Aaiun" );
+            options.time_zones.addOption( "Africa/Freetown" );
+            options.time_zones.addOption( "Africa/Gaborone" );
+            options.time_zones.addOption( "Africa/Harare" );
+            options.time_zones.addOption( "Africa/Johannesburg" );
+            options.time_zones.addOption( "Africa/Kampala" );
+            options.time_zones.addOption( "Africa/Khartoum" );
+            options.time_zones.addOption( "Africa/Kigali" );
+            options.time_zones.addOption( "Africa/Kinshasa" );
+            options.time_zones.addOption( "Africa/Lagos" );
+            options.time_zones.addOption( "Africa/Libreville" );
+            options.time_zones.addOption( "Africa/Lome" );
+            options.time_zones.addOption( "Africa/Luanda" );
+            options.time_zones.addOption( "Africa/Lubumbashi" );
+            options.time_zones.addOption( "Africa/Lusaka" );
+            options.time_zones.addOption( "Africa/Malabo" );
+            options.time_zones.addOption( "Africa/Maputo" );
+            options.time_zones.addOption( "Africa/Maseru" );
+            options.time_zones.addOption( "Africa/Mbabane" );
+            options.time_zones.addOption( "Africa/Mogadishu" );
+            options.time_zones.addOption( "Africa/Monrovia" );
+            options.time_zones.addOption( "Africa/Nairobi" );
+            options.time_zones.addOption( "Africa/Ndjamena" );
+            options.time_zones.addOption( "Africa/Niamey" );
+            options.time_zones.addOption( "Africa/Nouakchott" );
+            options.time_zones.addOption( "Africa/Ouagadougou" );
+            options.time_zones.addOption( "Africa/Porto-Novo" );
+            options.time_zones.addOption( "Africa/Sao_Tome" );
+            options.time_zones.addOption( "Africa/Tripoli" );
+            options.time_zones.addOption( "Africa/Tunis" );
+            options.time_zones.addOption( "Africa/Windhoek" );
+            options.time_zones.addOption( "America/Adak" );
+            options.time_zones.addOption( "America/Anchorage" );
+            options.time_zones.addOption( "America/Anguilla" );
+            options.time_zones.addOption( "America/Antigua" );
+            options.time_zones.addOption( "America/Araguaina" );
+            options.time_zones.addOption( "America/Aruba" );
+            options.time_zones.addOption( "America/Asuncion" );
+            options.time_zones.addOption( "America/Bahia" );
+            options.time_zones.addOption( "America/Barbados" );
+            options.time_zones.addOption( "America/Belem" );
+            options.time_zones.addOption( "America/Belize" );
+            options.time_zones.addOption( "America/Boa_Vista" );
+            options.time_zones.addOption( "America/Bogota" );
+            options.time_zones.addOption( "America/Boise" );
+            options.time_zones.addOption( "America/Buenos_Aires" );
+            options.time_zones.addOption( "America/Cambridge_Bay" );
+            options.time_zones.addOption( "America/Campo_Grande" );
+            options.time_zones.addOption( "America/Cancun" );
+            options.time_zones.addOption( "America/Caracas" );
+            options.time_zones.addOption( "America/Catamarca" );
+            options.time_zones.addOption( "America/Cayenne" );
+            options.time_zones.addOption( "America/Cayman" );
+            options.time_zones.addOption( "America/Chicago" );
+            options.time_zones.addOption( "America/Chihuahua" );
+            options.time_zones.addOption( "America/Cordoba" );
+            options.time_zones.addOption( "America/Costa_Rica" );
+            options.time_zones.addOption( "America/Cuiaba" );
+            options.time_zones.addOption( "America/Curacao" );
+            options.time_zones.addOption( "America/Danmarkshavn" );
+            options.time_zones.addOption( "America/Dawson" );
+            options.time_zones.addOption( "America/Dawson_Creek" );
+            options.time_zones.addOption( "America/Denver" );
+            options.time_zones.addOption( "America/Detroit" );
+            options.time_zones.addOption( "America/Dominica" );
+            options.time_zones.addOption( "America/Edmonton" );
+            options.time_zones.addOption( "America/Eirunepe" );
+            options.time_zones.addOption( "America/El_Salvador" );
+            options.time_zones.addOption( "America/Fortaleza" );
+            options.time_zones.addOption( "America/Glace_Bay" );
+            options.time_zones.addOption( "America/Godthab" );
+            options.time_zones.addOption( "America/Goose_Bay" );
+            options.time_zones.addOption( "America/Grand_Turk" );
+            options.time_zones.addOption( "America/Grenada" );
+            options.time_zones.addOption( "America/Guadeloupe" );
+            options.time_zones.addOption( "America/Guatemala" );
+            options.time_zones.addOption( "America/Guayaquil" );
+            options.time_zones.addOption( "America/Guyana" );
+            options.time_zones.addOption( "America/Halifax" );
+            options.time_zones.addOption( "America/Havana" );
+            options.time_zones.addOption( "America/Hermosillo" );
+            options.time_zones.addOption( "America/Indiana/Indianapolis" );
+            options.time_zones.addOption( "America/Indiana/Knox" );
+            options.time_zones.addOption( "America/Indiana/Marengo" );
+            options.time_zones.addOption( "America/Indiana/Vevay" );
+            options.time_zones.addOption( "America/Inuvik" );
+            options.time_zones.addOption( "America/Iqaluit" );
+            options.time_zones.addOption( "America/Jamaica" );
+            options.time_zones.addOption( "America/Jujuy" );
+            options.time_zones.addOption( "America/Juneau" );
+            options.time_zones.addOption( "America/Kentucky/Louisville" );
+            options.time_zones.addOption( "America/Kentucky/Monticello" );
+            options.time_zones.addOption( "America/La_Paz" );
+            options.time_zones.addOption( "America/Lima" );
+            options.time_zones.addOption( "America/Los_Angeles" );
+            options.time_zones.addOption( "America/Maceio" );
+            options.time_zones.addOption( "America/Managua" );
+            options.time_zones.addOption( "America/Manaus" );
+            options.time_zones.addOption( "America/Martinique" );
+            options.time_zones.addOption( "America/Mazatlan" );
+            options.time_zones.addOption( "America/Mendoza" );
+            options.time_zones.addOption( "America/Menominee" );
+            options.time_zones.addOption( "America/Merida" );
+            options.time_zones.addOption( "America/Mexico_City" );
+            options.time_zones.addOption( "America/Miquelon" );
+            options.time_zones.addOption( "America/Monterrey" );
+            options.time_zones.addOption( "America/Montevideo" );
+            options.time_zones.addOption( "America/Montreal" );
+            options.time_zones.addOption( "America/Montserrat" );
+            options.time_zones.addOption( "America/Nassau" );
+            options.time_zones.addOption( "America/New_York" );
+            options.time_zones.addOption( "America/Nipigon" );
+            options.time_zones.addOption( "America/Nome" );
+            options.time_zones.addOption( "America/Noronha" );
+            options.time_zones.addOption( "America/North_Dakota/Center" );
+            options.time_zones.addOption( "America/Panama" );
+            options.time_zones.addOption( "America/Pangnirtung" );
+            options.time_zones.addOption( "America/Paramaribo" );
+            options.time_zones.addOption( "America/Phoenix" );
+            options.time_zones.addOption( "America/Port-au-Prince" );
+            options.time_zones.addOption( "America/Port_of_Spain" );
+            options.time_zones.addOption( "America/Porto_Velho" );
+            options.time_zones.addOption( "America/Puerto_Rico" );
+            options.time_zones.addOption( "America/Rainy_River" );
+            options.time_zones.addOption( "America/Rankin_Inlet" );
+            options.time_zones.addOption( "America/Recife" );
+            options.time_zones.addOption( "America/Regina" );
+            options.time_zones.addOption( "America/Rio_Branco" );
+            options.time_zones.addOption( "America/Santiago" );
+            options.time_zones.addOption( "America/Santo_Domingo" );
+            options.time_zones.addOption( "America/Sao_Paulo" );
+            options.time_zones.addOption( "America/Scoresbysund" );
+            options.time_zones.addOption( "America/Shiprock" );
+            options.time_zones.addOption( "America/St_Johns" );
+            options.time_zones.addOption( "America/St_Kitts" );
+            options.time_zones.addOption( "America/St_Lucia" );
+            options.time_zones.addOption( "America/St_Thomas" );
+            options.time_zones.addOption( "America/St_Vincent" );
+            options.time_zones.addOption( "America/Swift_Current" );
+            options.time_zones.addOption( "America/Tegucigalpa" );
+            options.time_zones.addOption( "America/Thule" );
+            options.time_zones.addOption( "America/Thunder_Bay" );
+            options.time_zones.addOption( "America/Tijuana" );
+            options.time_zones.addOption( "America/Toronto" );
+            options.time_zones.addOption( "America/Tortola" );
+            options.time_zones.addOption( "America/Vancouver" );
+            options.time_zones.addOption( "America/Whitehorse" );
+            options.time_zones.addOption( "America/Winnipeg" );
+            options.time_zones.addOption( "America/Yakutat" );
+            options.time_zones.addOption( "America/Yellowknife" );
+            options.time_zones.addOption( "Antarctica/Casey" );
+            options.time_zones.addOption( "Antarctica/Davis" );
+            options.time_zones.addOption( "Antarctica/Dumont d'Urville" );
+            options.time_zones.addOption( "Antarctica/Mawson" );
+            options.time_zones.addOption( "Antarctica/McMurdo" );
+            options.time_zones.addOption( "Antarctica/Palmer" );
+            options.time_zones.addOption( "Antarctica/Rothera" );
+            options.time_zones.addOption( "Antarctica/South_Pole" );
+            options.time_zones.addOption( "Antarctica/Syowa" );
+            options.time_zones.addOption( "Antarctica/Vostok" );
+            options.time_zones.addOption( "Arctic/Longyearbyen" );
+            options.time_zones.addOption( "Asia/Aden" );
+            options.time_zones.addOption( "Asia/Almaty" );
+            options.time_zones.addOption( "Asia/Amman" );
+            options.time_zones.addOption( "Asia/Anadyr" );
+            options.time_zones.addOption( "Asia/Aqtau" );
+            options.time_zones.addOption( "Asia/Aqtobe" );
+            options.time_zones.addOption( "Asia/Ashgabat" );
+            options.time_zones.addOption( "Asia/Baghdad" );
+            options.time_zones.addOption( "Asia/Bahrain" );
+            options.time_zones.addOption( "Asia/Baku" );
+            options.time_zones.addOption( "Asia/Bangkok" );
+            options.time_zones.addOption( "Asia/Beirut" );
+            options.time_zones.addOption( "Asia/Bishkek" );
+            options.time_zones.addOption( "Asia/Brunei" );
+            options.time_zones.addOption( "Asia/Calcutta" );
+            options.time_zones.addOption( "Asia/Choibalsan" );
+            options.time_zones.addOption( "Asia/Chongqing" );
+            options.time_zones.addOption( "Asia/Colombo" );
+            options.time_zones.addOption( "Asia/Damascus" );
+            options.time_zones.addOption( "Asia/Dhaka" );
+            options.time_zones.addOption( "Asia/Dili" );
+            options.time_zones.addOption( "Asia/Dubai" );
+            options.time_zones.addOption( "Asia/Dushanbe" );
+            options.time_zones.addOption( "Asia/Gaza" );
+            options.time_zones.addOption( "Asia/Harbin" );
+            options.time_zones.addOption( "Asia/Hong_Kong" );
+            options.time_zones.addOption( "Asia/Hovd" );
+            options.time_zones.addOption( "Asia/Irkutsk" );
+            options.time_zones.addOption( "Asia/Istanbul" );
+            options.time_zones.addOption( "Asia/Jakarta" );
+            options.time_zones.addOption( "Asia/Jayapura" );
+            options.time_zones.addOption( "Asia/Jerusalem" );
+            options.time_zones.addOption( "Asia/Kabul" );
+            options.time_zones.addOption( "Asia/Kamchatka" );
+            options.time_zones.addOption( "Asia/Karachi" );
+            options.time_zones.addOption( "Asia/Kashgar" );
+            options.time_zones.addOption( "Asia/Katmandu" );
+            options.time_zones.addOption( "Asia/Krasnoyarsk" );
+            options.time_zones.addOption( "Asia/Kuala_Lumpur" );
+            options.time_zones.addOption( "Asia/Kuching" );
+            options.time_zones.addOption( "Asia/Kuwait" );
+            options.time_zones.addOption( "Asia/Macau" );
+            options.time_zones.addOption( "Asia/Magadan" );
+            options.time_zones.addOption( "Asia/Makassar" );
+            options.time_zones.addOption( "Asia/Manila" );
+            options.time_zones.addOption( "Asia/Muscat" );
+            options.time_zones.addOption( "Asia/Nicosia" );
+            options.time_zones.addOption( "Asia/Novosibirsk" );
+            options.time_zones.addOption( "Asia/Omsk" );
+            options.time_zones.addOption( "Asia/Oral" );
+            options.time_zones.addOption( "Asia/Phnom_Penh" );
+            options.time_zones.addOption( "Asia/Pontianak" );
+            options.time_zones.addOption( "Asia/Pyongyang" );
+            options.time_zones.addOption( "Asia/Qatar" );
+            options.time_zones.addOption( "Asia/Qyzylorda" );
+            options.time_zones.addOption( "Asia/Rangoon" );
+            options.time_zones.addOption( "Asia/Riyadh" );
+            options.time_zones.addOption( "Asia/Saigon" );
+            options.time_zones.addOption( "Asia/Sakhalin" );
+            options.time_zones.addOption( "Asia/Samarkand" );
+            options.time_zones.addOption( "Asia/Seoul" );
+            options.time_zones.addOption( "Asia/Shanghai" );
+            options.time_zones.addOption( "Asia/Singapore" );
+            options.time_zones.addOption( "Asia/Taipei" );
+            options.time_zones.addOption( "Asia/Tashkent" );
+            options.time_zones.addOption( "Asia/Tbilisi" );
+            options.time_zones.addOption( "Asia/Tehran" );
+            options.time_zones.addOption( "Asia/Thimphu" );
+            options.time_zones.addOption( "Asia/Tokyo" );
+            options.time_zones.addOption( "Asia/Ulaanbaatar" );
+            options.time_zones.addOption( "Asia/Urumqi" );
+            options.time_zones.addOption( "Asia/Vientiane" );
+            options.time_zones.addOption( "Asia/Vladivostok" );
+            options.time_zones.addOption( "Asia/Yakutsk" );
+            options.time_zones.addOption( "Asia/Yekaterinburg" );
+            options.time_zones.addOption( "Asia/Yerevan" );
+            options.time_zones.addOption( "Atlantic/Azores" );
+            options.time_zones.addOption( "Atlantic/Bermuda" );
+            options.time_zones.addOption( "Atlantic/Canary" );
+            options.time_zones.addOption( "Atlantic/Cape_Verde" );
+            options.time_zones.addOption( "Atlantic/Faeroe" );
+            options.time_zones.addOption( "Atlantic/Madeira" );
+            options.time_zones.addOption( "Atlantic/Reykjavik" );
+            options.time_zones.addOption( "Atlantic/South_Georgia" );
+            options.time_zones.addOption( "Atlantic/St_Helena" );
+            options.time_zones.addOption( "Australia/Adelaide" );
+            options.time_zones.addOption( "Australia/Brisbane" );
+            options.time_zones.addOption( "Australia/Broken_Hill" );
+            options.time_zones.addOption( "Australia/Darwin" );
+            options.time_zones.addOption( "Australia/Hobart" );
+            options.time_zones.addOption( "Australia/Lindeman" );
+            options.time_zones.addOption( "Australia/Lord_Howe" );
+            options.time_zones.addOption( "Australia/Melbourne" );
+            options.time_zones.addOption( "Australia/Perth" );
+            options.time_zones.addOption( "Australia/Sydney" );
+            options.time_zones.addOption( "Canada/Atlantic" );
+            options.time_zones.addOption( "Canada/Central" );
+            options.time_zones.addOption( "Canada/Eastern" );
+            options.time_zones.addOption( "Canada/East-Saskatchewan" );
+            options.time_zones.addOption( "Canada/Mountain" );
+            options.time_zones.addOption( "Canada/Newfoundland" );
+            options.time_zones.addOption( "Canada/Pacific" );
+            options.time_zones.addOption( "Canada/Saskatchewan" );
+            options.time_zones.addOption( "Canada/Yukon" );
+            options.time_zones.addOption( "Europe/Amsterdam" );
+            options.time_zones.addOption( "Europe/Andorra" );
+            options.time_zones.addOption( "Europe/Athens" );
+            options.time_zones.addOption( "Europe/Belgrade" );
+            options.time_zones.addOption( "Europe/Berlin" );
+            options.time_zones.addOption( "Europe/Bratislava" );
+            options.time_zones.addOption( "Europe/Brussels" );
+            options.time_zones.addOption( "Europe/Bucharest" );
+            options.time_zones.addOption( "Europe/Budapest" );
+            options.time_zones.addOption( "Europe/Chisinau" );
+            options.time_zones.addOption( "Europe/Copenhagen" );
+            options.time_zones.addOption( "Europe/Dublin" );
+            options.time_zones.addOption( "Europe/Gibraltar" );
+            options.time_zones.addOption( "Europe/Helsinki" );
+            options.time_zones.addOption( "Europe/Istanbul" );
+            options.time_zones.addOption( "Europe/Kaliningrad" );
+            options.time_zones.addOption( "Europe/Kiev" );
+            options.time_zones.addOption( "Europe/Lisbon" );
+            options.time_zones.addOption( "Europe/Ljubljana" );
+            options.time_zones.addOption( "Europe/London" );
+            options.time_zones.addOption( "Europe/Luxembourg" );
+            options.time_zones.addOption( "Europe/Madrid" );
+            options.time_zones.addOption( "Europe/Malta" );
+            options.time_zones.addOption( "Europe/Minsk" );
+            options.time_zones.addOption( "Europe/Monaco" );
+            options.time_zones.addOption( "Europe/Moscow" );
+            options.time_zones.addOption( "Europe/Nicosia" );
+            options.time_zones.addOption( "Europe/Oslo" );
+            options.time_zones.addOption( "Europe/Paris" );
+            options.time_zones.addOption( "Europe/Prague" );
+            options.time_zones.addOption( "Europe/Riga" );
+            options.time_zones.addOption( "Europe/Rome" );
+            options.time_zones.addOption( "Europe/Samara" );
+            options.time_zones.addOption( "Europe/San_Marino" );
+            options.time_zones.addOption( "Europe/Sarajevo" );
+            options.time_zones.addOption( "Europe/Simferopol" );
+            options.time_zones.addOption( "Europe/Skopje" );
+            options.time_zones.addOption( "Europe/Sofia" );
+            options.time_zones.addOption( "Europe/Stockholm" );
+            options.time_zones.addOption( "Europe/Tallinn" );
+            options.time_zones.addOption( "Europe/Tirane" );
+            options.time_zones.addOption( "Europe/Uzhgorod" );
+            options.time_zones.addOption( "Europe/Vaduz" );
+            options.time_zones.addOption( "Europe/Vatican" );
+            options.time_zones.addOption( "Europe/Vienna" );
+            options.time_zones.addOption( "Europe/Vilnius" );
+            options.time_zones.addOption( "Europe/Warsaw" );
+            options.time_zones.addOption( "Europe/Zagreb" );
+            options.time_zones.addOption( "Europe/Zaporozhye" );
+            options.time_zones.addOption( "Europe/Zurich" );
+            options.time_zones.addOption( "GMT" );
+            options.time_zones.addOption( "Indian/Antananarivo" );
+            options.time_zones.addOption( "Indian/Chagos" );
+            options.time_zones.addOption( "Indian/Christmas" );
+            options.time_zones.addOption( "Indian/Cocos" );
+            options.time_zones.addOption( "Indian/Comoro" );
+            options.time_zones.addOption( "Indian/Kerguelen" );
+            options.time_zones.addOption( "Indian/Mahe" );
+            options.time_zones.addOption( "Indian/Maldives" );
+            options.time_zones.addOption( "Indian/Mauritius" );
+            options.time_zones.addOption( "Indian/Mayotte" );
+            options.time_zones.addOption( "Indian/Reunion" );
+            options.time_zones.addOption( "Pacific/Apia" );
+            options.time_zones.addOption( "Pacific/Auckland" );
+            options.time_zones.addOption( "Pacific/Chatham" );
+            options.time_zones.addOption( "Pacific/Easter" );
+            options.time_zones.addOption( "Pacific/Efate" );
+            options.time_zones.addOption( "Pacific/Enderbury" );
+            options.time_zones.addOption( "Pacific/Fakaofo" );
+            options.time_zones.addOption( "Pacific/Fiji" );
+            options.time_zones.addOption( "Pacific/Funafuti" );
+            options.time_zones.addOption( "Pacific/Galapagos" );
+            options.time_zones.addOption( "Pacific/Gambier" );
+            options.time_zones.addOption( "Pacific/Guadalcanal" );
+            options.time_zones.addOption( "Pacific/Guam" );
+            options.time_zones.addOption( "Pacific/Honolulu" );
+            options.time_zones.addOption( "Pacific/Johnston" );
+            options.time_zones.addOption( "Pacific/Kiritimati" );
+            options.time_zones.addOption( "Pacific/Kosrae" );
+            options.time_zones.addOption( "Pacific/Kwajalein" );
+            options.time_zones.addOption( "Pacific/Majuro" );
+            options.time_zones.addOption( "Pacific/Marquesas" );
+            options.time_zones.addOption( "Pacific/Midway" );
+            options.time_zones.addOption( "Pacific/Nauru" );
+            options.time_zones.addOption( "Pacific/Niue" );
+            options.time_zones.addOption( "Pacific/Norfolk" );
+            options.time_zones.addOption( "Pacific/Noumea" );
+            options.time_zones.addOption( "Pacific/Pago_Pago" );
+            options.time_zones.addOption( "Pacific/Palau" );
+            options.time_zones.addOption( "Pacific/Pitcairn" );
+            options.time_zones.addOption( "Pacific/Ponape" );
+            options.time_zones.addOption( "Pacific/Port_Moresby" );
+            options.time_zones.addOption( "Pacific/Rarotonga" );
+            options.time_zones.addOption( "Pacific/Saipan" );
+            options.time_zones.addOption( "Pacific/Tahiti" );
+            options.time_zones.addOption( "Pacific/Tarawa" );
+            options.time_zones.addOption( "Pacific/Tongatapu" );
+            options.time_zones.addOption( "Pacific/Truk" );
+            options.time_zones.addOption( "Pacific/Wake" );
+            options.time_zones.addOption( "Pacific/Wallis" );
+            options.time_zones.addOption( "US/Alaska" );
+            options.time_zones.addOption( "US/Aleutian" );
+            options.time_zones.addOption( "US/Arizona" );
+            options.time_zones.addOption( "US/Central" );
+            options.time_zones.addOption( "US/Eastern" );
+            options.time_zones.addOption( "US/East-Indiana" );
+            options.time_zones.addOption( "US/Hawaii" );
+            options.time_zones.addOption( "US/Indiana-Starke" );
+            options.time_zones.addOption( "US/Michigan" );
+            options.time_zones.addOption( "US/Mountain" );
+            options.time_zones.addOption( "US/Pacific" );
+            options.time_zones.addOption( "US/Samoa" );
+
+            options.time_zones.isValid = true;
+        })();
+
+        // set up user query
+        (function() {
+            options.xmatters_users = getQueryOption( function( $query ) {
+                return XMService.searchPeople( $query );
+            } );
+        })();
+
+        return {
+            "optionList": options,
+            "getOptionsByName": function( optionName ) {
+                if( options.hasOwnProperty( optionName ) ) {
+                    return options[ optionName ];
+                } else if( optionName.indexOf( '_device_names' ) > 0 ) {
+                    return options.default_device_name;
+                } else  {
+                    return new XMOption();
+                }
+            }
+        };
+    });
+]]></script>
+        <script_name>xm_mod_conf_opt_service</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-11 00:01:20</sys_created_on>
+        <sys_id>31c188a30f4de2009ea83b8ce1050e93</sys_id>
+        <sys_mod_count>29</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_mod_conf_opt_service</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_31c188a30f4de2009ea83b8ce1050e93</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-05-03 20:35:00</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

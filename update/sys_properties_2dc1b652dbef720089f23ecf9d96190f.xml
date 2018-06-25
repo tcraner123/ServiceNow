@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Email Provider: specifies the default User Service Provider for User's email Devices.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.user.sync.email.service.provider</name>
+        <read_roles/>
+        <suffix>xmatters.user.sync.email.service.provider</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-06-26 18:25:45</sys_created_on>
+        <sys_id>2dc1b652dbef720089f23ecf9d96190f</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.user.sync.email.service.provider</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_2dc1b652dbef720089f23ecf9d96190f</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-02-20 18:20:41</sys_updated_on>
+        <type>string</type>
+        <value>(x)Matters Email Gateway</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=2dc1b652dbef720089f23ecf9d96190f"/>
+</record_update>

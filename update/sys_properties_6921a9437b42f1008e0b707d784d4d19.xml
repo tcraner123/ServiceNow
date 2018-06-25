@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Enable Engage with xMatters: When selected, the integration will enable the Engage with xMatters action in ServiceNow and apply the xMatters business rules for engaging with users and groups for notification.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.task.enable</name>
+        <read_roles/>
+        <suffix>xmatters.task.enable</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 22:10:01</sys_created_on>
+        <sys_id>6921a9437b42f1008e0b707d784d4d19</sys_id>
+        <sys_mod_count>44</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.task.enable</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_6921a9437b42f1008e0b707d784d4d19</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-06-21 16:11:35</sys_updated_on>
+        <type>boolean</type>
+        <value>true</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=6921a9437b42f1008e0b707d784d4d19"/>
+</record_update>

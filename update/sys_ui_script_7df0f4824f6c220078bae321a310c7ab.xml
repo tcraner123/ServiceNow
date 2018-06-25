@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_mod_property_config</name>
+        <script><![CDATA[angular.module('xm.property-config', []);
+angular.module('xm.property-config').value( 'propertyConfig', {
+    "x_xma_xmatters.xmatters.api.user": {
+        isTypeahead: true,
+        optionName: 'snow_users',
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.reb.hostname": {
+        isUrl: true,
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.reb.user": {
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.reb.password": {
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.reb.incident.endpoint": {
+        isUrl: true,
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.reb.task.endpoint": {
+        isUrl: true,
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.reb.task.conference.endpoint": {
+        isUrl: true,
+        isRequired: true
+    },
+    "x_xma_xmatters.xmatters.task.conference.bridges": {
+        isTagsInput: true,
+        placeholder: 'Add a conference bridge'
+    },
+    "x_xma_xmatters.xmatters.reb.incident.group.responses": {
+        isTagsInput: true,
+        placeholder: 'Add a response option'
+    },
+    "x_xma_xmatters.xmatters.reb.incident.individual.responses": {
+        isTagsInput: true,
+        placeholder: 'Add a response option'
+    },
+    "x_xma_xmatters.xmatters.reb.events.language": {
+        // isTypeahead: true,
+        // optionName: 'language_short'
+    },
+    "x_xma_xmatters.xmatters.sync.supervisor": {
+        isTypeahead: true,
+        optionName: 'xmatters_users'
+    },
+    "x_xma_xmatters.xmatters.sync.time.zone": {
+        isTypeahead: true,
+        optionName: 'time_zones'
+    },
+    "x_xma_xmatters.xmatters.sync.configurationitem.list.UUID": {
+        subCategory: 'Incident Properties'
+    },
+    "x_xma_xmatters.xmatters.sync.configurationitem.query": {
+        subCategory: 'Incident Properties'
+    },
+    "x_xma_xmatters.xmatters.group.sync.allow.duplicates": {
+        subCategory: 'Groups'
+    },
+    "x_xma_xmatters.xmatters.group.sync.use.default.devices": {
+        subCategory: 'Groups'
+    },
+    "x_xma_xmatters.xmatters.user.sync.language": {
+        subCategory: 'People',
+        isTypeahead: true,
+        optionName: 'language_full'
+    },
+    "x_xma_xmatters.xmatters.user.sync.weblogin.type": {
+        subCategory: 'People'
+    },
+    "x_xma_xmatters.xmatters.user.sync.role": {
+        isTagsInput: true,
+        delimiter: ',',
+        subCategory: 'People',
+        placeholder: 'Add a role'
+    },
+    "x_xma_xmatters.xmatters.user.sync.email.device.name": {
+        isDeviceName: true,
+        deviceType: 'EMAIL',
+        subCategory: 'People'
+    },
+    "x_xma_xmatters.xmatters.user.sync.mobile.phone.device.name": {
+        isDeviceName: true,
+        deviceType: 'VOICE',
+        subCategory: 'People'
+    },
+    "x_xma_xmatters.xmatters.user.sync.sms.device.name": {
+        isDeviceName: true,
+        deviceType: 'TEXT_PHONE',
+        subCategory: 'People'
+    },
+    "x_xma_xmatters.xmatters.user.sync.work.phone.device.name": {
+        isDeviceName: true,
+        deviceType: 'VOICE',
+        subCategory: 'People'
+    },
+    "x_xma_xmatters.xmatters.user.sync.ldap.domain": {
+        subCategory: 'People'
+    },
+    "x_xma_xmatters.xmatters.user.sync.phone.extension.identifier": {
+        subCategory: 'People',
+        placeholder: ';ext='
+    }
+} );
+]]></script>
+        <script_name>xm_mod_property_config</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 15:04:52</sys_created_on>
+        <sys_id>7df0f4824f6c220078bae321a310c7ab</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_mod_property_config</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_7df0f4824f6c220078bae321a310c7ab</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-11-18 00:12:26</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersDataHelper</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersDataHelper</name>
+        <script><![CDATA[gs.include("xMattersConfig");
+gs.include("xMattersLogger");
+
+var xMattersDataHelper = Class.create();
+xMattersDataHelper.prototype = {
+
+    /**
+     * instantiate the data helper. Accepts a hostname, username and password
+     *
+     * @param {null|Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, logTraceId) {
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersDataHelper', logTraceId);
+
+        this.hostname = this.config.XMAPI.hostname;
+        this.baseURL = this.config.XMAPI.baseURL;
+        this.username = this.config.XMAPI.user;
+        this.password = this.config.XMAPI.password;
+
+        this.callCount = 0;
+    },
+
+    /**
+     * Set the logging context ID for this objects logger
+     *
+     * @param {string} traceId the log context Id to set for this logger
+     */
+    setLogTraceId: function (traceId) {
+        this.log.setLogTraceId(traceId);
+    },
+
+    setBaseURL: function (url) {
+        this.baseURL = url;
+    },
+
+    /**
+     * Return how many REST calls have been made by this dataHelper
+     *
+     * @returns {number}
+     */
+    getCallCount: function () {
+        return this.callCount;
+    },
+
+    /**
+     * sends an HTTP request in the background (asynchronously)
+     *
+     * example of opts:
+     * {
+     *   "method" - The HTTP method to use.
+     *   "path"   - The path to append to the hostname
+     *   "headers" - Name value pairs for passing headers
+     *   "body"   - Payload body. [optional]
+     *   "hostname"  - Override the hostname
+     *   "username"  - Override the username
+     *   "password"  - Override the password
+     * }
+     *
+     * @param opts object containing method, headers and payload to pass through
+     * @returns {*}
+     */
+    sendRequestAsync: function (opts) {
+        // Create GlideScriptedHierarchicalWorker
+
+        // The putMethodArg doesn't pass arrays nicely,
+        // so we'll turn this into a string and then decode
+        // on the other side
+        var str = new global.JSON().encode(opts);
+
+        var worker = new GlideScriptedHierarchicalWorker();
+        worker.setProgressName("x_xma_xmatters.xMattersDataHelper '" + opts.method + "' " + opts.path);
+
+        worker.setBackground(true);
+        worker.setScriptIncludeName("x_xma_xmatters.xMattersDataHelper");
+        worker.setScriptIncludeMethod("sendRequest");
+        worker.putMethodArg('str', str);
+        worker.putMethodArg('parentLogTraceId', this.log.getLogTraceId());
+
+        worker.start();
+
+        return worker.getProgressID();
+    },
+
+    /**
+     * Sends an HTTP request and returns the response
+     *
+     * @param {string|{}} arg an object or stringified object containing request data
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @param {?number} requestAttempt the attempt for this request (in case it is being retried); Max attempts is 3
+     * @returns {{status: *, body: string}}
+     */
+    sendRequest: function (arg, parentLogTraceId, requestAttempt) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        requestAttempt = requestAttempt || 1;
+
+        // If this was called from sendRequestAsync,
+        // the arg will be a JSON encoded string,
+        // otherwise, we expect a JSON object
+        var debugDetails = [];
+        var opts = arg;
+        if (typeof arg === 'string') {
+            opts = new global.JSON().decode(arg);
+        }
+
+        // Last chance to override the hostname, username and password
+        var hostname = ( opts.hostname ? opts.hostname : this.hostname );
+        var username = ( opts.username ? opts.username : this.username );
+        var password = ( opts.password ? opts.password : this.password );
+        // Allow override for integration urls
+        var endpoint = (opts.endpoint ? opts.endpoint : hostname + opts.path);
+
+        // Build the RESTMessage.
+        var restMessage = new sn_ws.RESTMessageV2();
+
+        // method enums are defined in lowercase
+        restMessage.setHttpMethod(opts.method.toLowerCase());
+        restMessage.setEndpoint(endpoint);
+
+        debugDetails.push('Method: ' + opts.method.toUpperCase());
+        debugDetails.push('Endpoint: ' + endpoint);
+
+        // Set REST message log level, if method present (>= Istanbul)
+        // See xMattersConfig to set a custom REST_LOGLEVEL
+        if (typeof restMessage.setLogLevel === 'function') {
+            restMessage.setLogLevel(this.config.REST_LOGLEVEL);
+        }
+
+        if (this.config.MID_SERVER_ENABLED) {
+            debugDetails.push('MID Server: ' + this.config.MID_SERVER_NAME);
+            restMessage.setMIDServer(this.config.MID_SERVER_NAME);
+        }
+
+        if (opts.headers) {
+            for (var item in opts.headers) {
+                if (opts.headers.hasOwnProperty(item)) {
+                    debugDetails.push(item + ': ' + opts.headers[item]);
+                    restMessage.setRequestHeader(item, opts.headers[item]);
+                }
+            }
+        }
+
+        // Errors can happen if the username or password are actually null
+        // If they need to not be set, pass as '' (empty string)
+        if (username && password) {
+            debugDetails.push('Auth User: ' + username);
+            restMessage.setBasicAuth(username, password);
+        }
+
+        // If there is a body, check to see if it
+        // needs stringifying, otherwise, just add it.
+        if (opts.body) {
+            if (typeof opts.body == 'object') {
+                body = new global.JSON().encode(opts.body);
+            }
+
+            debugDetails.push('Payload: ' + body);
+            restMessage.setRequestBody(body);
+        }
+
+        var response = restMessage.execute();
+        this.callCount++;
+
+        var status = response.getStatusCode();
+        var responseBody = response.haveError() ? response.getErrorMessage() + ' => ' : '';
+        responseBody += response.getBody();
+        debugDetails.push('Response: ' + response.getBody());
+
+        var resp = {"status": status, "body": responseBody, "respData": response.getBody()};
+
+        this.log.debug('sendRequest: ' + opts.method.toUpperCase() + ' ' + endpoint +
+            (requestAttempt > 1 ? ' (requestAttempt=' + requestAttempt + ')' : '') +
+            "\n* " + debugDetails.join("\n* "));
+
+        // if we caught a "500 Internal Server Error" from request,
+        // replay it again, up to max of 3 attempts
+        if (status == 500 && requestAttempt < this.config.MAX_REQUEST_ATTEMPTS) {
+            resp = this.sendRequest(arg, null, requestAttempt + 1);
+        }
+
+        return resp;
+    },
+
+    /**
+     * Perform a GET on XMAPI
+     *
+     * @param {string} route of the GET endpoint
+     * @param {null|Object} params an object of name/value pairs send in the request
+     * @returns {*|{status: *, body: string}}
+     */
+    get: function (route, params) {
+        var path = this.baseURL + route;
+
+        if (params) {
+            for (var k in params) {
+                if (params.hasOwnProperty(k)) {
+                    path += path.indexOf('?') === -1 ? '?' : '&';
+                    path += encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+                }
+            }
+        }
+
+        return this.sendRequest({
+            method: 'GET',
+            path: path
+        });
+    },
+
+    /**
+     * Perform a POST request to XMAPI
+     *
+     * @param {string} route of the POST endpoint
+     * @param {Object} payload JS object containing the data to POST
+     * @returns {*|{status: *, body: string}}
+     */
+    post: function (route, payload) {
+        var path = this.baseURL + route;
+
+        return this.sendRequest({
+            path: path,
+            method: 'POST',
+            headers: {
+                'Content-type': 'application/json'
+            },
+            body: payload
+        });
+    },
+
+    /**
+     * Perform a PUT request to XMAPI
+     *
+     * @param {string} route of the PUT endpoint
+     * @param {Object} payload JS object containing the data to PUT
+     * @returns {*|{status: *, body: string}}
+     */
+    put: function (route, payload) {
+        var path = this.baseURL + route;
+
+        return this.sendRequest({
+            path: path,
+            method: 'PUT',
+            headers: {
+                'Content-type': 'application/json'
+            },
+            body: payload
+        });
+    },
+
+    /**
+     * Perform a DELETE request to XMAPI
+     *
+     * @param {string} route of the DELETE endpoint
+     * @returns {*|{status: *, body: string}}
+     */
+    remove: function (route) {
+        var path = this.baseURL + route;
+
+        return this.sendRequest({
+            method: 'DELETE',
+            path: path
+        });
+    },
+
+    /**
+     * Find if a response represents success or failure
+     *
+     * @param {{}} response the response to check
+     * @returns {boolean} true if this was a success; false otherwise
+     */
+    isSucessfulResponse: function (response) {
+        return response.status >= 200 && response.status <= 299;
+    },
+
+    /**
+     * Pretty-format an error response for logging
+     *
+     * @param {{}} response the response received from a REST request
+     * @returns {string}
+     */
+    formatErrorMessage: function (response) {
+        var decodedResponse = new global.JSON().decode(response.respData);
+        var message = response.status;
+        if (decodedResponse.reason) {
+            message += ' ' + decodedResponse.reason;
+        }
+        if (decodedResponse.message) {
+            message += ': ' + decodedResponse.message;
+        }
+
+        return '> ' + message;
+    },
+
+    type: 'xMattersDataHelper'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-04-25 23:35:43</sys_created_on>
+        <sys_id>b456b8454f0f5a008472a88ca310c70c</sys_id>
+        <sys_mod_count>24</sys_mod_count>
+        <sys_name>xMattersDataHelper</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_b456b8454f0f5a008472a88ca310c70c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-21 17:45:50</sys_updated_on>
+    </sys_script_include>
+</record_update>

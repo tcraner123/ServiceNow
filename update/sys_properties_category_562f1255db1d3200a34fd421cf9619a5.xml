@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties_category">
+    <sys_properties_category action="INSERT_OR_UPDATE">
+        <name>xMInformProperties</name>
+        <sys_class_name>sys_properties_category</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-03 18:09:15</sys_created_on>
+        <sys_id>562f1255db1d3200a34fd421cf9619a5</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>xMInformProperties</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_category_562f1255db1d3200a34fd421cf9619a5</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-03-03 18:09:15</sys_updated_on>
+        <title><![CDATA[<p> </p>
+<p><strong> <span style="font-size: 10pt;">Properties to configure for the Inform with xMatters feature</span></strong></p>
+<hr />
+<p> </p>]]></title>
+    </sys_properties_category>
+    <sys_translated_text action="delete_multiple" query="documentkey=562f1255db1d3200a34fd421cf9619a5"/>
+</record_update>

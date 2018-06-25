@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersSite</api_name>
+        <client_callable>false</client_callable>
+        <description>Model for working with xMattersSite objects</description>
+        <name>xMattersSite</name>
+        <script><![CDATA[gs.include('xMattersLogger');
+gs.include('xMattersConfig');
+gs.include('xMattersDataHelper');
+
+/**
+ * xMattersSite model for handling xMatters sites
+ *
+ * @type {Object}
+ */
+var xMattersSite = Class.create();
+
+xMattersSite.prototype = {
+
+    /**
+     * Initialize the xMattersSite object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersSite', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+
+        this.siteIdCache = {};
+    },
+
+    /**
+     * Get xMatters site ID for site name
+     *
+     * @param {string} siteName of the site to look retrieve
+     * @returns {null|string} the ID of the site in xMatters, if found
+     */
+    getSiteId: function (siteName) {
+        siteName = siteName || this.config.SITE;
+
+        if (siteName === '') {
+            this.log.error('getSiteId: No site name was requested and no default site was found in configuration');
+            this.siteIdCache[siteName] = null;
+        }
+
+        if (!(siteName in this.siteIdCache)) {
+            var path = '/sites/' + encodeURIComponent(siteName);
+            var response = this.dataHelper.get(path);
+
+            if (!this.dataHelper.isSucessfulResponse(response)) {
+                this.log.error('getSiteId: Failed retrieving site: ' + siteName + "\n" +
+                    this.dataHelper.formatErrorMessage(response));
+                this.siteIdCache[siteName] = null;
+
+            } else {
+                this.log.debug('getSiteId: Successfully retrieved site: ' + siteName);
+                this.siteIdCache[siteName] = (new global.JSON()).decode(response.body).id;
+            }
+        }
+
+        return this.siteIdCache[siteName];
+    },
+
+    type: 'xMattersSite'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-11-18 00:06:32</sys_created_on>
+        <sys_id>4058f5934f43660078bae321a310c709</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>xMattersSite</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_4058f5934f43660078bae321a310c709</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-11-21 18:46:09</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_mod_property_directive</name>
+        <script><![CDATA[angular.module( 'xm.custom-directives', [] );
+angular.module( 'xm.custom-directives' ).directive( 'xmProperty', function() {
+    return {
+        restrict: 'E',
+        require: '^form',
+        scope: {
+            systemProperty: '=systemProperty'
+        },
+        link: function( scope, element, attrs, formCtrl ){
+            scope.formCtrl = formCtrl;
+        },
+        templateUrl: 'x_xma_xmatters_xm_config_property_template.do?sysparm_nostack=true'
+    };
+} );
+
+angular.module( 'xm.custom-directives' ).directive( 'xmCheckbox', function() {
+    return {
+        restrict: 'E',
+        require: '^form',
+        scope: {
+            xmIdentifier: '=xmId',
+            model: '=xmModel'
+        },
+        link: function( scope, element, attrs, formCtrl ){
+            scope.formCtrl = formCtrl;
+            scope.elem = scope.formCtrl[ scope.xmIdentifier ];
+            scope.toggle = function() {
+                var scope = this.$parent;
+                scope.model = !scope.model;
+                // scope.formCtrl[ scope.xmIdentifier ].$dirty = true;
+            };
+        },
+        templateUrl: 'x_xma_xmatters_xm_checkbox_template.do?sysparm_nostack=true'
+    };
+} );
+
+angular.module( 'xm.custom-directives' ).directive( 'xmCategory', function() {
+    return {
+        restrict: 'E',
+        scope: {
+            xmCategory: '=',
+            xmActive: '='
+        },
+        link: function( scope, element, attrs ){
+            scope.form = scope.categoryForm;
+            scope.xmCategory.form = scope.form;
+            scope.xmCategory.activateTab = scope.xmActive;
+            scope.save = function() {
+                scope.xmCategory.save( scope.form );
+            };
+        },
+        templateUrl: 'x_xma_xmatters_xm_config_category_template.do?sysparm_nostack=true'
+    };
+} );
+
+angular.module( 'xm.custom-directives' ).directive( 'xmInputGroup', function() {
+    return {
+        restrict: 'E',
+        require: '^form',
+        scope: {
+            xmProperty: '=',
+            xmClick: '=',
+            xmIcon: '=',
+            xmTooltip: '=',
+            xmIsPassword: '='
+        },
+        link: function( scope, element, attrs, formCtrl ){
+            scope.form = formCtrl;
+            scope.elem = formCtrl[ scope.xmProperty.identifier ];
+        },
+        templateUrl: 'x_xma_xmatters_xm_input_group_template.do?sysparm_nostack=true'
+    };
+} );
+]]></script>
+        <script_name>xm_mod_property_directive</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-11 00:02:19</sys_created_on>
+        <sys_id>4602c4a30f4de2009ea83b8ce1050ef8</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_mod_property_directive</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_4602c4a30f4de2009ea83b8ce1050ef8</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-06-23 22:24:43</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

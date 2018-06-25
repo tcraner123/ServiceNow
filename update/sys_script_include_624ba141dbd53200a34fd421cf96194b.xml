@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersConfigExtended</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersConfigExtended</name>
+        <script><![CDATA[gs.include("xMattersConfig");
+
+var xMattersConfigExtended = Class.create();
+
+// We'll extend the xMattersConfig class so that we can inherit all
+// the good stuff there. We can then reference like so:
+// 'SNAPI.hostname: ' + this.SNAPI.hostname
+xMattersConfigExtended.prototype = Object.extend( new xMattersConfig(), {
+    initialize: function() {
+		var prefix = gs.getCurrentScopeName();
+		
+		this.INFORM = {
+			ENABLED: true,
+			FORM: gs.getProperty(prefix + '.inform.endpoint'),
+			LOCATIONS: {
+				LIST: gs.getProperty(prefix + '.inform.locations'), 
+				UUID: gs.getProperty(prefix + '.inform.locations.uuid')
+			},
+			SERVICES: {
+				LIST: gs.getProperty(prefix + '.inform.services'), 
+				UUID: gs.getProperty(prefix + '.inform.services.uuid')
+			}
+		};
+    },
+
+    type: 'xMattersConfigExtended'
+});
+
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-02 20:12:44</sys_created_on>
+        <sys_id>624ba141dbd53200a34fd421cf96194b</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>xMattersConfigExtended</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_624ba141dbd53200a34fd421cf96194b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-03-06 22:24:09</sys_updated_on>
+    </sys_script_include>
+</record_update>

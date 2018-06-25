@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersTask</api_name>
+        <client_callable>false</client_callable>
+        <description>Business level object to deal with sending tasks to the xMattersRESTHelper.sendAddTaskRESTMessage.</description>
+        <name>xMattersTask</name>
+        <script><![CDATA[gs.include("xMattersLogger");
+gs.include("xMattersConfig");
+gs.include('xMattersDataHelper');
+gs.include("xMattersEvent");
+
+var xMattersTask = Class.create();
+
+xMattersTask.prototype = {
+
+    /**
+     * Initialize the xMattersTask object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        if (config && config.type === 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersTask', logTraceId);
+
+        if (dataHelper && dataHelper.type === 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.dataHelper, this.log.getLogTraceId());
+        }
+
+        this.json = new global.JSON();
+    },
+
+    /**
+     * @param rec current record
+     * @param triggerRule String containing the trigger rule
+     */
+    addTask: function (rec, triggerRule) {
+        try {
+            var xmEvent = new xMattersEvent(this.config, this.dataHelper, this.log.getLogTraceId());
+
+            // Add Incident Properties
+            var parentIncident = new GlideRecord('incident');
+            parentIncident.get(rec.parent_incident);
+            xmEvent.addAllIncidentProperties(parentIncident);
+
+            // Add task properties
+            xmEvent.addProperty('task_message', rec.message);
+            xmEvent.addProperty('task_number', rec.number);
+            xmEvent.addProperty('task_priority', rec.send_priority);
+            xmEvent.addProperty('task_message_subject', rec.message_subject);
+            xmEvent.addProperty('task_state', rec.state);
+            xmEvent.addProperty('task_escalation', rec.escalation);
+            xmEvent.addProperty('task_sys_id', rec.sys_id);
+            xmEvent.addProperty('task_initiator_display_name', rec.initiator_display_name);
+            xmEvent.addProperty('task_initiator_username', rec.initiator_username);
+
+            // Add additional properties
+            xmEvent.addProperty('trigger', triggerRule);
+            xmEvent.addProperty('servicenowurl', this.config.SNAPI.hostname);
+            xmEvent.addProperty('xmatters_url', this.config.XMAPI.hostname);
+
+            var recipients = rec.recipients.toString().split(',');
+            for (var i = 0; i < recipients.length; i++) {
+                if (recipients[i] !== "") {
+                    xmEvent.addRecipient(recipients[i]);
+                }
+            }
+
+            var isConference = false;
+            var confBridge = rec.conference_bridge.getDisplayValue();
+            if (confBridge !== 'None') {
+                isConference = true;
+                if (confBridge === 'Hosted_New') {
+                    xmEvent.addConferenceBridge(null);
+                } else {
+                    xmEvent.addConferenceBridge(confBridge);
+                }
+            }
+
+            xmEvent.setPriority(rec.send_priority.getDisplayValue());
+            if (isConference) {
+                xmEvent.setWebserviceURL(this.config.ENGAGE.FORM.CONFERENCE);
+            } else {
+                xmEvent.setWebserviceURL(this.config.ENGAGE.FORM.ENGAGE);
+            }
+            xmEvent.send();
+
+        } catch (e) {
+            this.log.logException('addTask', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Terminates an incident in the xMatters (alarmpoint) Engine
+     * @param rec current rec
+     * @param triggerRule String containing the trigger rule
+     */
+    deleteTask: function (rec, triggerRule) {
+        // Terminate the related events in xMatters
+        try {
+            var xMEvent = new xMattersEvent(this.config, this.dataHelper, this.log.getLogTraceId());
+            xMEvent.terminateEvents('task_number', String(rec.number));
+            return "[xMatters] - Terminated existing events for this Incident";
+
+        } catch (e) {
+            return "[xMatters] - Termination of events failed: " + this.json.encode(e);
+        }
+    }
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:57:33</sys_created_on>
+        <sys_id>38d205cb7b02f1008e0b707d784d4dad</sys_id>
+        <sys_mod_count>41</sys_mod_count>
+        <sys_name>xMattersTask</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_38d205cb7b02f1008e0b707d784d4dad</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+    </sys_script_include>
+</record_update>

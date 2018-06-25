@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description>&#13;
+INFORM!</description>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_app_inform_xmatters</name>
+        <script><![CDATA[var informApp = angular.module('xm.inform-xm', [ 'ngTagsInput', 'ngMessages', 'pascalprecht.translate', 'xm.xmatters-service', 'xm.location-service', 'xm.glide-ajax', 'ui.bootstrap' ]); 
+ // Global configuration for ng tags input module 
+
+
+informApp.config(function(tagsInputConfigProvider) {
+	tagsInputConfigProvider.setDefaults('tagsInput', {
+		replaceSpacesWithDashes: false,
+		addFromAutocompleteOnly: true
+	}).setDefaults('autoComplete', {
+		minLength: 1
+	});
+});
+
+
+
+// Configuration for translations
+informApp.config(function ($translateProvider) {
+  $translateProvider.translations('en', {
+  	INFORM_XM: {
+  		TITLE: 'Inform with xMatters',
+  		LABEL: {
+  			UPDATE_TYPE:     'Update Type',
+  			PARENT_INCIDENT: 'Parent Incident',
+			BUSINESS_IMPACT: 'Business Impact',
+			UPDATE:          'Update',
+  			FIRST_REPORTED:  'First Reported',
+  			LOCATIONS:       'Locations',
+  			SERVICES:        'Services'
+  		},
+  		BUTTON: {
+  			SUBMIT: 'Submit',
+			CANCEL: 'Cancel'
+  		},
+  		ERROR: {
+  			REQUIRED: 'Required field',
+  			MAX_LENGTH: 'Maximum length {{max_length}} characters'
+  		},
+  		MESSAGE: {
+  			SUCCESS: 'Your request has been submitted successfully. To track the progress of this request in ServiceNow, view the Inform with xMatters record.'
+  		},
+  		OPTIONS: {
+  		}
+  	}
+  });
+  $translateProvider.preferredLanguage('en');
+});
+informApp.controller('informCtlr', 
+	function($scope, $window, $translate, $q, $filter, XMService, LocationService, GlideAjax) {
+		 // Core scope variables 
+		$scope.is_finished = false; 
+		$scope.is_invalid = false;
+		$scope.global_errors = [];
+
+		 // form model scope variables and default values 
+		$scope.business_impact = '';
+		$scope.update          = '';
+		$scope.first_reported  = '';
+	
+	
+		 // result scope variable 
+		$scope.engage_url = '';
+
+		 // behind the scenes scope variables used for options/state 
+		$scope.xm_search_state           = XMService.searchState;
+		$scope.update_type_options = [
+			{ "label": "-- None --", "value": null },
+			{ "label": "Initial",    "value": "Initial" },
+			{ "label": "Bridge",     "value": "Bridge" },
+			{ "label": "Update",     "value": "Update" },
+			{ "label": "Resolved",   "value": "Resolved" }
+
+		];
+	
+		$scope.locations = [];
+		$scope.services  = [];
+		$scope.allLocations = [];
+		$scope.allServices = [];
+
+	
+		// Set the incident id scope variable based on search parameters in the url 
+		$scope.incident_id     = LocationService.searchParams.incident_id;
+	
+		if( typeof $scope.incident_id === 'undefined' || $scope.incident_id === null || $scope.incident_id === '' ) {
+			console.log( 'No incident identifier was defined' );
+			$scope.global_errors.push( 'Missing "incident_id" parameter: A valid ServiceNow Incident system id must be set to continue' );
+		}
+
+		var retrieveIncident = new GlideAjax( 'xMattersAjaxExtended' );
+		retrieveIncident.addParam( 'sysparm_name', 'getIncident' );
+		retrieveIncident.addParam( 'sysparm_sys_id', $scope.incident_id );
+		retrieveIncident.send().then( function( resp ) {
+			if( resp.success ) {
+				$scope.incident = resp.data;
+
+			} else {
+				console.log( 'Error getting Incident: ' + JSON.stringify( resp ) );
+			}
+		});
+
+	
+		// Options for the date picker
+	    // See here for details: https://angular-ui.github.io/bootstrap/#!#datepicker
+		$scope.dateOptions = {
+			//maxDate: new Date(),  // Set min and max selectable dates
+			//minDate: new Date()
+		};
+	
+		$scope.first_reported = new Date(); 
+	
+		$scope.openCalendarPopup = function() {
+			$scope.calendarPopup.opened = true;
+		};
+	
+		$scope.calendarPopup = {
+			opened: false
+		};
+	
+	
+		var retrieveLocations = new GlideAjax( 'xMattersAjaxExtended' );
+		retrieveLocations.addParam( 'sysparm_name', 'getLocations' );
+		retrieveLocations.send().then( function( resp ){
+			if( resp.success ) {
+				var locationsTemp = resp.data.split( ';' );
+				for( var i = 0; i < locationsTemp.length; i++ ) {
+					if( locationsTemp[i].trim().length > 0 ) {
+						$scope.allLocations.push( {"text": locationsTemp[i] } );
+					}
+				}
+			} else {
+				console.log( 'Error getting Locations: ' + resp );
+			}
+		} );
+
+		//$scope.allLocations = OptionsProviderExtended.locations;
+	
+		var retrieveServices = new GlideAjax( 'xMattersAjaxExtended' );
+		retrieveServices.addParam( 'sysparm_name', 'getServices' );
+		retrieveServices.send().then( function( resp ){
+			if( resp.success ) {
+				var servicesTemp = resp.data.split( ';' );
+				for( var i = 0; i < servicesTemp.length; i++ ) {
+					if( servicesTemp[i].trim().length > 0 ) {
+						$scope.allServices.push( {"text": servicesTemp[i] } );
+					}
+				}
+			} else {
+				console.log( 'Error getting Services: ' + resp );
+			}
+		} );
+	
+	
+		$scope.getLocations = function( query ) {
+				var deferred = $q.defer();
+				deferred.resolve( $filter('filter')($scope.allLocations, query) );
+				return deferred.promise;
+		};
+	
+		$scope.getServices = function( query ) {
+			
+			    var deferred = $q.defer();
+				deferred.resolve( $filter('filter')($scope.allServices, query) );
+				return deferred.promise;
+					 
+		};
+	
+	
+		/**
+		 * Submits the engageXMForm form, and if valid, tries to create a new Engage with xMatters record via
+		 * the xMattersAjaxEngage client callable script include.
+		 */
+		$scope.submit = function() {
+			
+
+			$scope.informXMForm.$setSubmitted( true );
+			if( $scope.informXMForm.$invalid ) {
+				console.log( 'The form will not be submitted in an invalid state' );
+				console.log( $scope.informXMForm );
+			} else {
+				var formData = {
+					"business_impact": $scope.business_impact,
+					"first_reported":  $scope.first_reported,
+					"locations":       $scope.locations.map( function( item ){ return item.text; }).join( ';' ),
+					"services":        $scope.services.map(  function( item ){ return item.text; }).join( ';' ),
+					"update":          $scope.update,
+					"update_type":     $scope.update_type,
+					"parent_incident": $scope.incident_id
+				};
+				
+				//  console.log( 'formData: ' + JSON.stringify( formData ) );
+				
+				var ga = new GlideAjax( 'xMattersAjaxExtended' );
+				ga.addParam( 'sysparm_name', 'submitInformWithXMatters' );
+				ga.addParam( 'form_data', JSON.stringify( formData ) );
+				ga.send().then( function( resp ) {
+					if( resp.success ) {
+						$scope.is_finished = true;
+						//$scope.engage_url = '/nav_to.do?uri=x_xma_xmatters_engage_with_xmatters.do?sys_id=' + resp.data.sys_id;
+						//var gdw = GlideDialogWindow.get();
+						//console.log( 'GDW: ' + gdw );
+						//gdw.destroy();
+						$translate('INFORM_XM.MESSAGE.SUCCESS').then(function(successMsg){
+                            closeDialog(successMsg);
+                        });
+						
+						
+						
+					} else {
+						console.log( resp );
+					}
+				} ).catch( function( resp ){
+					console.log( resp );
+				} );
+			}
+
+
+		};
+
+	
+	        
+        var closeDialog = function(optionalMessage) {
+            var data = {
+                type: "DIALOG_CLOSE"
+            };
+            if(optionalMessage) {
+                data.message = optionalMessage;
+            }
+            $window.parent.postMessage(data, window.location.origin);
+        };
+    
+        $scope.cancel = function() {
+            closeDialog();
+        };
+
+});
+
+
+
+
+
+]]></script>
+        <script_name>xm_app_inform_xmatters</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-02 22:26:24</sys_created_on>
+        <sys_id>2e509281dbd53200a34fd421cf961966</sys_id>
+        <sys_mod_count>97</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_app_inform_xmatters</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_2e509281dbd53200a34fd421cf961966</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-07-06 22:29:42</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_scope_script_access">
+    <sys_scope_script_access action="INSERT_OR_UPDATE">
+        <example_stack_trace>Default-thread-12
+	com.glide.sys.fencing.dependency.ScopeAccessProvider$ScopeAccessCache.getCurrentStackTrace(ScopeAccessProvider.java:231)
+	com.glide.sys.fencing.dependency.ScopeAccessProvider$ScopeAccessCache.record(ScopeAccessProvider.java:200)
+	com.glide.sys.fencing.dependency.ScopeAccessProvider$ScopeAccessCache.access$100(ScopeAccessProvider.java:80)
+	com.glide.sys.fencing.dependency.ScopeAccessProvider.recordAccess(ScopeAccessProvider.java:63)
+	com.glide.sys.fencing.dependency.ScopeAccessRecorder.record(ScopeAccessRecorder.java:13)
+	com.glide.script.system.ASystemInclude.recordCrossScopeAccess(ASystemInclude.java:123)
+	com.glide.script.system.ASystemInclude.include(ASystemInclude.java:106)
+	com.glide.script.AGlideRhinoScopeHandler.isScriptInclude(AGlideRhinoScopeHandler.java:43)
+	com.glide.script.GlideRhinoScopeHandler.found(GlideRhinoScopeHandler.java:24)
+	com.glide.script.ARhinoScope.get(ARhinoScope.java:75)
+	com.glide.script.RhinoScope.get(RhinoScope.java:51)
+	com.glide.script.PackageRhinoGlobalScope.get(PackageRhinoGlobalScope.java:34)
+	org.mozilla.javascript.ScriptableObject.getProperty(ScriptableObject.java:1478)
+	org.mozilla.javascript.ScriptRuntime.getProp(ScriptRuntime.java:724)
+	org.mozilla.javascript.gen.c2809.call(sys_script_include.83a205cb7b02f1008e0b707d784d4dea:10)
+	org.mozilla.javascript.ScriptRuntime.call(ScriptRuntime.java:1227)
+	org.mozilla.javascript.BaseFunction.applyOrCall(BaseFunction.java:488)
+	org.mozilla.javascript.BaseFunction.execMethod(BaseFunction.java:195)
+	org.mozilla.javascript.IdFunction.call(IdFunction.java:78)
+	org.mozilla.javascript.ScriptRuntime.call(ScriptRuntime.java:1227)
+	org.mozilla.javascript.gen.c166.call(sys_script_include.d22e7bdbc0a8016500a18e024bfc9aa3:4)
+	org.mozilla.javascript.BaseFunction.construct(BaseFunction.java:236)
+	org.mozilla.javascript.ScriptRuntime.newObject(ScriptRuntime.java:1329)
+	org.mozilla.javascript.gen.c2802.call(&lt;refname&gt;:7)
+	org.mozilla.javascript.gen.c2802.exec(&lt;refname&gt;)
+	com.glide.script.ScriptEvaluator.execute(ScriptEvaluator.java:233)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:105)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:72)
+	com.glide.script.ScriptEvaluator.evaluateString(ScriptEvaluator.java:63)
+	com.glide.script.Evaluator.evaluateString(Evaluator.java:91)
+	com.glide.processors.ScriptProcessor.evaluateScript(ScriptProcessor.java:302)
+	com.glide.processors.ScriptProcessor.runApplicationModule(ScriptProcessor.java:426)
+	com.glide.processors.ScriptProcessor.process(ScriptProcessor.java:161)
+	com.glide.processors.Processor.runProcessor(Processor.java:401)
+	com.glide.processors.Processor.processTransaction(Processor.java:191)
+	com.glide.processors.ProcessorRegistry.process(ProcessorRegistry.java:146)
+	com.glide.ui.GlideServletTransaction.process(GlideServletTransaction.java:36)
+	com.glide.ui.GlideServlet$1.run(GlideServlet.java:414)
+	java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:895)
+	java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:918)
+	java.lang.Thread.run(Thread.java:662)
+</example_stack_trace>
+        <script_name>JSON</script_name>
+        <source_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</source_scope>
+        <sys_class_name>sys_scope_script_access</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-26 18:10:08</sys_created_on>
+        <sys_id>9b4dc0a84f6231000e9fa88ca310c720</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>JSON</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_scope_script_access_9b4dc0a84f6231000e9fa88ca310c720</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2015-02-26 18:10:08</sys_updated_on>
+        <target_scope display_value="Global">global</target_scope>
+    </sys_scope_script_access>
+</record_update>

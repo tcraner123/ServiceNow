@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersAjaxEngage</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>xMattersAjaxEngage</name>
+        <script><![CDATA[gs.include("xMattersConfig");
+gs.include("xMattersDataHelper");
+
+var xMattersAjaxEngage = Class.create();
+xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+
+	/**
+	 * Retrieves xMatters configuration details used to make calls from the browser client.
+	 * Currently unused because xmApi doesn't support cross-browser calls right now
+	 *
+	 * @return {String} A stringified JSON object with the following details:
+	 * {
+	 * 		"success": true or false depending on whether the request was successful,
+	 * 		"log": an array of strings used to debug the request,
+	 * 		"error": only present if "success" = false - a string describing what went wrong,
+	 * 		"data": only present if "success" = true - an object with the following properties:
+	 * 			{
+	 * 				"host": the configured xMatters hostname,
+	 * 				"baseAuth": the Basic Authentication credentials configured to be used by the integration
+	 * 					to communicate with xMatters
+	 * 			}
+	 * }
+	 */
+	getXMattersDetails: function() {
+		var response;
+		var customLog = [];
+		try {
+			var conf = new xMattersConfig();
+			var hostname = conf.XMAPI.hostname;
+			var user = conf.XMAPI.user;
+			var password = conf.XMAPI.password;
+
+			var isValid = true;
+			if( typeof hostname === 'undefined' || hostname === null || hostname.trim() === '' ) {
+				isValid = false;
+				customLog.push( 'Invalid hostname: ' + hostname );
+			}
+			if( typeof user === 'undefined' || user === null || user.trim() === '' ) {
+				isValid = false;
+				customLog.push( 'Invalid user: ' + user );
+			}
+			if( typeof password === 'undefined' || password === null || password.trim() === '') {
+				isValid = false;
+				customLog.push( 'Invalid password: ' + password );
+			}
+			if( isValid ) {
+				response = {
+					success: true,
+					data: {
+						host: hostname,
+						baseAuth: gs.base64Encode( user + ':' + password )
+					}
+				};
+			} else {
+				response = {
+					success: false,
+					error: "Problems exist in the xMatters API configuration"
+				};
+			}
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		response.log = customLog;
+		return new global.JSON().encode( response );
+	},
+
+	/**
+	 * Retrieves the configured External Conference Bridges
+	 *
+	 * @return {String} A stringified JSON object with the following details:
+	 * {
+	 * 		"success": true or false depending on whether the request was successful,
+	 * 		"log": an array of strings used to debug the request,
+	 * 		"error": only present if "success" = false - a string describing what went wrong,
+	 * 		"data": only present if "success" = true - an object that will contain the external conference bridges as text
+	 * }
+	 */
+	getExternalConferenceBridges: function() {
+		var response;
+		var customLog = [];
+		try {
+			var conf = new xMattersConfig();
+			response = {
+				success: true,
+				data: conf.ENGAGE.EXTERNAL_BRIDGES
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		response.log = customLog;
+		return new global.JSON().encode( response );
+	},
+
+    getActiveHostedConferenceBridges: function() {
+        var response;
+        var opts;
+        var activeConferenceBridgesData = {};
+
+        try {
+            var conf = new xMattersConfig();
+            var incidentId = this.getParameter( 'incident_id' );
+            opts = {
+                "method": "GET",
+                "path": "/api/xm/1/events?status=ACTIVE&sortBy=start_time&propertyName=sys_id%23" + conf.EVENTS.LANGUAGE + "&propertyValue=" + incidentId,
+                "headers": {
+                    "Content-Type": "application/json"
+                }
+            };
+            var dataHelper = new xMattersDataHelper();
+            var apiResp = dataHelper.sendRequest( opts );
+            if( apiResp.status >= 200 && apiResp.status < 300 && apiResp.body ) {
+                var apiRespBody = JSON.parse(apiResp.body);
+
+                if (apiRespBody.data && Array.isArray(apiRespBody.data)) {
+                    var conferenceBridgeIds = [];
+                    for (var i = 0; i < apiRespBody.data.length; i++) {
+                        var dataItem = apiRespBody.data[i];
+                        if (dataItem.conference && dataItem.conference.bridgeId &&
+							conferenceBridgeIds.indexOf(dataItem.conference.bridgeId) < 0) {
+                            conferenceBridgeIds.push(dataItem.conference.bridgeId);
+                        }
+                    }
+                    var activeConferenceBridgesResponse = JSON.parse(this.getActiveConferenceBridges(conferenceBridgeIds));
+                    if (activeConferenceBridgesResponse.success) {
+                        response = {
+                            success: true,
+                            data: activeConferenceBridgesResponse.data
+                        };
+					} else {
+                    	return activeConferenceBridgesResponse;
+					}
+                }
+
+            } else {
+                response = {
+                    success: false,
+                    api_response: apiResp,
+                    error: 'The call to xMatters was unsuccessful'
+                };
+            }
+        } catch( e ) {
+            response = {
+                success: false,
+                opts: opts,
+                error: String( e )
+            };
+        }
+        return new global.JSON().encode( response );
+	},
+
+    /**
+	 * Get a list of bridges that are still ongoing
+     * @param {[]} conferenceBridgeIds: a list of conference bridge ids
+	 * @returns {{}} A list of bridges, or failure response.
+     */
+    getActiveConferenceBridges: function(conferenceBridgeIds) {
+        var response;
+        var opts;
+        var activeConferenceBridges = [];
+        var dataHelper = new xMattersDataHelper();
+
+        try {
+        	for (var i = 0; i < conferenceBridgeIds.length; i++) {
+                opts = {
+                    "method": "GET",
+                    "path": "/api/xm/1/conferences/" + conferenceBridgeIds[i],
+                    "headers": {
+                        "Content-Type": "application/json"
+                    }
+                };
+                var apiResp = dataHelper.sendRequest( opts );
+                if( apiResp.status >= 200 && apiResp.status < 300 && apiResp.body) {
+                	var apiRespBody = JSON.parse(apiResp.body);
+                    if (apiRespBody.status && apiRespBody.status !== "INACTIVE") {
+                        activeConferenceBridges.push(apiRespBody);
+                    }
+                } else {
+                    response = {
+                        success: false,
+                        api_response: apiResp,
+                        error: 'The call to xMatters was unsuccessful'
+                    };
+                    return new global.JSON().encode( response );
+                }
+            }
+            response = {
+                success: true,
+                data: activeConferenceBridges
+            };
+		} catch( e ) {
+			response = {
+				success: false,
+				opts: opts,
+				error: String( e )
+			};
+		}
+
+        return new global.JSON().encode( response );
+    },
+
+	/**
+	 * Searches xMatters for people via the search people xmAPI endpoint
+	 * When called from glide ajax, must have a string "search_term" parameter.
+	 *
+	 * @return {String} A stringified JSON object with the following details:
+	 * {
+	 * 		"success": true or false depending on whether the submission was successful,
+	 * 		"opts": an object that will contain the details of the http callout,
+	 * 		"error": only present if "success" = false - a string describing what went wrong,
+	 * 		"api_response": only present if "success" = false - will contain the http response in a failed http call,
+	 * 		"data": only present if "success" = true - will contain the http response in a successfull http call
+	 * }
+	 */
+	searchPeople: function(){
+		var response;
+		var opts;
+		try {
+			var search_term = this.getParameter( 'search_term' );
+			opts = {
+				"method": "GET",
+				"path": "/api/xm/1/people?search=" + search_term,
+				"headers": {
+					"Content-Type": "application/json"
+				}
+			};
+			var dataHelper = new xMattersDataHelper();
+			var apiResp = dataHelper.sendRequest( opts );
+			if( apiResp.status >= 200 && apiResp.status < 300 ) {
+				response = {
+					success: true,
+					data: apiResp
+				};
+			} else {
+				response = {
+					success: false,
+					api_response: apiResp,
+					error: 'The call to xMatters was unsuccessful'
+				};
+			}
+		} catch( e ) {
+			response = {
+				success: false,
+				opts: opts,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+
+	/**
+	 * Searches xMatters for groups via the search groups xmAPI endpoint
+	 * When called from glide ajax, must have a string "search_term" parameter.
+	 *
+	 * @return {String} A stringified JSON object with the following details:
+	 * {
+	 * 		"success": true or false depending on whether the submission was successful,
+	 * 		"opts": an object that will contain the details of the http callout,
+	 * 		"error": only present if "success" = false - a string describing what went wrong,
+	 * 		"api_response": only present if "success" = false - will contain the http response in a failed http call,
+	 * 		"data": only present if "success" = true - will contain the http response in a successfull http call
+	 * }
+	 */
+	searchGroups: function(){
+		var response;
+		var opts;
+		try {
+			var search_term = this.getParameter( 'search_term' );
+			var dataHelper = new xMattersDataHelper();
+			opts = {
+				"method": "GET",
+				"path": "/api/xm/1/groups?search=" + search_term,
+				"headers": {
+					"Content-Type": "application/json"
+				}
+			};
+			var apiResp = dataHelper.sendRequest( opts );
+			if( apiResp.status >= 200 && apiResp.status < 300 ) {
+				response = {
+					success: true,
+					data: apiResp
+				};
+			} else {
+				response = {
+					success: false,
+					api_response: apiResp,
+					error: 'The call to xMatters was unsuccessful'
+				};
+			}
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		response.opts = opts;
+		return new global.JSON().encode( response );
+	},
+
+	/**
+	 * Submits a new Engage with xMatters record in ServiceNow (note that this does not perform any communication between ServiceNow and xMatters)
+	 * When called from glide ajax, must have a stringified "form_data" parameter. This parameter should look like the following:
+	 * 	{
+	 * 		"recipients": semi-colon delimited list of recipient target names,
+	 * 		"message": the message,
+	 * 		"incident_id": System ID of Parent Incident,
+	 * 		"subject": the subject,
+	 * 		"send_priority": the send priority,
+	 * 		"conference_bridge": Optional Conference Bridge
+	 * 	}
+	 *
+	 * @return {String} A stringified JSON object with the following details:
+	 * {
+	 * 		"success": true or false depending on whether the submission was successful,
+	 * 		"error": only present if "success" = false - a string describing what went wrong,
+	 * 		"data": only present if "success" = true - an object with the following properties:
+	 * 			{
+	 * 				"sys_id": the id of the new Engage with xMatters record
+	 * 			}
+	 * }
+	 */
+	submitEngageWithXMatters: function() {
+		var response;
+		try {
+			var form_data = this.getParameter( 'form_data' );
+			var formData = new global.JSON().decode( form_data );
+
+			var engageRequest = new GlideRecord( 'x_xma_xmatters_engage_with_xmatters' );
+			engageRequest.initialize();
+			engageRequest.recipients = formData.recipients;
+			engageRequest.message = formData.message;
+			engageRequest.parent_incident = formData.incident_id;
+			engageRequest.message_subject = formData.subject;
+			engageRequest.send_priority = formData.send_priority;
+			engageRequest.conference_bridge = formData.conference_bridge;
+			engageRequest.initiator_display_name = formData.initiator_display_name;
+			engageRequest.initiator_username = formData.initiator_username;
+			engageRequest.insert();
+
+			response = {
+				success: true,
+				data: { sys_id: String( engageRequest.sys_id ) }
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+
+    type: 'xMattersAjaxEngage'
+});
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-11 17:18:47</sys_created_on>
+        <sys_id>99e580794f2822008472a88ca310c7fd</sys_id>
+        <sys_mod_count>10</sys_mod_count>
+        <sys_name>xMattersAjaxEngage</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_99e580794f2822008472a88ca310c7fd</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+    </sys_script_include>
+</record_update>

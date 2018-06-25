@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update sys_domain="global" table="sys_app_application">
+    <sys_app_application action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <category/>
+        <description>xMatters to ServiceNow integration</description>
+        <device_type>browser</device_type>
+        <hint/>
+        <name>itil_self_service</name>
+        <order>50</order>
+        <roles>x_xma_xmatters.xmatters_admin</roles>
+        <sys_class_name>sys_app_application</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 20:53:16</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>1b9f490f7b02f1008e0b707d784d4d81</sys_id>
+        <sys_mod_count>8</sys_mod_count>
+        <sys_name>Integration - xMatters</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_app_application_1b9f490f7b02f1008e0b707d784d4d81</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-30 22:02:52</sys_updated_on>
+        <title>Integration - xMatters</title>
+        <view_name/>
+    </sys_app_application>
+</record_update>

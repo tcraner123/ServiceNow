@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersPersonCollection</api_name>
+        <client_callable>false</client_callable>
+        <description>Helper to manage updates to a set of users, typically used in a background batch process.</description>
+        <name>xMattersPersonCollection</name>
+        <script><![CDATA[gs.include('xMattersConfig');
+gs.include('xMattersDataEvent');
+gs.include('xMattersDataHelper');
+gs.include('xMattersPerson');
+
+/**
+ * xMattersPersonCollection model for managing batch user syncing
+ *
+ * @type {Object}
+ */
+var xMattersPersonCollection = Class.create();
+
+xMattersPersonCollection.prototype = {
+
+    /**
+     * Initialize the xMattersPerson object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersPersonCollection', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Insert/Update list of users in xMatters asynchronously (in the background)
+     *
+     * @param {Array} users an array of sys_user records or usernames of the users to sync
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @returns {*}
+     */
+    syncUsersAsync: function (users, setExternalKey) {
+        var encodedUsers = new global.JSON().encode(users);
+        var logTraceId = this.log.getLogTraceId();
+        if (this.config.USE_PROGRESS_WORKERS) {
+            var worker = new GlideScriptedHierarchicalWorker();
+            worker.setProgressName("x_xma_xmatters.xMattersPersonCollection syncUsers: " + logTraceId);
+
+            worker.setBackground(true);
+            worker.setScriptIncludeName("x_xma_xmatters.xMattersPersonCollection");
+            worker.setScriptIncludeMethod("syncUsers");
+            worker.putMethodArg("users", encodedUsers);
+            worker.putMethodArg("setExternalKey", setExternalKey);
+            worker.putMethodArg("parentLogTraceId", logTraceId);
+
+            worker.start();
+
+            return worker.getProgressID();
+        } else {
+            var xde = new xMattersDataEvent(this.config, logTraceId);
+            xde.queueSyncPeopleEvent(encodedUsers, setExternalKey);
+        }
+    },
+
+    /**
+     * Remove list of users in xMatters asynchronously (in the background)
+     *
+     * @param {Array} usernames listing of users to remove
+     * @returns {*} id of background worker process
+     */
+    removeUsersAsync: function (usernames) {
+        var encodedUsers = new global.JSON().encode(usernames);
+        var logTraceId = this.log.getLogTraceId();
+        if (this.config.USE_PROGRESS_WORKERS) {
+            var worker = new GlideScriptedHierarchicalWorker();
+            worker.setProgressName("x_xma_xmatters.xMattersPersonCollection removeUsers: " + logTraceId);
+
+            worker.setBackground(true);
+            worker.setScriptIncludeName("x_xma_xmatters.xMattersPersonCollection");
+            worker.setScriptIncludeMethod("removeUsers");
+            worker.putMethodArg("usernames", encodedUsers);
+            worker.putMethodArg('parentLogTraceId', logTraceId);
+
+            worker.start();
+
+            return worker.getProgressID();
+        } else {
+            var xde = new xMattersDataEvent(this.config, logTraceId);
+            xde.queueRemovePeopleEvent(encodedUsers);
+        }
+    },
+
+    /**
+     * Sync a list of users to xMatters
+     *
+     * @param {string|Array} users listing of usernames to sync
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     */
+    syncUsers: function (users, setExternalKey, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            this.person = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+
+            var usersArr = users;
+            if (typeof users === 'string') {
+                usersArr = new global.JSON().decode(users);
+            }
+
+            this.log.debug('syncUsers: Worker started for ' + usersArr.length + ' users');
+            this.log.debug('syncUsers: User list: [' + usersArr.join() + ']');
+
+            var userRec = new GlideRecord("sys_user");
+            userRec.addEncodedQuery(this.config.USERNAMEFIELD + 'IN' + usersArr.join());
+            userRec.orderBy(this.config.USERNAMEFIELD);
+            userRec.query();
+
+            var syncedUsers = [], failedUsers = [];
+            var moreUsersToSync = [];
+            while (userRec.next()) {
+                var username = userRec[this.config.USERNAMEFIELD].getDisplayValue();
+                this.log.debug('syncUsers: Syncing user "' + username + '"');
+
+                if (this.person.syncUser(userRec, null, {setExternalKey: setExternalKey})) {
+                    syncedUsers.push(username);
+                    this.log.debug('syncUsers: Sync of user: "' + username + '" completed');
+
+                } else {
+                    failedUsers.push(username);
+                    this.log.warn('syncUsers: Failed to sync user: "' + username +
+                        '". Continuing with next user in the list.');
+                }
+                this.log.debug('syncUsers: ' + (syncedUsers.length + failedUsers.length) +
+                    ' users processed. Number of REST calls: ' + this.dataHelper.getCallCount());
+
+                if (this.config.MAX_CALLS_PER_PROCESS - this.dataHelper.getCallCount() < this.config.CALLS_PER_USER) {
+                    // do the rest of the work in a different process
+                    while (userRec.next()) {
+                        moreUsersToSync.push(userRec[this.config.USERNAMEFIELD].getDisplayValue());
+                    }
+
+                    break;
+                }
+            }
+
+            if (moreUsersToSync.length > 0) {
+                this.log.debug('syncUsers: Worker is close to REST calls quota and will sync ' +
+                    moreUsersToSync.length + ' users: [' + moreUsersToSync.join() +
+                    '] in a separate process');
+
+                this.syncUsersAsync(moreUsersToSync, setExternalKey);
+            }
+
+            var logMsg = 'syncUsers: Worker ending after processing ' +
+                (syncedUsers.length + failedUsers.length) +
+                ' users: ' + syncedUsers.length + ' synced, ' + failedUsers.length + ' failed (' +
+                this.log.timer(start) + 'ms elapsed)';
+            if (this.log.isDebug()) {
+                if (syncedUsers.length) {
+                    logMsg += '\n> Synced users: [' + syncedUsers.join() + ']';
+                }
+                if (failedUsers.length) {
+                    logMsg += '\n> Failed syncs: [' + failedUsers.join() + ']';
+                }
+                this.log.debug(logMsg);
+
+            } else {
+                if (syncedUsers.length) {
+                    logMsg += '\n> Synced users: [' + syncedUsers.slice(0, 50).join() + ']';
+                    logMsg += (syncedUsers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                if (failedUsers.length) {
+                    logMsg += '\n> Failed syncs: [' + failedUsers.slice(0, 50).join() + ']';
+                    logMsg += (failedUsers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                this.log.info(logMsg);
+            }
+
+        } catch (e) {
+            this.log.logException('syncUsers', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Remove a list of users from xMatters
+     *
+     * @param {string|Array} usernames listing of users to remove
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     */
+    removeUsers: function (usernames, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            this.person = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+
+            var usernamesArr = usernames;
+            if (typeof usernames === 'string') {
+                usernamesArr = new global.JSON().decode(usernames);
+            }
+
+            this.log.debug('removeUsers: Worker started for ' + usernamesArr.length + ' users');
+            this.log.debug('removeUsers: User list: [' + usernamesArr.join() + ']');
+
+            var removedUsers = [], failedUsers = [];
+            var moreUsersToRemove = [];
+            for (var i = 0; i < usernamesArr.length; ++i) {
+                var username = usernamesArr[i];
+                this.log.debug('removeUsers: Removing user: "' + username + '"');
+
+                if (this.person.removeUser(username)) {
+                    removedUsers.push(username);
+                    this.log.debug('removeUsers: Completed removal of user: "' + username + '"');
+
+                } else {
+                    failedUsers.push(username);
+                    this.log.warn('removeUsers: Failed to remove user: "' + username +
+                        '". Continuing with next user in the list.');
+                }
+
+                this.log.debug('removeUsers: ' + (removedUsers.length + failedUsers.length) +
+                    ' users processed. Number of REST calls: ' + this.dataHelper.getCallCount());
+
+                if (i + 1 < usernamesArr.length &&
+                    this.config.MAX_CALLS_PER_PROCESS - this.dataHelper.getCallCount() < this.config.CALLS_PER_USER_DELETE) {
+                    moreUsersToRemove = usernamesArr.slice(i + 1);
+                    break;
+                }
+            }
+
+            if (moreUsersToRemove.length > 0) {
+                this.log.debug('removeUsers: Worker is close to REST calls quota and will remove ' +
+                    moreUsersToRemove.length + ' users: [' + moreUsersToRemove.join() +
+                    '] in a separate process');
+
+                this.removeUsersAsync(moreUsersToRemove);
+            }
+
+            var logMsg = 'removeUsers: Worker ending after processing ' +
+                (removedUsers.length + failedUsers.length) +
+                ' users: ' + removedUsers.length + ' removed, ' + failedUsers.length + ' failed (' +
+                this.log.timer(start) + 'ms elapsed)';
+            if (this.log.isDebug()) {
+                if (removedUsers.length) {
+                    logMsg += '\n> Removed users: [' + removedUsers.join() + ']';
+                }
+                if (failedUsers.length) {
+                    logMsg += '\n> Failed removals: [' + failedUsers.join() + ']';
+                }
+                this.log.debug(logMsg);
+
+            } else {
+                if (removedUsers.length) {
+                    logMsg += '\n> Removed users: [' + removedUsers.slice(0, 50).join() + ']';
+                    logMsg += (removedUsers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                if (failedUsers.length) {
+                    logMsg += '\n> Failed removals: [' + failedUsers.slice(0, 50).join() + ']';
+                    logMsg += (failedUsers.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                this.log.info(logMsg);
+            }
+
+        } catch (e) {
+            this.log.logException('removeUsers', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Get the "syncable" users for a batch sync
+     *
+     * Only those uses that have a role listed in xmatters.user.sync.roles.list are
+     * eligible for sync. Roles can be directly attributed to the user or inherited
+     * through group membership
+     *
+     * @returns {Array}
+     */
+    getSyncableUsers: function () {
+        var arrayUtil = new global.ArrayUtil();
+
+        var syncableUsers = [];
+
+        var grUserRoles = new GlideRecord('sys_user_has_role');
+        grUserRoles.addQuery('user.active', 'true');
+        grUserRoles.addQuery('role.name', 'IN', this.config.SYNCABLEROLES.join(','));
+
+        // exclude the API user from sync
+        grUserRoles.addQuery('user.' + this.config.USERNAMEFIELD, '!=', this.config.XMAPI.user);
+
+        grUserRoles.orderBy('user.' + this.config.USERNAMEFIELD);
+        grUserRoles.query();
+        while (grUserRoles.next()) {
+            var username = grUserRoles.user[this.config.USERNAMEFIELD].toString();
+            if (!arrayUtil.contains(syncableUsers, username)) {
+                syncableUsers.push(username);
+            }
+        }
+
+        syncableUsers = arrayUtil.unique(syncableUsers);
+
+        this.log.debug('getSyncableUsers: ' + syncableUsers.length + " users matched: [" + syncableUsers.join() + ']');
+
+        return syncableUsers;
+    },
+
+    type: 'xMattersPersonCollection'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-11 17:34:08</sys_created_on>
+        <sys_id>c359c8794f2822008472a88ca310c7e7</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>xMattersPersonCollection</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_c359c8794f2822008472a88ca310c7e7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+    </sys_script_include>
+</record_update>

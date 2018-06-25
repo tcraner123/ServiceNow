@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersDevice</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersDevice</name>
+        <script><![CDATA[gs.include('xMattersLogger');
+gs.include('xMattersConfig');
+gs.include('xMattersDataHelper');
+
+/**
+ * xMattersDevice model for mapping xMatters person device objects with ServiceNow users
+ *
+ * @type {Object}
+ */
+var xMattersDevice = Class.create();
+
+xMattersDevice.prototype = {
+
+    /**
+     * Initialize the xMattersDevice object
+     *
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersDevice', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Sync a device to xMatters
+     *
+     * If the device Id is included in the device object,
+     * the device will be updated; otherwise a new device
+     * will be created.
+     *
+     * @param {*} device to sync
+     */
+    syncDevice: function (device) {
+        // do not send the targetName field
+        if ('targetName' in device) {
+            delete device.targetName;
+        }
+
+        var response = this.dataHelper.post('/devices', device);
+        if (this.dataHelper.isSucessfulResponse(response)) {
+            this.log.debug('syncDevice: Successfully synced device: "' + device.name +
+                '" for owner: "' + device.owner + '"');
+
+        } else if (response.status == 409 && response.body.indexOf('already has a device with the name') != -1) {
+            this.log.debug('syncDevice: Device: "' + device.name + '" already exists for owner: "' + device.owner +
+                '" (probably the result of a parallel running device creation operation). Will not create new device.');
+
+        } else {
+            this.log.error('syncDevice: Failed syncing device: ' + device.name +
+                ' for owner: ' + device.owner + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+        }
+        return response;
+    },
+
+    /**
+     * Extract and return a device from the results of an API lookup
+     *
+     * @param {string} name of the device to extract
+     * @param {Object} devices devices object returned from xMatters API
+     * @returns {null|*} the extracted device or null if not found
+     */
+    extractDeviceByName: function (name, devices) {
+        for (var i = 0; i < devices.data.length; i++) {
+            if (devices.data[i].name == name) {
+                return devices.data[i];
+            }
+        }
+
+        return null;
+    },
+
+    /**
+     * Create a new device object that can be synced to xMatters
+     *
+     * When a new device is being created, we also check the config
+     * to determine if it should be set as externally owned.
+     *
+     * @param {string} name of the device
+     * @param {string} type of the device
+     * @param {string} ownerID of the person who owns this device
+     * @returns {Object} the new device object
+     */
+    createDevice: function (name, type, ownerID) {
+        var device = {
+            name: name,
+            recipientType: "DEVICE",
+            deviceType: type,
+            owner: ownerID,
+            externalKey: [ownerID, name].join('-').replace(/ /, '-'),
+            externallyOwned: this.config.EXTERNALLYOWNED
+        };
+        if (this.config.DEVICE_PROVIDERS[type]) {
+            device.provider = this.config.DEVICE_PROVIDERS[type];
+        }
+
+        return device;
+    },
+
+    /**
+     * Flag a device to preserve it in xMatters
+     *
+     * @param {Object} device
+     */
+    flagToKeep: function (device) {
+        device._keep = true;
+    },
+
+    /**
+     * Check to see if a device needs removing
+     *
+     * If a device is not marked to keep and was created
+     * through a sync (has an externalKey), it should be
+     * deleted.
+     *
+     * @param {Object} device
+     * @returns {boolean}
+     */
+    isRemoveRequired: function (device) {
+        var shouldRemove = (!device._keep && device.externalKey);
+        var owner = device.owner.targetName ? device.owner.targetName : device.owner;
+
+        this.log.debug('isRemovedRequired: Removal ' + (shouldRemove ? '' : 'not ') +
+            'required for device: ' + device.name + ', owner: ' + owner);
+
+        return shouldRemove;
+    },
+
+    /**
+     * Delete a device from xMatters
+     *
+     * @param {string} deviceID UUID of device to remove
+     */
+    removeDevice: function (deviceID) {
+        var response = this.dataHelper.remove('/devices/' + deviceID);
+
+        if (this.dataHelper.isSucessfulResponse(response)) {
+            this.log.debug('removeDevice: Successfully removed device: ' + deviceID);
+        } else {
+            this.log.error('removeDevice: Failed removing device: ' + deviceID + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+        }
+
+        return response;
+    },
+
+    /**
+     * Clean up a phone number and return in xMatters' expected format
+     *
+     * @param {string} phoneRaw a phone number to format
+     * @returns {string} formatted phone number
+     */
+    cleanPhoneNumber: function (phoneRaw) {
+        phoneRaw = ('' + phoneRaw).toLowerCase();
+
+        var extIdentifier = !!this.config.EXTENSION_IDENTIFIER ? this.config.EXTENSION_IDENTIFIER : ';ext=';
+        extIdentifier = extIdentifier.toLowerCase();
+
+        var extensionPos = phoneRaw.indexOf(extIdentifier);
+        var baseNumber = '';
+        var extension = '';
+
+        if (extensionPos != -1) {
+            baseNumber = phoneRaw.substring(0, extensionPos);
+            extension = phoneRaw.substring(extensionPos + extIdentifier.length);
+
+        } else {
+            baseNumber = phoneRaw;
+        }
+
+        // remove any characters which will cause sync to fail
+        baseNumber = baseNumber.replace(/[^\d\.\+]+/g, '');
+        extension = extension.replace(/[^\d\.\+]+/g, '');
+
+        // If there is no +, then assume US based
+        if (baseNumber.indexOf('+') == -1) {
+            baseNumber = '+1' + baseNumber;
+        }
+
+        var cCodeNumber = this.getCountryCode(baseNumber);
+        var formattedNumber = '+' + cCodeNumber.code + cCodeNumber.number;
+        if (extension !== '') {
+            formattedNumber += ';ext=' + extension;
+        }
+
+        return formattedNumber;
+    },
+
+    /**
+     * Get the country code for a given phone number
+     *
+     * @param {string} number of the phone to lookup
+     * @returns {*} the found country code
+     */
+    getCountryCode: function (number) {
+        var re = /\D/g;
+        var n = number.replace(re, '');
+
+        for (var c in this.COUNTRY_CODES) {
+            code = this.COUNTRY_CODES[c];
+            if (n.substring(0, c.length) == c) {
+                val = code;
+                val.number = n.substring(c.length);
+                return val;
+            }
+        }
+
+        // If we got here, we didn't find a
+        // matching code, so just return as is and log
+        this.log.warn('getCountryCode: Could not find country code for "' + n +
+            '". Using user\'s default country code.');
+        return {"number": n};
+    },
+
+    /**
+     * List of country codes to use for phone devices
+     */
+    COUNTRY_CODES: {
+        "1": {"code": "1", "name": "United States", "iso_code": "US"},
+        "7": {"code": "7", "name": "Russia", "iso_code": "RU"},
+        "20": {"code": "20", "name": "Egypt", "iso_code": "EG"},
+        "27": {"code": "27", "name": "South Africa", "iso_code": "ZA"},
+        "30": {"code": "30", "name": "Greece", "iso_code": "GR"},
+        "31": {"code": "31", "name": "Netherlands", "iso_code": "NL"},
+        "32": {"code": "32", "name": "Belgium", "iso_code": "BE"},
+        "33": {"code": "33", "name": "France", "iso_code": "FR"},
+        "34": {"code": "34", "name": "Spain", "iso_code": "ES"},
+        "36": {"code": "36", "name": "Hungary", "iso_code": "HU"},
+        "39": {"code": "39", "name": "Italy", "iso_code": "IT"},
+        "40": {"code": "40", "name": "Romania", "iso_code": "RO"},
+        "41": {"code": "41", "name": "Switzerland", "iso_code": "CH"},
+        "43": {"code": "43", "name": "Austria", "iso_code": "AT"},
+        "44": {"code": "44", "name": "United Kingdom", "iso_code": "GB"},
+        "45": {"code": "45", "name": "Denmark", "iso_code": "DK"},
+        "46": {"code": "46", "name": "Sweden", "iso_code": "SE"},
+        "47": {"code": "47", "name": "Norway", "iso_code": "NO"},
+        "48": {"code": "48", "name": "Poland", "iso_code": "PL"},
+        "49": {"code": "49", "name": "Germany", "iso_code": "DE"},
+        "51": {"code": "51", "name": "Peru", "iso_code": "PE"},
+        "52": {"code": "52", "name": "Mexico", "iso_code": "MX"},
+        "53": {"code": "53", "name": "Cuba", "iso_code": "CU"},
+        "54": {"code": "54", "name": "Argentina", "iso_code": "AR"},
+        "55": {"code": "55", "name": "Brazil", "iso_code": "BR"},
+        "56": {"code": "56", "name": "Chile", "iso_code": "CL"},
+        "57": {"code": "57", "name": "Colombia", "iso_code": "CO"},
+        "58": {"code": "58", "name": "Venezuela", "iso_code": "VE"},
+        "60": {"code": "60", "name": "Malaysia", "iso_code": "MY"},
+        "61": {"code": "61", "name": "Australia", "iso_code": "AU"},
+        "62": {"code": "62", "name": "Indonesia", "iso_code": "ID"},
+        "63": {"code": "63", "name": "Philippines", "iso_code": "PH"},
+        "64": {"code": "64", "name": "New Zealand", "iso_code": "NZ"},
+        "65": {"code": "65", "name": "Singapore", "iso_code": "SG"},
+        "66": {"code": "66", "name": "Thailand", "iso_code": "TH"},
+        "81": {"code": "81", "name": "Japan", "iso_code": "JP"},
+        "82": {"code": "82", "name": "South Korea", "iso_code": "KR"},
+        "84": {"code": "84", "name": "Vietnam", "iso_code": "VN"},
+        "86": {"code": "86", "name": "China", "iso_code": "CN"},
+        "90": {"code": "90", "name": "Turkey", "iso_code": "TR"},
+        "91": {"code": "91", "name": "India", "iso_code": "IN"},
+        "92": {"code": "92", "name": "Pakistan", "iso_code": "PK"},
+        "93": {"code": "93", "name": "Afghanistan", "iso_code": "AF"},
+        "94": {"code": "94", "name": "Sri Lanka", "iso_code": "LK"},
+        "95": {"code": "95", "name": "Myanmar", "iso_code": "MM"},
+        "98": {"code": "98", "name": "Iran", "iso_code": "IR"},
+        "211": {"code": "211", "name": "South Sudan", "iso_code": "SS"},
+        "212": {"code": "212", "name": "Morocco", "iso_code": "MA"},
+        "213": {"code": "213", "name": "Algeria", "iso_code": "DZ"},
+        "216": {"code": "216", "name": "Tunisia", "iso_code": "TN"},
+        "218": {"code": "218", "name": "Libya", "iso_code": "LY"},
+        "220": {"code": "220", "name": "Gambia", "iso_code": "GM"},
+        "221": {"code": "221", "name": "Senegal", "iso_code": "SN"},
+        "222": {"code": "222", "name": "Mauritania", "iso_code": "MR"},
+        "223": {"code": "223", "name": "Mali", "iso_code": "ML"},
+        "224": {"code": "224", "name": "Guinea", "iso_code": "GN"},
+        "225": {"code": "225", "name": "Ivory Coast", "iso_code": "CI"},
+        "226": {"code": "226", "name": "Burkina Faso", "iso_code": "BF"},
+        "227": {"code": "227", "name": "Niger", "iso_code": "NE"},
+        "228": {"code": "228", "name": "Togo", "iso_code": "TG"},
+        "229": {"code": "229", "name": "Benin", "iso_code": "BJ"},
+        "230": {"code": "230", "name": "Mauritius", "iso_code": "MU"},
+        "231": {"code": "231", "name": "Liberia", "iso_code": "LR"},
+        "232": {"code": "232", "name": "Sierra Leone", "iso_code": "SL"},
+        "233": {"code": "233", "name": "Ghana", "iso_code": "GH"},
+        "234": {"code": "234", "name": "Nigeria", "iso_code": "NG"},
+        "235": {"code": "235", "name": "Chad", "iso_code": "TD"},
+        "236": {"code": "236", "name": "Central African Republic", "iso_code": "CF"},
+        "237": {"code": "237", "name": "Cameroon", "iso_code": "CM"},
+        "238": {"code": "238", "name": "Cape Verde", "iso_code": "CV"},
+        "239": {"code": "239", "name": "Sao Tome and Principe", "iso_code": "ST"},
+        "240": {"code": "240", "name": "Equatorial Guinea", "iso_code": "GQ"},
+        "241": {"code": "241", "name": "Gabon", "iso_code": "GA"},
+        "242": {"code": "242", "name": "Republic of the Congo", "iso_code": "CG"},
+        "243": {"code": "243", "name": "Democratic Republic of the Congo", "iso_code": "CD"},
+        "244": {"code": "244", "name": "Angola", "iso_code": "AO"},
+        "245": {"code": "245", "name": "Guinea - Bissau", "iso_code": "GW"},
+        "246": {"code": "246", "name": "British Indian Ocean Territory", "iso_code": "IO"},
+        "248": {"code": "248", "name": "Seychelles", "iso_code": "SC"},
+        "249": {"code": "249", "name": "Sudan", "iso_code": "SD"},
+        "250": {"code": "250", "name": "Rwanda", "iso_code": "RW"},
+        "251": {"code": "251", "name": "Ethiopia", "iso_code": "ET"},
+        "252": {"code": "252", "name": "Somalia", "iso_code": "SO"},
+        "253": {"code": "253", "name": "Djibouti", "iso_code": "DJ"},
+        "254": {"code": "254", "name": "Kenya", "iso_code": "KE"},
+        "255": {"code": "255", "name": "Tanzania", "iso_code": "TZ"},
+        "256": {"code": "256", "name": "Uganda", "iso_code": "UG"},
+        "257": {"code": "257", "name": "Burundi", "iso_code": "BI"},
+        "258": {"code": "258", "name": "Mozambique", "iso_code": "MZ"},
+        "260": {"code": "260", "name": "Zambia", "iso_code": "ZM"},
+        "261": {"code": "261", "name": "Madagascar", "iso_code": "MG"},
+        "262": {"code": "262", "name": "Mayotte", "iso_code": "YT"},
+        "263": {"code": "263", "name": "Zimbabwe", "iso_code": "ZW"},
+        "264": {"code": "264", "name": "Namibia", "iso_code": "NA"},
+        "265": {"code": "265", "name": "Malawi", "iso_code": "MW"},
+        "266": {"code": "266", "name": "Lesotho", "iso_code": "LS"},
+        "267": {"code": "267", "name": "Botswana", "iso_code": "BW"},
+        "268": {"code": "268", "name": "Swaziland", "iso_code": "SZ"},
+        "269": {"code": "269", "name": "Comoros", "iso_code": "KM"},
+        "290": {"code": "290", "name": "Saint Helena", "iso_code": "SH"},
+        "291": {"code": "291", "name": "Eritrea", "iso_code": "ER"},
+        "297": {"code": "297", "name": "Aruba", "iso_code": "AW"},
+        "298": {"code": "298", "name": "Faroe Islands", "iso_code": "FO"},
+        "299": {"code": "299", "name": "Greenland", "iso_code": "GL"},
+        "350": {"code": "350", "name": "Gibraltar", "iso_code": "GI"},
+        "351": {"code": "351", "name": "Portugal", "iso_code": "PT"},
+        "352": {"code": "352", "name": "Luxembourg", "iso_code": "LU"},
+        "353": {"code": "353", "name": "Ireland", "iso_code": "IE"},
+        "354": {"code": "354", "name": "Iceland", "iso_code": "IS"},
+        "355": {"code": "355", "name": "Albania", "iso_code": "AL"},
+        "356": {"code": "356", "name": "Malta", "iso_code": "MT"},
+        "357": {"code": "357", "name": "Cyprus", "iso_code": "CY"},
+        "358": {"code": "358", "name": "Finland", "iso_code": "FI"},
+        "359": {"code": "359", "name": "Bulgaria", "iso_code": "BG"},
+        "370": {"code": "370", "name": "Lithuania", "iso_code": "LT"},
+        "371": {"code": "371", "name": "Latvia", "iso_code": "LV"},
+        "372": {"code": "372", "name": "Estonia", "iso_code": "EE"},
+        "373": {"code": "373", "name": "Moldova", "iso_code": "MD"},
+        "374": {"code": "374", "name": "Armenia", "iso_code": "AM"},
+        "375": {"code": "375", "name": "Belarus", "iso_code": "BY"},
+        "376": {"code": "376", "name": "Andorra", "iso_code": "AD"},
+        "377": {"code": "377", "name": "Monaco", "iso_code": "MC"},
+        "378": {"code": "378", "name": "San Marino", "iso_code": "SM"},
+        "379": {"code": "379", "name": "Vatican", "iso_code": "VA"},
+        "380": {"code": "380", "name": "Ukraine", "iso_code": "UA"},
+        "381": {"code": "381", "name": "Serbia", "iso_code": "RS"},
+        "382": {"code": "382", "name": "Montenegro", "iso_code": "ME"},
+        "383": {"code": "383", "name": "Kosovo", "iso_code": "XK"},
+        "385": {"code": "385", "name": "Croatia", "iso_code": "HR"},
+        "386": {"code": "386", "name": "Slovenia", "iso_code": "SI"},
+        "387": {"code": "387", "name": "Bosnia and Herzegovina", "iso_code": "BA"},
+        "389": {"code": "389", "name": "Macedonia", "iso_code": "MK"},
+        "420": {"code": "420", "name": "Czech Republic", "iso_code": "CZ"},
+        "421": {"code": "421", "name": "Slovakia", "iso_code": "SK"},
+        "423": {"code": "423", "name": "Liechtenstein", "iso_code": "LI"},
+        "500": {"code": "500", "name": "Falkland Islands", "iso_code": "FK"},
+        "501": {"code": "501", "name": "Belize", "iso_code": "BZ"},
+        "502": {"code": "502", "name": "Guatemala", "iso_code": "GT"},
+        "503": {"code": "503", "name": "El Salvador", "iso_code": "SV"},
+        "504": {"code": "504", "name": "Honduras", "iso_code": "HN"},
+        "505": {"code": "505", "name": "Nicaragua", "iso_code": "NI"},
+        "506": {"code": "506", "name": "Costa Rica", "iso_code": "CR"},
+        "507": {"code": "507", "name": "Panama", "iso_code": "PA"},
+        "508": {"code": "508", "name": "Saint Pierre and Miquelon", "iso_code": "PM"},
+        "509": {"code": "509", "name": "Haiti", "iso_code": "HT"},
+        "590": {"code": "590", "name": "Saint Martin", "iso_code": "MF"},
+        "591": {"code": "591", "name": "Bolivia", "iso_code": "BO"},
+        "592": {"code": "592", "name": "Guyana", "iso_code": "GY"},
+        "593": {"code": "593", "name": "Ecuador", "iso_code": "EC"},
+        "595": {"code": "595", "name": "Paraguay", "iso_code": "PY"},
+        "597": {"code": "597", "name": "Suriname", "iso_code": "SR"},
+        "598": {"code": "598", "name": "Uruguay", "iso_code": "UY"},
+        "599": {"code": "599", "name": "Curacao", "iso_code": "CW"},
+        "670": {"code": "670", "name": "East Timor", "iso_code": "TL"},
+        "672": {"code": "672", "name": "Antarctica", "iso_code": "AQ"},
+        "673": {"code": "673", "name": "Brunei", "iso_code": "BN"},
+        "674": {"code": "674", "name": "Nauru", "iso_code": "NR"},
+        "675": {"code": "675", "name": "Papua New Guinea", "iso_code": "PG"},
+        "676": {"code": "676", "name": "Tonga", "iso_code": "TO"},
+        "677": {"code": "677", "name": "Solomon Islands", "iso_code": "SB"},
+        "678": {"code": "678", "name": "Vanuatu", "iso_code": "VU"},
+        "679": {"code": "679", "name": "Fiji", "iso_code": "FJ"},
+        "680": {"code": "680", "name": "Palau", "iso_code": "PW"},
+        "681": {"code": "681", "name": "Wallis and Futuna", "iso_code": "WF"},
+        "682": {"code": "682", "name": "Cook Islands", "iso_code": "CK"},
+        "683": {"code": "683", "name": "Niue", "iso_code": "NU"},
+        "685": {"code": "685", "name": "Samoa", "iso_code": "WS"},
+        "686": {"code": "686", "name": "Kiribati", "iso_code": "KI"},
+        "687": {"code": "687", "name": "New Caledonia", "iso_code": "NC"},
+        "688": {"code": "688", "name": "Tuvalu", "iso_code": "TV"},
+        "689": {"code": "689", "name": "French Polynesia", "iso_code": "PF"},
+        "690": {"code": "690", "name": "Tokelau", "iso_code": "TK"},
+        "691": {"code": "691", "name": "Micronesia", "iso_code": "FM"},
+        "692": {"code": "692", "name": "Marshall Islands", "iso_code": "MH"},
+        "850": {"code": "850", "name": "North Korea", "iso_code": "KP"},
+        "852": {"code": "852", "name": "Hong Kong", "iso_code": "HK"},
+        "853": {"code": "853", "name": "Macao", "iso_code": "MO"},
+        "855": {"code": "855", "name": "Cambodia", "iso_code": "KH"},
+        "856": {"code": "856", "name": "Laos", "iso_code": "LA"},
+        "880": {"code": "880", "name": "Bangladesh", "iso_code": "BD"},
+        "886": {"code": "886", "name": "Taiwan", "iso_code": "TW"},
+        "960": {"code": "960", "name": "Maldives", "iso_code": "MV"},
+        "961": {"code": "961", "name": "Lebanon", "iso_code": "LB"},
+        "962": {"code": "962", "name": "Jordan", "iso_code": "JO"},
+        "963": {"code": "963", "name": "Syria", "iso_code": "SY"},
+        "964": {"code": "964", "name": "Iraq", "iso_code": "IQ"},
+        "965": {"code": "965", "name": "Kuwait", "iso_code": "KW"},
+        "966": {"code": "966", "name": "Saudi Arabia", "iso_code": "SA"},
+        "967": {"code": "967", "name": "Yemen", "iso_code": "YE"},
+        "968": {"code": "968", "name": "Oman", "iso_code": "OM"},
+        "970": {"code": "970", "name": "Palestine", "iso_code": "PS"},
+        "971": {"code": "971", "name": "United Arab Emirates", "iso_code": "AE"},
+        "972": {"code": "972", "name": "Israel", "iso_code": "IL"},
+        "973": {"code": "973", "name": "Bahrain", "iso_code": "BH"},
+        "974": {"code": "974", "name": "Qatar", "iso_code": "QA"},
+        "975": {"code": "975", "name": "Bhutan", "iso_code": "BT"},
+        "976": {"code": "976", "name": "Mongolia", "iso_code": "MN"},
+        "977": {"code": "977", "name": "Nepal", "iso_code": "NP"},
+        "992": {"code": "992", "name": "Tajikistan", "iso_code": "TJ"},
+        "993": {"code": "993", "name": "Turkmenistan", "iso_code": "TM"},
+        "994": {"code": "994", "name": "Azerbaijan", "iso_code": "AZ"},
+        "995": {"code": "995", "name": "Georgia", "iso_code": "GE"},
+        "996": {"code": "996", "name": "Kyrgyzstan", "iso_code": "KG"},
+        "998": {"code": "998", "name": "Uzbekistan", "iso_code": "UZ"}
+    },
+
+    type: 'xMattersDevice'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-04-25 23:45:06</sys_created_on>
+        <sys_id>d1fbb88d4f0f5a008472a88ca310c753</sys_id>
+        <sys_mod_count>7</sys_mod_count>
+        <sys_name>xMattersDevice</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_d1fbb88d4f0f5a008472a88ca310c753</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-18 21:30:18</sys_updated_on>
+    </sys_script_include>
+</record_update>

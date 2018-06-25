@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update sys_domain="global" table="sys_app_module">
+    <sys_app_module action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <application display_value="Integration - xMatters">1b9f490f7b02f1008e0b707d784d4d81</application>
+        <assessment/>
+        <content_page/>
+        <device_type/>
+        <filter/>
+        <hint>View xMatters log entries</hint>
+        <homepage/>
+        <image/>
+        <link_type>DIRECT</link_type>
+        <map_page/>
+        <mobile_title>xMatters Logs</mobile_title>
+        <mobile_view_name>Mobile</mobile_view_name>
+        <name/>
+        <order>615</order>
+        <override_menu_roles>false</override_menu_roles>
+        <query>syslog_list.do?sysparm_query=sys_created_onONToday@javascript:gs.daysAgoStart(0)@javascript:gs.daysAgoEnd(0)^sourceLIKEx_xma_xmatters^ORDERBYDESCmessage
+</query>
+        <report/>
+        <roles>x_xma_xmatters.xmatters_admin</roles>
+        <sys_class_name>sys_app_module</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-15 20:46:20</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>3d1541c54f91620078bae321a310c7da</sys_id>
+        <sys_mod_count>8</sys_mod_count>
+        <sys_name>xMatters Logs</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_app_module_3d1541c54f91620078bae321a310c7da</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-06-23 22:24:44</sys_updated_on>
+        <timeline_page/>
+        <title>xMatters Logs</title>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+        <window_name>_blank</window_name>
+    </sys_app_module>
+</record_update>

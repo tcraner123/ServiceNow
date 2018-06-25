@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="clone_cleanup_script">
+    <clone_cleanup_script action="INSERT_OR_UPDATE">
+        <name>xMatters Clone</name>
+        <script><![CDATA[// reset xmatters app properties after a successful
+gs.setProperty('x_xma_xmatters.xmatters.api.user', '');
+gs.setProperty('x_xma_xmatters.xmatters.api.password', '');
+
+// disable features
+gs.setProperty('x_xma_xmatters.xmatters.incident.enable', false);
+gs.setProperty('x_xma_xmatters.xmatters.sync.dynamically', false);
+gs.setProperty('x_xma_xmatters.xmatters.task.enable', false);
+
+// reset endpoints
+gs.setProperty('x_xma_xmatters.xmatters.reb.incident.endpoint', 'https://<company>.<dc>.xmatters.com/api/integration/1/functions/<UUID>/triggers');
+gs.setProperty('x_xma_xmatters.xmatters.reb.task.conference.endpoint', 'https://<company>.<dc>.xmatters.com/api/integration/1/functions/<UUID>/triggers');
+gs.setProperty('x_xma_xmatters.xmatters.reb.task.endpoint', 'https://<company>.<dc>.xmatters.com/api/integration/1/functions/<UUID>/triggers');
+
+// clear response UUIDs
+gs.setProperty('x_xma_xmatters.xmatters.reb.incident.group.responses', '');
+gs.setProperty('x_xma_xmatters.xmatters.reb.incident.individual.responses', '');
+gs.setProperty('x_xma_xmatters.xmatters.sync.configurationitem.list.UUID', '');
+
+// user credentials
+gs.setProperty('x_xma_xmatters.xmatters.reb.hostname', 'https://<company>.<dc>.xmatters.com');
+gs.setProperty('x_xma_xmatters.xmatters.reb.password', '');
+gs.setProperty('x_xma_xmatters.xmatters.reb.user', '');
+
+// external stuff
+gs.setProperty('x_xma_xmatters.xmatters.task.conference.bridges', '');
+]]></script>
+        <sys_class_name>clone_cleanup_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-19 23:15:16</sys_created_on>
+        <sys_id>6ec26a584f7ca20078bae321a310c7e0</sys_id>
+        <sys_mod_count>12</sys_mod_count>
+        <sys_name>xMatters Clone</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>clone_cleanup_script_6ec26a584f7ca20078bae321a310c7e0</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-07-05 19:42:16</sys_updated_on>
+    </clone_cleanup_script>
+</record_update>

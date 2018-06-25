@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_rest_message_fn">
+    <sys_rest_message_fn action="INSERT_OR_UPDATE">
+        <authentication_type>inherit_from_parent</authentication_type>
+        <basic_auth_password>XkIqcDQb9oKa2Y3P1ntn/Q==</basic_auth_password>
+        <basic_auth_profile/>
+        <basic_auth_user>ServiceNow</basic_auth_user>
+        <content/>
+        <function_name>delete</function_name>
+        <http_method>delete</http_method>
+        <lock>false</lock>
+        <oauth2_profile/>
+        <protocol_name/>
+        <qualified_name>xMatters ServiceNow REB [ delete ]</qualified_name>
+        <rest_endpoint>http://64.251.74.99:8091/reapi/2013-12-01/engines/servicenow30/group/events?_authCompanyName=sn</rest_endpoint>
+        <rest_message display_value="xMatters ServiceNow REB">88e6a9837b42f1008e0b707d784d4d35</rest_message>
+        <sys_class_name>sys_rest_message_fn</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 22:35:21</sys_created_on>
+        <sys_id>fef6a9837b42f1008e0b707d784d4d57</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>delete</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_rest_message_fn_fef6a9837b42f1008e0b707d784d4d57</sys_update_name>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2017-06-23 00:07:22</sys_updated_on>
+        <use_basic_auth>true</use_basic_auth>
+        <use_mid_server/>
+        <use_mutual_auth>false</use_mutual_auth>
+    </sys_rest_message_fn>
+</record_update>

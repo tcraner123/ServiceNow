@@ -1,0 +1,632 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersGroup</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>xMattersGroup</name>
+        <script><![CDATA[gs.include('xMattersLogger');
+gs.include('xMattersConfig');
+gs.include('xMattersDataEvent');
+gs.include('xMattersDataHelper');
+gs.include('xMattersDevice');
+gs.include('xMattersSite');
+
+/**
+ * xMattersGroup model for mapping xMatters groups with ServiceNow groups
+ *
+ * @type {Object}
+ */
+var xMattersGroup = Class.create();
+
+xMattersGroup.prototype = {
+
+    /**
+     * Initialize the xMattersGroup object
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersGroup', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Insert/Update group in xMatters asynchronously (in the background)
+     *
+     * @param groupRec group sys_user_group record to sync, or the group name of the group to sync
+     * @param previousRec previous sys_user_group record to sync, or the previous group name
+     * @param {boolean} syncMembership to sync group membership after group sync
+     * @returns {*}
+     */
+    syncGroupAsync: function (groupRec, previousRec, syncMembership) {
+        var groupName = groupRec.name.getDisplayValue();
+		var logTraceId = this.log.getLogTraceId();
+        var previousValues = {};
+        if (previousRec) {
+            previousValues.name = previousRec.name.getDisplayValue();
+        }
+		if (this.config.USE_PROGRESS_WORKERS) {
+			var worker = new GlideScriptedHierarchicalWorker();
+			worker.setProgressName('x_xma_xmatters.xMattersGroup syncGroup: ' + groupName);
+
+			worker.setBackground(true);
+			worker.setScriptIncludeName('x_xma_xmatters.xMattersGroup');
+			worker.setScriptIncludeMethod('syncGroup');
+			worker.putMethodArg('group', groupName);
+
+			worker.putMethodArg("previousValues", previousValues);
+
+			worker.putMethodArg('syncMembership', syncMembership);
+			worker.putMethodArg('setExternalKey', false);
+
+			worker.putMethodArg('parentLogTraceId', logTraceId);
+
+			worker.start();
+
+			return worker.getProgressID();
+		} else {
+			var xde = new xMattersDataEvent(this.config, logTraceId);
+			xde.queueSyncGroupEvent(groupRec, groupName, previousValues, syncMembership, false);
+		}
+    },
+	
+	 /**
+     * Remove a group from xMatters asynchronously
+     *
+     * @param {GlideRecord} groupRec the group to remove
+     * @returns {Integer} the progress ID for tracking the background worker
+     */
+    removeGroupAsync: function (groupRec) {
+        var groupName = groupRec.name.getDisplayValue();
+		var logTraceId = this.log.getLogTraceId();
+		if (this.config.USE_PROGRESS_WORKERS) {
+			var worker = new GlideScriptedHierarchicalWorker();
+			worker.setProgressName("x_xma_xmatters.xMattersGroup removeGroup: " + groupName);
+
+			worker.setBackground(true);
+			worker.setScriptIncludeName("x_xma_xmatters.xMattersGroup");
+			worker.setScriptIncludeMethod("removeGroup");
+			worker.putMethodArg("group", groupName);
+			worker.putMethodArg('parentLogTraceId', logTraceId);
+			worker.start();
+
+			return worker.getProgressID();
+		} else {
+			var xde = new xMattersDataEvent(this.config, logTraceId);
+			xde.queueRemoveGroupEvent(groupRec, groupName);
+		}
+    },
+
+    /**
+     * Send a group sync request to the server
+     *
+     * @param {*} xMGroup
+     * @returns {*}
+     */
+    syncGroupRequest: function (xMGroup) {
+        this.log.debug('syncGroupRequest: Syncing group, "' + xMGroup.targetName + '"');
+
+        var response = this.dataHelper.post('/groups/', xMGroup);
+
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            this.log.error('syncGroupRequest: Failed syncing group: "' + xMGroup.targetName + '"' + "\n" +
+                this.dataHelper.formatErrorMessage(response));
+            return null;
+        }
+
+        this.log.debug('syncGroupRequest: Successfully synced group: "' + xMGroup.targetName + '"');
+        return (new global.JSON()).decode(response.body);
+    },
+
+    /**
+     * Insert/Update user in xMatters synchronously (in the current "ground")
+     *
+     * @param {string|{}} group sys_user_group record, or group name, of group to sync
+     * @param {{}} previousValues [optional] previous group values we are concerned with
+     * @param {boolean} syncMembership to sync group membership after group sync; default is false
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns {null|*} the synced group or null on error
+     */
+    syncGroup: function (group, previousValues, syncMembership, setExternalKey, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var groupRec = group;
+
+            if (typeof group === 'string') {
+                if (group.trim() === '') {
+                    this.log.warn('syncGroup: Skipping on empty group name.');
+                    return null;
+                }
+
+                groupRec = new GlideRecord('sys_user_group');
+                if (!(groupRec.get('name', group))) {
+                    this.log.warn('syncGroup: ServiceNow group "' + group + '" not found.');
+                    return null;
+                }
+            }
+
+            var groupName = groupRec.name.getDisplayValue();
+
+            this.log.debug('syncGroup: Syncing group: "' + groupName + '" AND ' +
+                (syncMembership ? '' : 'NOT ') + 'syncing membership');
+
+            // sync the group's manager to xM in advance to ensure they exists and have the appropriate roles
+            var xmperson = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+            var managerUsername = groupRec.manager ? xmperson.getxMattersUsername(groupRec.manager) : '';
+            if (managerUsername && xmperson.isSyncableUser(managerUsername)) {
+                xmperson.syncUser(managerUsername);
+            }
+
+            // Get the group from xM. If name has changed, retrieved based on previous name
+            var xMGroup = this.getGroupFromxM((previousValues) ? previousValues.name : groupName);
+            var newGroup = ( xMGroup === null );
+
+            if (newGroup) {
+                this.log.debug('syncGroup: Creating new group: "' + groupName + '"');
+            } else {
+                this.log.debug('syncGroup: Updating existing group: "' + groupName + '"');
+            }
+
+            xMGroup = this.syncGroupRequest(this.buildGroupObject(groupRec, xMGroup, setExternalKey));
+            if (!xMGroup) {
+                this.log.debug('syncGroup: Failed to sync group "' + groupName + '" to xMatters');
+                return null;
+            }
+
+            var membership = new xMattersGroupMembership(this.config, this.dataHelper, this.log.getLogTraceId());
+            if (newGroup) {
+                // add a default shift to the new group
+                var defaultShift = membership.addShift(xMGroup.targetName, this.config.SHIFTNAME);
+                if (defaultShift) {
+                    this.log.debug('syncGroup: New default shift: "' + defaultShift.name +
+                        '" added to group: "' + groupName + '"');
+                } else {
+                    this.log.warn('syncGroup: No default shift could be added to group: "' + groupName + '"');
+                }
+            }
+
+            if (syncMembership === true) {
+                // sync membership
+                membership.syncMembershipAsync(groupRec);
+            }
+
+            return xMGroup;
+
+        } catch (e) {
+            this.log.logException('syncGroup', e);
+            throw e;
+        }
+    },
+
+  /**
+   * Given an array of supervisor JSON object array, fetch the list of supervisor UUIDs
+   * @param {Array} groupSupervisors array of objects for supervisors
+   * @returns {Array} of supervisor UUIDs
+   */
+  getSupervisorIds: function(groupSupervisors) {
+    var supervisorIds = [];
+    for (var i = 0; i < groupSupervisors.length; i++) {
+      supervisorIds.push(groupSupervisors[i].id);
+    }
+    return supervisorIds;
+  },
+
+    /**
+     * Map the fields from the sys_user_group rec to an xMatters group Obj
+     *
+     * If xMGroup is passed, it is used as a template and values are
+     * overwritten with the values from the sys_user_group rec.
+     *
+     * @param {Object} groupRec the sys_user_group record from ServiceNow
+     * @param {null|Object} xMGroup (optional) group object from xMatters
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @returns {Object} the resulting object from a successful sync
+     */
+    buildGroupObject: function (groupRec, xMGroup, setExternalKey) {
+        var groupName = groupRec.name.getDisplayValue();
+        this.log.debug('buildGroupObject: entering for group: "' + groupName + '"');
+
+        var group = {};
+
+        if (xMGroup) {
+            group = new global.JSON().decode(new global.JSON().encode(xMGroup));
+
+        } else {
+            this.log.debug('buildGroupObject: no group from xMatters');
+
+            group.externallyOwned = this.config.EXTERNALLYOWNED;
+            setExternalKey = true;
+
+            var xMSite = new xMattersSite(this.config, this.dataHelper, this.log.getLogTraceId());
+            group.site = xMSite.getSiteId();
+
+            group.allowDuplicates = this.config.ALLOWDUPLICATES;
+            group.useDefaultDevices = this.config.USEDEFAULTDEVICES;
+            group.observedByAll = this.config.OBSERVEDBYALL;
+        }
+
+        // populate externalKey only if we are creating a new group
+        // or if explicitly requested
+        if (setExternalKey) {
+            group.externalKey = groupName;
+        }
+
+        group.status = "ACTIVE";
+        group.recipientType = "GROUP";
+        var description = groupRec.description.getDisplayValue();
+        if (description.length > 200) {
+            this.log.debug('buildGroupObject: Truncating group description to 200 characters for group: "' + groupName + '"');
+            description = description.substr(0, 195) + '[...]';
+        }
+        group.description = description;
+        group.targetName = groupName;
+
+    var supervisorIds = [];
+    if (group.supervisors && Array.isArray(group.supervisors.data)) {
+      supervisorIds = this.getSupervisorIds(group.supervisors.data);
+        }
+    group.supervisors = supervisorIds;
+
+        var supervisorNames = [];
+        var xmperson = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+        if (groupRec.manager) {
+            var managerName = xmperson.getxMattersUsername(groupRec.manager);
+            if (managerName && managerName != this.config.DEFAULTSUPERVISOR) {
+                supervisorNames.push(managerName);
+            }
+        }
+		
+        if (this.config.DEFAULTSUPERVISOR !== '') {
+            supervisorNames.push(this.config.DEFAULTSUPERVISOR);
+        }
+
+        this.log.debug('buildGroupObject: Supervisor list for group: "' + groupName + '":  [' +
+           (new global.JSON()).encode(supervisorNames) + ']');
+
+        for (var i = 0; i < supervisorNames.length; ++i) {
+            var supervisorId = xmperson.getSyncableSupervisorId(supervisorNames[i]);
+            if (supervisorId) {
+                group.supervisors.push(supervisorId);
+
+            } else if (supervisorNames[i] !== '') {
+                this.log.warn('buildGroupObject: Supervisor: "' + supervisorNames[i] + '" not being set for group: "' +
+                   groupName + '"');
+            }
+        }
+		
+        return group;
+    },
+
+    /**
+     * Get the group from xMatters and return the Group Object
+     *
+     * @param groupName of the group to look up
+     * @returns {*}
+     */
+    getGroupFromxM: function (groupName) {
+    var response = this.dataHelper.get('/groups/' + encodeURIComponent(groupName), { embed: 'supervisors'});
+        if (!this.dataHelper.isSucessfulResponse(response)) {
+            if (response.status === 404) {
+                this.log.debug('getGroupFromxM: Group: "' + groupName + '" not found (404)');
+            } else {
+                this.log.error('getGroupFromxM: Failed retrieving group: "' + groupName + '"' + "\n" +
+                    this.dataHelper.formatErrorMessage(response));
+            }
+            return null;
+        }
+
+        return new global.JSON().decode(response.body);
+    },
+
+    /**
+     * Check to see if this is a group we care about
+     *
+     * @param group the "current" sys_user_group record. Or the groupName to check.
+     * @param groupRec_prev the "previous" sys_user_group record
+     * @param groupRoleRec the "current" sys_group_has_role record
+     * @param groupRoleRec_prev the "previous" sys_group_has_role record
+     * @returns {boolean}
+     */
+    isSyncableGroup: function (group, groupRec_prev, groupRoleRec, groupRoleRec_prev) {
+        var groupRec = group;
+
+        // If a string is passed, then we'll help out and
+        // go get the group record.
+        if (typeof group === 'string') {
+            groupRec = new GlideRecord('sys_user_group');
+            groupRec.get('name', group);
+        }
+
+        var groupName;
+        if (groupRec) {
+            groupName = groupRec.name.getDisplayValue();
+
+            if (!groupRec.active) {
+                this.log.debug('isSyncableGroup: Group: "' + groupName + '" is not active');
+                return false;
+            }
+
+            if (this.hasRole(groupRec.sys_id)) {
+                this.log.debug('isSyncableGroup: Group "' + groupName + '" has a syncable role');
+                return true;
+            }
+
+        } else {
+            groupName = groupRoleRec.group.name.getDisplayValue();
+
+            if (!groupRoleRec.group.active) {
+                this.log.debug('isSyncableGroup: Group "' + groupName + '" is not active');
+                return false;
+            }
+
+
+            if (this.hasRole(groupRoleRec.group.sys_id)) {
+                this.log.debug('isSyncableGroup: Group "' + groupName + '" has a syncable role');
+                return true;
+            }
+        }
+
+        this.log.debug('isSyncableGroup: Group "' + groupName + '" does not have a syncable role');
+        return false;
+    },
+
+    /**
+     * Check if the group should be removed.
+     *
+     * The groupRec arguments should only be used when dealing directly
+     * with the sys_user_group record, while the groupRoleRec arguments should
+     * be used only when dealing directly with the sys_group_has_role
+     * record.
+     *
+     * In determining if the group should be deleted, we check to see if
+     * the group was originally created in ServiceNow
+     *
+     * @param groupRec the "current" sys_user_group record
+     * @param groupRec_prev the "previous" sys_user_group record
+     * @param groupRoleRec the "current" sys_group_has_role record
+     * @param groupRoleRec_prev the "previous" sys_group_has_role record
+     * @returns {boolean}
+     */
+    isRemoveRequired: function (groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) {
+        var groupName;
+        if (groupRec) {
+            groupName = groupRec.name;
+            if (groupRec.active.changesTo(false)) {
+                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (group is not active)');
+                return true;
+            }
+
+            if (groupRec.operation() == "delete") {
+                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (group deleted)');
+                return true;
+            }
+
+        } else if (groupRoleRec && groupRoleRec.operation() == "delete") {
+            groupName = groupRoleRec.group.name;
+
+            if (!this.hasRole(groupRoleRec.group)) {
+                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (no syncable role)');
+
+                return true;
+            }
+        }
+
+        if (groupName) {
+            this.log.debug('isRemoveRequired: No relevant change detected for group: "' + groupName + '"');
+        }
+
+        return false;
+    },
+
+    /**
+     * Remove a group from xMatters
+     *
+     * @param group sys_user_group record or name of the group to remove
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     * @returns null|{{}} either null on error or the response from xM-API
+     */
+    removeGroup: function (group, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var isGlide = (typeof group !== 'string');
+            var groupName = isGlide ? group.name.getDisplayValue() : group;
+            groupName = groupName || '';
+
+            // ensure there is a valid groupName
+            if (groupName.trim() === '') {
+                var msg = 'removeUser: Cannot remove group with empty name';
+                if (isGlide) {
+                    msg += ' (sys_id: ' + group.sys_id + ')';
+                }
+                this.log.warn(msg);
+                return null;
+            }
+
+            // ensure the group was created through a sync
+            var xMGroup = this.getGroupFromxM(groupName);
+
+            // remove the group members, if necessary
+            var usersToRemove = [];
+            var xMPerson = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
+            var membership = new xMattersGroupMembership(this.config, this.dataHelper, this.log.getLogTraceId());
+            var members = membership.getMembersConsolidated(groupName);
+            for (var i = 0; i < members.length; ++i) {
+                if (!xMPerson.isSyncableUser(members[i])) {
+                    usersToRemove.push(members[i]);
+                }
+            }
+
+            this.log.debug('removeGroup: Potential removal of ' + usersToRemove.length +
+                ' users from xMatters as a result of removing group: "' + groupName + '"');
+
+            if (usersToRemove.length) {
+                var xMPersonCollection = new xMattersPersonCollection(this.config, this.dataHelper, this.log.getLogTraceId());
+                xMPersonCollection.removeUsersAsync(usersToRemove);
+            }
+
+            if (!xMGroup) {
+                this.log.warn('removeGroup: Group: "' + groupName + '" does not exist in xMatters.');
+                return null;
+            }
+
+            if (!xMGroup.externalKey) {
+                this.log.warn('removeGroup: Group: "' + groupName + '" was not created by sync');
+                return null;
+            }
+
+            this.log.debug('removeGroup: Removing group: "' + groupName + '"');
+
+            var response = this.dataHelper.remove('/groups/' + encodeURIComponent(groupName));
+
+            if (this.dataHelper.isSucessfulResponse(response)) {
+                this.log.debug('removeGroup: Successfully removed group: "' + groupName + '"');
+            } else {
+                this.log.error('removeGroup: Failed removing group: "' + groupName + '"' + "\n" +
+                    this.dataHelper.formatErrorMessage(response));
+            }
+
+            return response;
+
+        } catch (e) {
+            this.log.logException('removeGroup', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Check to see if this is a data change we care about
+     *
+     * @param groupRec the "current" sys_user_group record
+     * @param groupRec_prev the "previous" sys_user_group record
+     * @param groupRoleRec the "current" sys_group_has_role record
+     * @param groupRoleRec_prev the "previous" sys_group_has_role record
+     * @returns {boolean}
+     */
+    isChanged: function (groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) {
+        var groupname;
+
+        if (groupRec) {
+            // check if any of the fields we sync changed
+            var changed = groupRec.name.changes() || groupRec.description.changes() || groupRec.manager.changes();
+
+            groupname = groupRec.name;
+            this.log.debug('isChanged: ' + groupname + "'s data has changed: " + changed);
+
+            return changed;
+
+        } else if (groupRoleRec) {
+            // check if role we track was added or deleted
+            groupname = groupRoleRec.group;
+            var role = groupRoleRec.role.name.getDisplayValue();
+            var roles = this.config.SYNCABLEROLES;
+            for (var i = 0; i < roles.length; i++) {
+                if (roles[i] == role) {
+                    this.log.debug('isChanged: ' + groupname + "'s syncable role has changed");
+                    return true;
+                }
+            }
+            this.log.debug('isChanged: ' + groupname + "'s syncable role has not changed");
+        }
+
+        this.log.debug('isChanged: No group or group roles changes to check');
+        return false;
+    },
+
+    /**
+     * Check to see if synchronization is required
+     *
+     * @param groupRec the "current" sys_user_group record
+     * @param groupRec_prev the "previous" sys_user_group record
+     * @param groupRoleRec the "current" sys_group_has_role record
+     * @param groupRoleRec_prev the "previous" sys_group_has_role record
+     * @returns {boolean}
+     */
+    isSyncRequired: function (groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) {
+        var syncable = this.isSyncableGroup(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev),
+            req = syncable || groupRoleRec ? this.isChanged(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) : false;
+        if (!req && groupRec) {
+            req = this.isRemoveRequired(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev);
+        }
+        return req;
+    },
+
+    /**
+     * Check if group has specified role(s)
+     *
+     * If no roles are passed, roles are checked against the configuration
+     * roles.list for syncing groups and members
+     *
+     * @param groupSys_ID  the sys_user_group ID of the group to check
+     * @param roles [optional] - A string or an array of roles to check
+     * @returns {boolean} if the group has one of the roles specified
+     */
+    hasRole: function (groupSys_ID, roles) {
+        var rolesList;
+
+        // If roles is passed in...
+        if (roles) {
+            // convert string value to appropriate format
+            if (typeof roles === 'string') {
+                rolesList = roles.split(';').join(',');
+            }
+        } else {
+            rolesList = this.config.SYNCABLEROLES.join(',');
+        }
+
+        var groupRoleRec = new GlideRecord('sys_group_has_role');
+        groupRoleRec.addQuery('group', groupSys_ID);
+        groupRoleRec.addQuery('role.name', 'IN', rolesList);
+        groupRoleRec.query();
+
+        var result = groupRoleRec.next();
+        if (result) {
+            this.log.debug('hasRole: ' + groupSys_ID + ' has a role in syncable list: "' + rolesList + '"');
+        } else {
+            this.log.debug('hasRole: ' + groupSys_ID + ' does not have a role in syncable list: "' + rolesList + '"');
+        }
+
+        return result;
+    },
+
+    type: 'xMattersGroup'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-04-27 16:18:01</sys_created_on>
+        <sys_id>d6d8ed614f4712008472a88ca310c757</sys_id>
+        <sys_mod_count>84</sys_mod_count>
+        <sys_name>xMattersGroup</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_d6d8ed614f4712008472a88ca310c757</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+    </sys_script_include>
+</record_update>

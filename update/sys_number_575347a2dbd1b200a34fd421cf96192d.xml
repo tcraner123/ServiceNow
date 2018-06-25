@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_number">
+    <sys_number action="INSERT_OR_UPDATE">
+        <category display_value="" name="x_xma_xmatters_inform_with_xmatters">x_xma_xmatters_inform_with_xmatters</category>
+        <maximum_digits>7</maximum_digits>
+        <number>1000</number>
+        <prefix>XMI</prefix>
+        <sys_class_name>sys_number</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-03-07 17:59:33</sys_created_on>
+        <sys_id>575347a2dbd1b200a34fd421cf96192d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>XMI</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_number_575347a2dbd1b200a34fd421cf96192d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-03-07 17:59:33</sys_updated_on>
+    </sys_number>
+</record_update>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_soap_message_function">
+    <sys_soap_message_function action="INSERT_OR_UPDATE">
+        <authentication_type/>
+        <basic_auth_password/>
+        <basic_auth_profile/>
+        <basic_auth_user/>
+        <certificate/>
+        <enable_mutual_auth>false</enable_mutual_auth>
+        <envelope><![CDATA[<SOAP-ENV:Envelope xmlns:m="http://www.alarmpoint.com/webservices/schema" xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"  SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <SOAP-ENV:Body>
+    <AddSubscription xmlns="http://www.alarmpoint.com/webservices/schema">
+      <!--  nillable-->
+<user xsi:type="xsd:string">String</user>
+<!--  nillable-->
+<password xsi:type="xsd:string">String</password>
+<!--  nillable-->
+<clientTimestamp xsi:type="xsd:string">String</clientTimestamp>
+<!--  nillable-->
+<clientIP xsi:type="xsd:string">String</clientIP>
+<!--  nillable-->
+<clientOSUser xsi:type="xsd:string">String</clientOSUser>
+<!--  nillable-->
+<company xsi:type="xsd:string">String</company>
+<!--  nillable-->
+<subscriptionDomainName xsi:type="xsd:string">String</subscriptionDomainName>
+<!--  nillable-->
+<subscription xsi:type="m:SoapSubscriptionParameter">
+<!--  nillable-->
+<deviceTypeOverrides xsi:type="m:SoapDeviceTypeOverridesParameter">
+<!-- Array[]   nillable-->
+<type xsi:type="xsd:string">String</type>
+</deviceTypeOverrides>
+<!--  nillable-->
+<escalationOverride xsi:type="xsd:string">String</escalationOverride>
+<!--  nillable-->
+<ignoreDeviceDelays xsi:type="xsd:string">String</ignoreDeviceDelays>
+<!--  nillable-->
+<name xsi:type="xsd:string">String</name>
+<!--  nillable-->
+<notificationDelay xsi:type="xsd:string">String</notificationDelay>
+<!--  nillable-->
+<overrideDeviceSeverity xsi:type="xsd:string">String</overrideDeviceSeverity>
+<!--  nillable-->
+<overrideTimeframe xsi:type="xsd:string">String</overrideTimeframe>
+<!--  nillable-->
+<predicates xsi:type="m:SoapPredicatesParameter">
+<!-- Array[]   nillable-->
+<listPredicate xsi:type="m:SoapListPredicateParameter">
+<anyValue xsi:type="xsd:boolean">true</anyValue>
+<!--  nillable-->
+<name xsi:type="xsd:string">String</name>
+<!-- Array[]   nillable-->
+<values xsi:type="m:SoapListPredicateValue">
+<!--  nillable-->
+<value xsi:type="xsd:string">String</value>
+</values>
+</listPredicate>
+<!-- Array[]   nillable-->
+<textPredicate xsi:type="m:SoapTextPredicate">
+<!--  nillable-->
+<name xsi:type="xsd:string">String</name>
+<!--  nillable-->
+<operator xsi:type="xsd:string">String</operator>
+<!--  nillable-->
+<value xsi:type="xsd:string">String</value>
+</textPredicate>
+</predicates>
+<!--  nillable-->
+<recipientList xsi:type="m:SoapRecipientList">
+<!-- Array[]   nillable-->
+<recipient xsi:type="m:SoapRecipient">
+<!--  nillable-->
+<targetName xsi:type="xsd:string">String</targetName>
+<!--  nillable-->
+<type xsi:type="xsd:string">String</type>
+</recipient>
+</recipientList>
+<!--  nillable-->
+<subscriptionTimeframe xsi:type="m:SoapSubscriptionTimeframe">
+<!--  nillable-->
+<dayList xsi:type="m:SoapStringDayList">
+<!--  nillable-->
+<friday xsi:type="xsd:string">String</friday>
+<!--  nillable-->
+<monday xsi:type="xsd:string">String</monday>
+<!--  nillable-->
+<saturday xsi:type="xsd:string">String</saturday>
+<!--  nillable-->
+<sunday xsi:type="xsd:string">String</sunday>
+<!--  nillable-->
+<thursday xsi:type="xsd:string">String</thursday>
+<!--  nillable-->
+<tuesday xsi:type="xsd:string">String</tuesday>
+<!--  nillable-->
+<wednesday xsi:type="xsd:string">String</wednesday>
+</dayList>
+<!--  nillable-->
+<durationHours xsi:type="xsd:string">String</durationHours>
+<!--  nillable-->
+<durationMinutes xsi:type="xsd:string">String</durationMinutes>
+<!--  nillable-->
+<startDate xsi:type="xsd:string">String</startDate>
+<!--  nillable-->
+<startTime xsi:type="xsd:string">String</startTime>
+<!--  nillable-->
+<timeZone xsi:type="xsd:string">String</timeZone>
+</subscriptionTimeframe>
+<!--  nillable-->
+<supervisorList xsi:type="m:SoapSupervisorList">
+<!-- Array[]   nillable-->
+<supervisor xsi:type="m:SoapSupervisor">
+<!--  nillable-->
+<targetName xsi:type="xsd:string">String</targetName>
+</supervisor>
+</supervisorList>
+</subscription>
+    </AddSubscription>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>]]></envelope>
+        <function_name>AddSubscription</function_name>
+        <key_store/>
+        <key_store_alias/>
+        <key_store_password/>
+        <lock>false</lock>
+        <protocol_profile/>
+        <qualified_name>xMatters AlarmPoint Engine [ AddSubscription ]</qualified_name>
+        <soap_action>urn:AddSubscription</soap_action>
+        <soap_endpoint/>
+        <soap_message display_value="xMatters AlarmPoint Engine">4958f08b7b02f1008e0b707d784d4dc7</soap_message>
+        <strip_whitespace>false</strip_whitespace>
+        <sys_class_name>sys_soap_message_function</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:30:10</sys_created_on>
+        <sys_id>0a9cf88b7b02f1008e0b707d784d4d3d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AddSubscription</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_soap_message_function_0a9cf88b7b02f1008e0b707d784d4d3d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2015-02-09 19:30:10</sys_updated_on>
+        <use_basic_auth>false</use_basic_auth>
+        <use_mid_server/>
+        <use_ws_security>false</use_ws_security>
+        <ws_security_type/>
+        <ws_security_username_profile/>
+        <ws_security_x509_profile/>
+    </sys_soap_message_function>
+</record_update>

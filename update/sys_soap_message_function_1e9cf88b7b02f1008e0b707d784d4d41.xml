@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_soap_message_function">
+    <sys_soap_message_function action="INSERT_OR_UPDATE">
+        <authentication_type/>
+        <basic_auth_password/>
+        <basic_auth_profile/>
+        <basic_auth_user/>
+        <certificate/>
+        <enable_mutual_auth>false</enable_mutual_auth>
+        <envelope><![CDATA[<SOAP-ENV:Envelope xmlns:m="http://www.alarmpoint.com/webservices/schema" xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"  SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <SOAP-ENV:Body>
+    <FindTemporaryReplacements xmlns="http://www.alarmpoint.com/webservices/schema">
+      <!--  nillable-->
+<user xsi:type="xsd:string">String</user>
+<!--  nillable-->
+<password xsi:type="xsd:string">String</password>
+<!--  nillable-->
+<clientTimestamp xsi:type="xsd:string">String</clientTimestamp>
+<!--  nillable-->
+<clientIP xsi:type="xsd:string">String</clientIP>
+<!--  nillable-->
+<clientOSUser xsi:type="xsd:string">String</clientOSUser>
+<!--  nillable-->
+<company xsi:type="xsd:string">String</company>
+<!--  nillable-->
+<searchParameters xsi:type="m:TemporaryReplacementSearchParameters">
+<!--  nillable-->
+<replacedUser xsi:type="xsd:string">String</replacedUser>
+</searchParameters>
+    </FindTemporaryReplacements>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>]]></envelope>
+        <function_name>FindTemporaryReplacements</function_name>
+        <key_store/>
+        <key_store_alias/>
+        <key_store_password/>
+        <lock>false</lock>
+        <protocol_profile/>
+        <qualified_name>xMatters AlarmPoint Engine [ FindTemporaryReplacements ]</qualified_name>
+        <soap_action>urn:FindTemporaryReplacements</soap_action>
+        <soap_endpoint/>
+        <soap_message display_value="xMatters AlarmPoint Engine">4958f08b7b02f1008e0b707d784d4dc7</soap_message>
+        <strip_whitespace>false</strip_whitespace>
+        <sys_class_name>sys_soap_message_function</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 19:30:11</sys_created_on>
+        <sys_id>1e9cf88b7b02f1008e0b707d784d4d41</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>FindTemporaryReplacements</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_soap_message_function_1e9cf88b7b02f1008e0b707d784d4d41</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2015-02-09 19:30:11</sys_updated_on>
+        <use_basic_auth>false</use_basic_auth>
+        <use_mid_server/>
+        <use_ws_security>false</use_ws_security>
+        <ws_security_type/>
+        <ws_security_username_profile/>
+        <ws_security_x509_profile/>
+    </sys_soap_message_function>
+</record_update>

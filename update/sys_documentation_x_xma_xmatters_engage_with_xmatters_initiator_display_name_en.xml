@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update>
+    <sys_documentation element="initiator_display_name" label="Initiator_display_name" language="en" table="x_xma_xmatters_engage_with_xmatters">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>initiator_display_name</element>
+            <help/>
+            <hint/>
+            <label>Initiator_display_name</label>
+            <language>en</language>
+            <name>x_xma_xmatters_engage_with_xmatters</name>
+            <plural>Initiator_display_names</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2018-04-19 20:41:23</sys_created_on>
+            <sys_id>0411b88e0fe59b80723148dce1050ee6</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Initiator_display_name</sys_name>
+            <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+            <sys_update_name>sys_documentation_x_xma_xmatters_engage_with_xmatters_initiator_display_name_en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2018-04-19 20:41:23</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

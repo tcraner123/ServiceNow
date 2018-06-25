@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_app_engage_xmatters</name>
+        <script><![CDATA[var engageApp = angular.module('xm.engage-xm', [ 'ngTagsInput', 'ngMessages', 'pascalprecht.translate', 'xm.xmatters-service', 'xm.location-service', 'xm.options-provider', 'xm.glide-ajax' ]);
+ // Global configuration for ng tags input module 
+engageApp.config(function(tagsInputConfigProvider) {
+    tagsInputConfigProvider.setDefaults('tagsInput', {
+        placeholder: 'Find Recipients',
+        replaceSpacesWithDashes: false,
+        addFromAutocompleteOnly: true,
+        displayProperty: 'name',
+        keyProperty : 'targetName'
+    }).setDefaults('autoComplete', {
+        displayProperty: 'name',
+        minLength: 2
+    });
+});
+// Configuration for translations
+engageApp.config(function ($translateProvider) {
+  $translateProvider.translations('en', {
+    ENGAGE_XM: {
+        TITLE: 'Engage with xMatters',
+        LABEL: {
+            RECIPIENTS: 'Recipients',
+            SEND_PRIORITY: 'Priority',
+            CONFERENCE_BRIDGE: 'Conference Bridge',
+            SUBJECT: 'Subject',
+            MESSAGE: 'Message'
+        },
+        BUTTON: {
+            SUBMIT: 'Submit',
+            CANCEL: 'Cancel',
+            VIEW_RECORD: 'View Record',
+            ADD_CI_GROUPS: "Add Related Service Groups"
+        },
+        ERROR: {
+            REQUIRED: 'Required field',
+            MAX_LENGTH: 'Maximum length {{max_length}} characters'
+        },
+        MESSAGE: {
+            SUCCESS: 'Your request has been submitted successfully. To track the progress of this request in ServiceNow, view the Engage with xMatters record.'
+        },
+        OPTIONS: {
+            CONFERENCE_BRIDGE: {
+                'None': '-- None --',
+                'External_Category': 'External Bridges',
+                'Hosted_Category':   'xMatters Hosted Bridges',
+                'Hosted_New': 'Create new'
+            },
+            SEND_PRIORITY: {
+                "low": 'Low',
+                "medium": 'Medium',
+                "high": 'High'
+            },
+            RECIPIENT_TYPE: {
+                "people": "People",
+                "groups": "Groups"
+            }
+        }
+    }
+  });
+  $translateProvider.preferredLanguage('en');
+});
+engageApp.controller('engageCtlr', 
+    function($scope, $window, $translate, XMService, LocationService, OptionsProvider, GlideAjax) {
+         // Core scope variables 
+        $scope.is_finished = false; 
+        $scope.is_invalid = false;
+        $scope.global_errors = [];
+
+         // form model scope variables and default values 
+        $scope.subject = '';
+        $scope.message = '';
+        $scope.recipients = [];
+        $scope.conference_bridge = 'None';
+        $scope.send_priority = 'medium';
+
+         // result scope variable 
+        $scope.engage_url = '';
+		$scope.hasRelatedServices = false;
+
+         // behind the scenes scope variables used for options/state 
+        $scope.xm_search_state = XMService.searchState;
+        $scope.hosted_conference_bridge_options = OptionsProvider.hosted_conference_bridges;
+        $scope.external_conference_bridge_options = OptionsProvider.external_conference_bridges;
+        $scope.send_priority_options = OptionsProvider.send_priorities;
+        $scope.recipientTypes = [ 
+            {
+                "label": "ENGAGE_XM.OPTIONS.RECIPIENT_TYPE.people",
+                "typeahead": XMService.searchPeople
+            }, 
+            {
+                "label": "ENGAGE_XM.OPTIONS.RECIPIENT_TYPE.groups",
+                "typeahead": XMService.searchGroups
+            } 
+        ]; 
+        $scope.activeRecipientType = $scope.recipientTypes[0];
+
+        // Set the incident id scope variable based on search parameters in the url 
+        $scope.incident_id = LocationService.searchParams.incident_id;
+        if( typeof $scope.incident_id === 'undefined' || $scope.incident_id === null || $scope.incident_id === '' ) {
+            console.log( 'No incident identifier was defined' );
+            $scope.global_errors.push( 'Missing "incident_id" parameter: A valid ServiceNow Incident system id must be set to continue' );
+        }
+
+		$scope.all_ci_groups = [];	
+		var retrieveIncident = new GlideAjax( 'xMattersAjaxExtended' );
+		retrieveIncident.addParam( 'sysparm_name', 'getIncident' );
+		retrieveIncident.addParam( 'sysparm_sys_id', $scope.incident_id );
+		console.log('$scope.incident_id: ' + $scope.incident_id);
+		retrieveIncident.send().then( function( resp ) {
+			if( resp.success ) {
+				$scope.incident = resp.data;
+				if( $scope.incident.cmdb_ci != null && $scope.incident.cmdb_ci != "") {
+					console.log("$scope.incident.cmdb_ci: " + $scope.incident.cmdb_ci);
+					var ga = new GlideAjax( 'xMattersAjaxExtended' );
+					ga.addParam( 'sysparm_name', 'getRelatedCiSupportGroups' );
+					ga.addParam( 'sysparm_cisys_id', $scope.incident.cmdb_ci );
+					ga.send().then( function( resp ) {
+						if( resp.success ) {
+							$scope.all_ci_groups = resp.data;
+							if ($scope.all_ci_groups.length > 0) {
+								$scope.hasRelatedServices = true;
+							}
+						} else {
+							console.log( resp );
+						}
+					} ).catch( function( resp ){
+						console.log( resp );
+					} );
+				}
+			} else {
+				console.log( 'Error getting Incident: ' + JSON.stringify( resp ) );
+			}
+		});
+	
+        /**
+         * Changes the active recipient type based on the input group action dropdown selection
+         * 
+         * @param  {Integer} selectedType 
+         *         index of the selected recipient option
+         */
+        $scope.selectRecipientType = function( selectedIndex ) {
+            $scope.activeRecipientType = $scope.recipientTypes[selectedIndex];
+        };
+        
+		$scope.addCiGroups = function() {
+			var i, ciGroup;
+			if ($scope.incident.cmdb_ci == null || $scope.incident.cmdb_ci == "") {
+				$scope.no_ci= true;
+				return;
+			}
+			if ($scope.recipients == null || $scope.recipients.length == 0) {
+				// Empty recipient list. Add all related CI support groups to recipient list.
+				$scope.recipients = [];
+				for (i = 0; i < $scope.all_ci_groups.length; i++) {
+					ciGroup = $scope.all_ci_groups[i];
+					$scope.recipients.push({"name" : ciGroup.label, "targetName" : ciGroup.label, "group" : ciGroup.group, "icon" : "users" });					
+				}				
+			} else {
+				// Recipient list not empty. Need to check each related CI support group to see if it
+				// already exists in the recipient list.
+				var j, addRecipient;
+				for (i = 0; i < $scope.all_ci_groups.length; i++) {
+					ciGroup = $scope.all_ci_groups[i];
+					addRecipient = true;
+					for (j = 0; j < $scope.recipients.length; j++) {
+						if (ciGroup.label == $scope.recipients[j].name) {
+							// Duplicate
+							addRecipient = false;
+							break;
+						}
+					}
+					if (addRecipient) {
+						$scope.recipients.push({"name" : ciGroup.label, "targetName" : ciGroup.label, "group" : ciGroup.group, "icon" : "users" });					
+					}
+				}
+			}
+			console.log( $scope.engageXMForm );
+		};	        
+        
+        var closeDialog = function(optionalMessage) {
+            var data = {
+                type: "DIALOG_CLOSE"
+            };
+            if(optionalMessage) {
+                data.message = optionalMessage;
+            }
+            $window.parent.postMessage(data, window.location.origin);
+        };
+    
+        $scope.cancel = function() {
+            closeDialog();
+        };
+
+        /**
+         * Submits the engageXMForm form, and if valid, tries to create a new Engage with xMatters record via
+         * the xMattersAjaxEngage client callable script include.
+         */
+        $scope.submit = function() {
+            $scope.engageXMForm.$setSubmitted( true );
+            if( $scope.engageXMForm.$invalid ) {
+                console.log( 'The form will not be submitted in an invalid state' );
+                console.log( $scope.engageXMForm );
+            } else {
+                var recipientTargets = [];
+                for( var i = 0; i < $scope.recipients.length; i++ ) {
+					console.log(JSON.stringify($scope.recipients[i]));
+					if ($scope.recipients[i].group != null) {
+						recipientTargets.push( $scope.recipients[i].group);
+					} else {
+                    recipientTargets.push( $scope.recipients[i].targetName );
+                }
+				}
+				console.log("Recipients: " + recipientTargets.join( ',' ));
+                var formData = {
+                    "recipients": recipientTargets.join( ',' ),
+                    "subject": $scope.subject,
+                    "message": $scope.message,
+                    "conference_bridge": $scope.conference_bridge,
+                    "incident_id": $scope.incident_id,
+                    "send_priority": $scope.send_priority
+                };
+                var ga = new GlideAjax( 'xMattersAjaxEngage' );
+                ga.addParam( 'sysparm_name', 'submitEngageWithXMatters' );
+                ga.addParam( 'form_data', JSON.stringify( formData ) );
+                ga.send().then( function( resp ) {
+                    if( resp.success ) {
+                        $translate('ENGAGE_XM.MESSAGE.SUCCESS').then(function(successMsg){
+                            closeDialog(successMsg);
+                        });
+                        // replacing our complete page by closing the dialog for you
+                        //$scope.is_finished = true;
+                        //$scope.engage_url = '/nav_to.do?uri=x_xma_xmatters_engage_with_xmatters.do?sys_id=' + resp.data.sys_id;
+                    } else {
+                        console.log( resp );
+                    }
+                } ).catch( function( resp ){
+                    console.log( resp );
+                } );
+            }
+        };
+    } );]]></script>
+        <script_name>xm_app_engage_xmatters</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 15:03:56</sys_created_on>
+        <sys_id>e4c0f8824f6c220078bae321a310c7b6</sys_id>
+        <sys_mod_count>8</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_app_engage_xmatters</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_e4c0f8824f6c220078bae321a310c7b6</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-11-06 15:59:22</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

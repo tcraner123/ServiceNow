@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update sys_domain="global" table="sys_ui_action">
+    <sys_ui_action action="INSERT_OR_UPDATE">
+        <action_name>createxMTask</action_name>
+        <active>true</active>
+        <client>true</client>
+        <comments>Notify a Group or User through xMatters using the xMatters Engage with xMatters records.</comments>
+        <condition>gs.hasRole(gs.getCurrentScopeName() + '.' + 'xmatters_engage') &amp;&amp; gs.getProperty( gs.getCurrentScopeName() + '.' + 'xmatters.task.enable' )</condition>
+        <form_action>true</form_action>
+        <form_button>true</form_button>
+        <form_context_menu>false</form_context_menu>
+        <form_link>false</form_link>
+        <form_style/>
+        <hint/>
+        <list_action>false</list_action>
+        <list_banner_button>false</list_banner_button>
+        <list_button>false</list_button>
+        <list_choice>false</list_choice>
+        <list_context_menu>false</list_context_menu>
+        <list_link>false</list_link>
+        <list_save_with_form_button>false</list_save_with_form_button>
+        <list_style/>
+        <name>Engage with xMatters</name>
+        <onclick>engageWithXMatters()</onclick>
+        <order>105</order>
+        <script><![CDATA[var xmEngage = {};
+function engageWithXMatters() {
+  var incidentId = g_form.getUniqueValue();
+  console.log( 'Incident: ' + incidentId );
+  xmEngage.incident= incidentId;
+  
+  var dialog = new GlideDialogWindow( g_scratchpad.appPrefix + '_xm_engage_with_xmatters' );
+  //dialog.setTitle( "Engage with xMatters" );
+  dialog.setTitle( "" );
+  dialog.setPreference( "sysparm_nostack", true );
+  dialog.setPreference( "sysparm_sysID", incidentId );
+  dialog.render();
+}]]></script>
+        <show_insert>false</show_insert>
+        <show_multiple_update>false</show_multiple_update>
+        <show_query>false</show_query>
+        <show_update>true</show_update>
+        <sys_class_name>sys_ui_action</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 20:50:19</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>78ce890f7b02f1008e0b707d784d4df7</sys_id>
+        <sys_mod_count>41</sys_mod_count>
+        <sys_name>Engage with xMatters</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_action_78ce890f7b02f1008e0b707d784d4df7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-16 18:19:41</sys_updated_on>
+        <table>incident</table>
+        <ui11_compatible>true</ui11_compatible>
+        <ui16_compatible>false</ui16_compatible>
+    </sys_ui_action>
+</record_update>

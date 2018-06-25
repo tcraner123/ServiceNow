@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description/>
+        <direct>true</direct>
+        <endpoint>x_xma_xmatters_xm_checkbox_template.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+    <label ng-click="toggle();" ng-class="{'ng-dirty': elem.$dirty,'ng-invalid': elem.$invalid}">
+        <input type="checkbox" id="{{xmIdentifier}}" name="{{xmIdentifier}}" ng-model="model" ng-show="false" ></input>
+        <span class="fa-stack xm-check-stack">
+            <i class="fa fa-square-o fa-stack-1x xm-check-square"></i>
+            <i ng-if="model" class="fa fa-check fa-stack-1x xm-checkmark"></i>
+        </span>
+    </label>
+</j:jelly>
+]]></html>
+        <name>xm_checkbox_template</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-08-10 23:58:03</sys_created_on>
+        <sys_id>770144a30f4de2009ea83b8ce1050eb4</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>xm_checkbox_template</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_770144a30f4de2009ea83b8ce1050eb4</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-06-23 22:24:43</sys_updated_on>
+    </sys_ui_page>
+</record_update>

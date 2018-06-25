@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Inform with xMatters" max_length="40" name="x_xma_xmatters_inform_with_xmatters" type="collection">
+        <element label="Business Impact" max_length="2000" name="business_impact" type="string"/>
+        <element label="First Reported" max_length="40" name="first_reported" type="glide_date_time"/>
+        <element label="Locations" max_length="1000" name="locations" type="string"/>
+        <element default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
+        <element label="Parent Incident" max_length="40" name="parent_incident" reference="incident" type="string"/>
+        <element label="Services" max_length="1000" name="services" type="string"/>
+        <element label="Update" max_length="2000" name="update" type="string"/>
+        <element label="Update Type" max_length="40" name="update_type" type="string"/>
+    </element>
+</database>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersAjaxBatchSync</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>xMattersAjaxBatchSync</name>
+        <script><![CDATA[gs.include('xMattersBackgroundBatchSync');
+gs.include('xMattersDataHelper');
+gs.include('xMattersConfig');
+gs.include('xMattersLogger');
+
+var xMattersAjaxBatchSync = Class.create();
+xMattersAjaxBatchSync.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+    // an AbstractAjaxProcessor cannot have an initialize() constructor
+    // initalize: function () {},
+
+    /**
+     * Batch sync users to xMatters
+     *
+     * @returns {{count: number}} of users being synced
+     */
+    ajaxUsersSync: function () {
+        var setExternalKey = !!this.getParameter('sysparm_set_external_key');
+
+        var config = new xMattersConfig();
+        var log = new xMattersLogger(config.DEBUGGING, 'xMattersAjaxBatchSync');
+        var dataHelper = new xMattersDataHelper(config, log.getLogTraceId());
+
+        log.debug('ajaxUsersSync: Starting batch sync');
+        try {
+            var backgroundBatchSync = new xMattersBackgroundBatchSync(config, dataHelper, log.getLogTraceId());
+            return new global.JSON().encode({
+                count: backgroundBatchSync.syncUsers(setExternalKey)
+            });
+
+        } catch (e) {
+            log.logException('ajaxUsersSync', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Batch sync groups to xMatters
+     *
+     * @returns {{count: number}} of groups being synced
+     */
+    ajaxGroupsSync: function () {
+        var setExternalKey = !!this.getParameter('sysparm_set_external_key');
+
+        var config = new xMattersConfig();
+        var log = new xMattersLogger(config.DEBUGGING, 'xMattersAjaxBatchSync');
+        var dataHelper = new xMattersDataHelper(config, log.getLogTraceId());
+
+        log.debug('ajaxGroupsSync: Starting batch sync');
+        try {
+            var backgroundBatchSync = new xMattersBackgroundBatchSync(config, dataHelper, log.getLogTraceId());
+            return new global.JSON().encode({
+                count: backgroundBatchSync.syncGroups(setExternalKey)
+            });
+
+        } catch (e) {
+            log.logException('ajaxGroupsSync', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Batch sync configuration item properties to xMatters
+     *
+     * @returns {{count: number}} of configuration items being synced
+     */
+    ajaxPropertiesSync: function () {
+        var config = new xMattersConfig();
+        var log = new xMattersLogger(config.DEBUGGING, 'xMattersAjaxBatchSync');
+        var dataHelper = new xMattersDataHelper(config, log.getLogTraceId());
+
+        log.debug('ajaxPropertiesSync: Starting batch sync');
+        try {
+            var backgroundBatchSync = new xMattersBackgroundBatchSync(config, dataHelper, log.getLogTraceId());
+            return new global.JSON().encode({
+                count: backgroundBatchSync.syncProperties()
+            });
+
+        } catch (e) {
+            log.logException('ajaxPropertiesSync', e);
+            throw e;
+        }
+    },
+
+    type: 'xMattersAjaxBatchSync'
+});
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 14:42:12</sys_created_on>
+        <sys_id>ef9ba44e4f2c220078bae321a310c7ee</sys_id>
+        <sys_mod_count>8</sys_mod_count>
+        <sys_name>xMattersAjaxBatchSync</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_ef9ba44e4f2c220078bae321a310c7ee</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-08-18 21:30:18</sys_updated_on>
+    </sys_script_include>
+</record_update>

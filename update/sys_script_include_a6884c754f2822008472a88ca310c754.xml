@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersGroupCollection</api_name>
+        <client_callable>false</client_callable>
+        <description>Helper to manage updates to a set of groups, typically used in a background batch process.</description>
+        <name>xMattersGroupCollection</name>
+        <script><![CDATA[gs.include('xMattersConfig');
+gs.include('xMattersDataEvent');
+gs.include('xMattersDataHelper');
+gs.include('xMattersGroup');
+
+/**
+ * xMattersGroupCollection model for managing batch group syncing
+ * @type {Object}
+ */
+var xMattersGroupCollection = Class.create();
+
+xMattersGroupCollection.prototype = {
+
+    /**
+     * Initialize the xMattersGroupCollection object
+     * @param {Object} config (optional) config object for the xMatters app; will default to xMattersConfig
+     * @param {Object} dataHelper data helper object; will default to xMattersDataHelper
+     * @param {string} logTraceId the context identifier under which to log messages
+     */
+    initialize: function (config, dataHelper, logTraceId) {
+        if (config && config.type == 'xMattersConfig') {
+            this.config = config;
+        } else {
+            this.config = new xMattersConfig();
+        }
+
+        this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersGroupCollection', logTraceId);
+
+        if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+            this.dataHelper = dataHelper;
+        } else {
+            this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
+        }
+    },
+
+    /**
+     * Asynchronously sync list of groups to xMatters
+     *
+     * @param {Array} groups to sync to xMatters
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @returns {*} worker progress ID of background worker process
+     */
+    syncGroupsAsync: function (groups, setExternalKey) {
+        var groups = new global.JSON().encode(groups);
+		var logTraceId = this.log.getLogTraceId();
+		if (this.config.USE_PROGRESS_WORKERS) {
+			var worker = new GlideScriptedHierarchicalWorker();
+			worker.setProgressName('x_xma_xmatters.xMattersGroupCollection syncGroups: ' + this.log.getLogTraceId());
+
+			worker.setBackground(true);
+			worker.setScriptIncludeName('x_xma_xmatters.xMattersGroupCollection');
+			worker.setScriptIncludeMethod('syncGroups');
+			worker.putMethodArg('groups', groups);
+			worker.putMethodArg("setExternalKey", setExternalKey);
+			worker.putMethodArg("parentLogTraceId", logTraceId);
+			worker.start();
+
+			return worker.getProgressID();
+		} else {
+			var xde = new xMattersDataEvent(this.config, logTraceId);
+			xde.queueSyncGroupsEvent(groups, setExternalKey);	
+		}
+    },
+
+    /**
+     * Sync a list of groups to xMatters
+     *
+     * @param {string|Array} groups listing to sync
+     * @param {boolean} setExternalKey will set externalKey to SNow username when true
+     * @param {string} parentLogTraceId the parent context identifier under which to log messages (if called async)
+     */
+    syncGroups: function (groups, setExternalKey, parentLogTraceId) {
+        if (parentLogTraceId) {
+            this.log.setParentLogTraceId(parentLogTraceId);
+            this.dataHelper.setLogTraceId(this.log.getLogTraceId());
+        }
+
+        try {
+            var start = this.log.timer();
+
+            this.group = new xMattersGroup(this.config, this.dataHelper, this.log.getLogTraceId());
+
+            var groupsArr = groups;
+            if (typeof groups === 'string') {
+                groupsArr = new global.JSON().decode(groups);
+            }
+
+            this.log.debug('syncGroups: Worker started for ' + groupsArr.length + ' groups');
+            this.log.debug('syncGroups: Groups list: [' + groupsArr.join() + ']');
+
+            var groupRec = new GlideRecord('sys_user_group');
+            groupRec.addEncodedQuery('nameIN' + groupsArr.join());
+            groupRec.orderBy('name');
+            groupRec.query();
+
+            var syncedGroups = [], failedGroups = [];
+            var moreGroupsToSync = [];
+            while (groupRec.next()) {
+                var groupName = groupRec.name.getDisplayValue();
+                this.log.debug('syncGroups: Syncing group: "' + groupName + '"');
+
+                if (this.group.syncGroup(groupRec, null, true, setExternalKey)) {
+                    syncedGroups.push(groupName);
+                    this.log.debug('syncedGroups: Sync of group: "' + groupName + '" completed');
+
+                } else {
+                    failedGroups.push(groupName);
+                    this.log.warn('syncGroups: Failed to sync group: "' + groupName +
+                        '". Continuing with next group in the list.');
+                }
+                this.log.debug('syncGroups: Processed ' + (syncedGroups.length + failedGroups.length) +
+                    ' groups. Number of REST calls: ' + this.dataHelper.getCallCount());
+
+                if (this.config.MAX_CALLS_PER_PROCESS - this.dataHelper.getCallCount() < this.config.CALLS_PER_GROUP) {
+                    // do the rest of the work in a different process
+                    while (groupRec.next()) {
+                        moreGroupsToSync.push(groupRec.name.getDisplayValue());
+                    }
+
+                    break;
+                }
+            }
+
+            if (moreGroupsToSync.length > 0) {
+                this.log.debug('syncGroups: Worker is close to REST calls quota and will sync ' +
+                    moreGroupsToSync.length + ' groups: [' + moreGroupsToSync.join() +
+                    '] in a separate process');
+
+                this.syncGroupsAsync(moreGroupsToSync, setExternalKey);
+            }
+
+            var logMsg = 'syncGroups: Worker ending after processing ' +
+                (syncedGroups.length + failedGroups.length) +
+                ' groups: ' + syncedGroups.length + ' synced, ' + failedGroups.length + ' failed (' +
+                this.log.timer(start) + 'ms elapsed)';
+            if (this.log.isDebug()) {
+                if (syncedGroups.length) {
+                    logMsg += '\n> Synced groups: [' + syncedGroups.join() + ']';
+                }
+                if (failedGroups.length) {
+                    logMsg += '\n> Failed syncs: [' + failedGroups.join() + ']';
+                }
+                this.log.debug(logMsg);
+
+            } else {
+                if (syncedGroups.length) {
+                    logMsg += '\n> Synced groups: [' + syncedGroups.slice(0, 50).join() + ']';
+                    logMsg += (syncedGroups.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                if (failedGroups.length) {
+                    logMsg += '\n> Failed syncs: [' + failedGroups.slice(0, 50).join() + ']';
+                    logMsg += (failedGroups.length > 50) ? ' (list truncated to first 50)' : '';
+                }
+                this.log.info(logMsg);
+            }
+
+        } catch (e) {
+            this.log.logException('syncGroups', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Get a list of syncable groups
+     *
+     * @returns {Array}
+     */
+    getSyncableGroups: function () {
+        var arrayUtil = new global.ArrayUtil();
+
+        var syncableGroups = [];
+
+        var grGroupRoles = new GlideRecord('sys_group_has_role');
+        grGroupRoles.addQuery('group.active', 'true');
+        grGroupRoles.addQuery('role.name', 'IN', this.config.SYNCABLEROLES.join());
+        grGroupRoles.orderBy('group.name');
+        grGroupRoles.query();
+
+        while (grGroupRoles.next()) {
+            var groupName = grGroupRoles.group.name.toString();
+            if (!arrayUtil.contains(syncableGroups, groupName)) {
+                syncableGroups.push(groupName);
+            }
+        }
+
+        syncableGroups = arrayUtil.unique(syncableGroups);
+
+        this.log.debug('getSyncableGroups: ' + syncableGroups.length + ' groups matched: [' + syncableGroups.join() + ']');
+
+        return syncableGroups;
+    },
+
+    type: 'xMattersGroupCollection'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-11 17:31:13</sys_created_on>
+        <sys_id>a6884c754f2822008472a88ca310c754</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>xMattersGroupCollection</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_a6884c754f2822008472a88ca310c754</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+    </sys_script_include>
+</record_update>

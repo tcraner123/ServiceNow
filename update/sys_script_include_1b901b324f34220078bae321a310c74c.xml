@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersAjaxConfig</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>xMattersAjaxConfig</name>
+        <script><![CDATA[gs.include("xMattersConfig");
+gs.include("xMattersDataHelper");
+
+var xMattersAjaxConfig = Class.create();
+xMattersAjaxConfig.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+	getList: function() {
+		var response = {};
+		try {
+			var category = this.getParameter( 'category'  );			
+			var propList = this.getPropertiesByCategory( category );
+			response = {
+				'success': true,
+				'category': category,
+				'properties': propList,
+				'scope': gs.getCurrentScopeName()
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: e
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+	getDeviceNames: function(){
+		var response;
+		try {
+			var dataHelper = new xMattersDataHelper();
+			var opts = {
+				"method": "GET",
+				"path": "/api/xm/1/device-names",
+				"headers": {
+					"Content-Type": "application/json"
+				}
+			};
+			var apiResp = dataHelper.sendRequest( opts );
+			response = {
+				success: apiResp.status >= 200 && apiResp.status < 300,
+				data: apiResp,
+				opts: opts
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: e
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+
+	/** No longer used, but gets the whole list of ServiceNow roles within the instance */
+	getServiceNowRoles: function() {
+		var response;
+		try {
+			var data = [];
+			var target = new GlideRecord( 'sys_user_role' );
+			target.query();
+			while( target.next() ) {
+				data.push( {
+					name: String( target.name ),
+					id: String( target.sys_id )
+				} );
+			}
+			response = {
+				success: true,
+				data: data
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+
+	/** No longer used, but gets the whole list of ServiceNow users within the instance */
+	getServiceNowUsers: function() {
+		var response;
+		try {
+			var data = [];
+			var target = new GlideRecord( 'sys_user' );
+			target.query();
+			while( target.next() ) {
+				data.push( {
+					name: String( target.user_name ),
+					id: String( target.sys_id )
+				} );
+			}
+			response = {
+				success: true,
+				data: data
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+
+	/**
+	 * Searches for ServiceNow Users that contain a query string in their
+	 * user_name (note expects a "search_term" property)
+	 * @return {object} object will have the following properties:
+	 *                         success {boolean} true if the users were queried successfully
+	 *                         data {list} list of users with a name and id property
+	 *                         error: {string} unprocessed error caught while processing the request
+	 */
+	searchServiceNowUsers: function() {
+		var response;
+		try {
+			var searchTerm = this.getParameter( 'search_term' );		
+			var data = [];
+			var target = new GlideRecord( 'sys_user' );
+			target.addQuery( 'user_name', 'CONTAINS', searchTerm );
+			// Set limit to 5 since the typeahead is only going to display 
+			// 5 results at a time.
+			target.setLimit(5);
+			target.query();
+			while( target.next() ) {
+				data.push( {
+					name: String( target.user_name ),
+					id: String( target.sys_id )
+				} );
+			}
+			response = {
+				success: true,
+				data: data,
+				input: searchTerm
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: String( e )
+			};
+		}
+		return new global.JSON().encode( response );		
+	},
+	updateProperties: function() {
+		var response = {};
+		try {
+			var propBySysId = {};
+			var sysIds = [];
+			var propStr = this.getParameter( 'updated_properties' );
+			var props = new global.JSON().decode( propStr );
+			for( var i = 0; i < props.length; i++ ) {
+ 				var prop = props[i];
+				sysIds.push( prop.sys_id );
+				propBySysId[ prop.sys_id ] = prop;
+			}
+			var target = this.getProperties( sysIds );
+			while( target.next() ) {
+				var targetProp = propBySysId[ String( target.sys_id ) ];
+				target.value = targetProp.value;
+				target.update();
+			}
+			response = {
+				'success': true
+			};
+		} catch( e ) {
+			response = {
+				success: false,
+				error: e
+			};
+		}
+		return new global.JSON().encode( response );
+	},
+	getProperties: function( sysIds ) {
+		var prefix = gs.getCurrentScopeName();
+		var target = new GlideRecord( 'sys_properties' );
+		target.addQuery( 'sys_id', 'IN', sysIds.join( ',' ) );
+		target.addQuery( 'sys_scope.scope', prefix );
+		target.query();
+		return target;
+	},
+	getPropertiesByCategory: function( category ) {
+		// build and perform Property - Category Query 
+		var prefix = gs.getCurrentScopeName();
+		var propCategoryTarget = new GlideRecord( 'sys_properties_category_m2m' );
+		propCategoryTarget.addQuery( 'sys_name', 'ENDSWITH', category );
+		propCategoryTarget.addQuery( 'sys_scope.scope', prefix );
+		propCategoryTarget.query();
+
+		// Process results to get propIds and 
+		var propIdToOrder = {};
+		var propIds = [];
+		while( propCategoryTarget.next() ) {
+			var propId = String( propCategoryTarget.property );
+			propIdToOrder[ propId ] = Number( propCategoryTarget.order );
+			propIds.push( propId );
+		}
+
+		// Query for properties
+		var propTarget = this.getProperties( propIds );
+
+		// Process results to get return valuevar propertyRecs = [];
+		var propertyRecs = [];
+		while( propTarget.next() ) {
+			var rec = {
+				'sys_id': String( propTarget.sys_id ),
+				'name': String( propTarget.name ),
+				'type': String( propTarget.type ),
+				'value': String( propTarget.value ),
+				'description': String( propTarget.description ),
+				'choices': String( propTarget.choices )
+			};
+			if( rec.type === 'password' ) {
+				rec.value = '';
+				//rec.encPass = rec.value;
+				//rec.value = gs.getProperty( rec.name );
+			}
+			rec.order = propIdToOrder[ rec.sys_id ];
+			propertyRecs.push( rec );
+		}
+		return propertyRecs;
+	},
+    type: 'xMattersAjaxConfig'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-27 20:54:11</sys_created_on>
+        <sys_id>1b901b324f34220078bae321a310c74c</sys_id>
+        <sys_mod_count>20</sys_mod_count>
+        <sys_name>xMattersAjaxConfig</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_1b901b324f34220078bae321a310c74c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+    </sys_script_include>
+</record_update>

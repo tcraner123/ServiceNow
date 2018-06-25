@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>false</active>
+        <api_name>x_xma_xmatters.xMattersAjaxExtended</api_name>
+        <client_callable>true</client_callable>
+        <description/>
+        <name>xMattersAjaxExtended</name>
+        <script><![CDATA[gs.include( "xMattersAjaxEngage" );
+
+var xMattersAjaxExtended = Class.create();
+xMattersAjaxExtended.prototype = Object.extendsObject( global.AbstractAjaxProcessor, Object.extendsObject( new xMattersAjaxEngage(), {
+	
+	getIncident: function() {
+
+		var sys_id = this.getParameter( 'sysparm_sys_id' );	
+		var rec = new GlideRecord( 'incident' );
+		rec.get( sys_id );
+		
+		var fields = [ 'number', 'short_description', 'cmdb_ci' ];
+		
+		response =  {
+			success: true,
+			data: this._getIncFields( fields, rec )
+		};
+		
+		return new global.JSON().encode( response );
+		
+	},
+	
+	getRelatedCiSupportGroups: function() {
+		var CISysID = this.getParameter( 'sysparm_cisys_id' );
+        var CIUtil = new global.xMCIUtils();
+        var serviceIds = CIUtil.servicesRelatedToCI( CISysID, ["child", "parent"] );
+	
+        var list = [];
+		var id = 0;
+        for( var i in serviceIds ) {
+            var service = new GlideRecord("cmdb_ci_service");
+            service.get( serviceIds[i] );
+
+			group = service.support_group.name.getDisplayValue() || 'None';
+			label = group + ' (CI: ' + service.getDisplayValue() + ')';
+
+            list.push( { 
+				"id": id, 
+				"ci": service.getDisplayValue(), 
+				"group": group, 
+				"label": label } );
+
+			id ++;
+        }
+		
+	
+		var response = {
+			"success": true,
+			"data": list
+		};
+		
+		return new global.JSON().encode( response );
+    },
+	
+	// There isn't a GlideRecord.toJSON function, so
+	// we'll fake it by just grabbing a handful of fields
+	_getIncFields: function( fields, rec ) {
+
+		var resp = {};
+		for( var f in fields ) {
+			key = fields[f];
+			val = '' + rec[ fields[f] ];  //.getDisplayValue();
+			//gs.info( 'Key: ' + key + '. Val: ' + val );
+			resp[ key ] = val;
+		}
+		
+		return resp;
+	},	
+
+    type: 'xMattersAjaxExtended'
+}));]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-11-06 15:39:02</sys_created_on>
+        <sys_id>c0e60f4ddb124300d570fbefbf9619de</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>xMattersAjaxExtended</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_c0e60f4ddb124300d570fbefbf9619de</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-03-21 22:39:19</sys_updated_on>
+    </sys_script_include>
+</record_update>

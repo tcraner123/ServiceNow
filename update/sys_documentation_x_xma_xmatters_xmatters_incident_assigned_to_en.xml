@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update>
+    <sys_documentation element="assigned_to" label="Assigned To" language="en" table="x_xma_xmatters_xmatters_incident">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>assigned_to</element>
+            <help/>
+            <hint/>
+            <label>Assigned To</label>
+            <language>en</language>
+            <name>x_xma_xmatters_xmatters_incident</name>
+            <plural>Assigned Tos</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2015-02-09 23:10:25</sys_created_on>
+            <sys_id>2c0f65c37b42f1008e0b707d784d4d20</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Assigned To</sys_name>
+            <sys_package display_value="Global" source="global">global</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+            <sys_update_name>sys_documentation_x_xma_xmatters_xmatters_incident_assigned_to_en</sys_update_name>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2015-02-09 23:10:25</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

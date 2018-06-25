@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element audit="true" extends="task" label="Engage with xMatters" max_length="40" name="x_xma_xmatters_engage_with_xmatters" sizeclass="74" type="collection">
+        <element attributes="edge_encryption_enabled=true" choice="1" label="Conference Bridge" max_length="40" name="conference_bridge" type="choice">
+            <choice/>
+        </element>
+        <element label="Initiator_display_name" max_length="100" name="initiator_display_name" type="string"/>
+        <element label="Initiator_username" max_length="100" name="initiator_username" type="string"/>
+        <element label="Message" max_length="16777215" name="message" type="string"/>
+        <element label="Message Subject" max_length="16777215" name="message_subject" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Parent Incident" max_length="32" name="parent_incident" reference="incident" type="reference"/>
+        <element label="Recipients" max_length="16777215" name="recipients" type="string"/>
+        <element attributes="edge_encryption_enabled=true" choice="3" default="medium" label="Send Priority" max_length="40" name="send_priority" type="choice">
+            <choice>
+                <element label="low" sequence="1" value="low"/>
+                <element label="medium" sequence="2" value="medium"/>
+                <element label="high" sequence="3" value="high"/>
+            </choice>
+        </element>
+    </element>
+</database>

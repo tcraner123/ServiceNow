@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="content_css">
+    <content_css action="INSERT_OR_UPDATE">
+        <name>xm_config_css</name>
+        <style>body {
+	font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+        padding-top: 0;
+}
+.xm-label {
+	font-size: 13px;
+	font-weight: normal;
+}
+input.xm-tracked.ng-dirty, textarea.xm-tracked.ng-dirty {
+	border: 1px orange solid;
+}
+form.ng-submitted input.ng-invalid, form.ng-submitted textarea.ng-invalid {
+	border: 1px red solid;
+}
+a.xm-help {
+	margin-left: 5px;
+	display: inline-block !important;	
+}
+.ng-dirty .tags {
+	/**border-color: orange; **/
+}
+.xm-tags-input-group .input-group-btn .btn {
+   height: 34px;
+}
+.tags {
+    border: 1px solid #ccc !important;
+}
+form.ng-submitted .ng-invalid .tags {
+	border-color: red !important;
+}
+tags-input .tags {
+     box-shadow: none !important;
+}
+tags-input .tags .tag-item {
+    background: #445465;
+    border: 0;
+}
+tags-input .tags .tag-item .remove-button {
+    color: white;
+}
+tags-input .tags .tag-item .remove-button:hover {
+    color: #bec1c6;;
+}
+tags-input .tags .tag-item.selected {
+	background-color: #ae1b1f;
+}
+.xm-input-group-btn {
+	background-color: #f6f6f6;
+	border: solid 1px #cccccc;
+	width: 106px;
+}
+.xm-left {
+     float: left;
+}
+.xm-right {
+    float: right;
+}
+.xm-tag-feedback {
+   right: 10px;
+}
+.xm-error {
+   color: red;
+   font-size: 13px;
+}
+.xm-btn-default, .xm-btn-default:focus, .xm-btn-default:hover {
+    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+    color: #343d47;
+    background-color: rgba(255, 255, 255, 0.45);
+    border-color: #bdc0c4;
+}
+tags-input .tags .tag-item {
+    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+}
+tags-input .tags .input {
+    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+}
+tags-input .autocomplete .suggestion-item {
+    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+}
+h4.xm-header {
+     font-size: 21px;
+     font-weight: normal;
+     margin-top: 0;
+}
+.xm-left-icon {
+    margin-right: 5px;
+}
+.xm-right-icon {
+    margin-left: 0;
+}
+.xm-right-icon .remove-button .fa {
+     font-size: 14px;
+     vertical-align: text-top;
+}
+.form-control-feedback .fa {
+     color: rgb(52, 61, 71);
+}
+.xm-success-message {
+    max-width: 80%;
+    min-width: 375px;
+    padding: 0 40px;
+}</style>
+        <sys_class_name>content_css</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-11 17:17:41</sys_created_on>
+        <sys_id>619540794f2822008472a88ca310c770</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>xm_config_css</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>content_css_619540794f2822008472a88ca310c770</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-04 20:55:57</sys_updated_on>
+        <type>local</type>
+        <url/>
+    </content_css>
+</record_update>

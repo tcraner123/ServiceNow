@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>false</global>
+        <name>x_xma_xmatters.xm_app_config</name>
+        <script><![CDATA[angular.module('config', [ 'xm.config-category', 'ang-tooltip', 'ngTagsInput', 'ui.bootstrap', 'ui.bootstrap.typeahead', 'xm.custom-directives', 'ngMessages' ]);
+angular.module('config').controller('ConfigCtlr',
+	function($scope, configCategory ) {
+		$scope.categories = [];
+
+		//Add categories to scope
+		$scope.categories.push( configCategory.getNewCategory( 'Common Configuration', 'xMatters Common' ) );
+		$scope.categories.push( configCategory.getNewCategory( 'Incident Notifications', 'xMIncidentProperties' ) );
+		$scope.categories.push( configCategory.getNewCategory( 'Engage with xMatters', 'xMEngageProperties' ) );
+		$scope.categories.push( configCategory.getNewCategory( 'Data Sync', 'xMSyncProperties' ) );
+
+		$scope.setActive = function( index ) {
+			$scope.active = index;
+		};
+
+		$scope.toggle = function( newCat, $index ) {
+			if( newCat.isActive ) {
+				newCat.deactivate();
+			} else {
+				newCat.activate();
+			}
+		};
+
+		$scope.categories[0].activate();
+	}
+);]]></script>
+        <script_name>xm_app_config</script_name>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2016-07-12 15:03:45</sys_created_on>
+        <sys_id>feb0f8824f6c220078bae321a310c7a1</sys_id>
+        <sys_mod_count>12</sys_mod_count>
+        <sys_name>x_xma_xmatters.xm_app_config</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_script_feb0f8824f6c220078bae321a310c7a1</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-05-03 20:34:59</sys_updated_on>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties_category_m2m">
+    <sys_properties_category_m2m action="INSERT_OR_UPDATE">
+        <category display_value="xMatters Engage with xMatters-DEPRECATED">0fd265837b42f1008e0b707d784d4d24</category>
+        <order>200</order>
+        <property display_value="x_xma_xmatters.xmatters.reb.task.endpoint" name="x_xma_xmatters.xmatters.reb.task.endpoint">4d9065437b42f1008e0b707d784d4d78</property>
+        <sys_class_name>sys_properties_category_m2m</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 22:27:40</sys_created_on>
+        <sys_id>9235e5837b42f1008e0b707d784d4dba</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.reb.task.endpoint.xMatters Engage with xMatters Properties</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_category_m2m_9235e5837b42f1008e0b707d784d4dba</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-11 00:23:26</sys_updated_on>
+    </sys_properties_category_m2m>
+</record_update>

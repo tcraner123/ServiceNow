@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_metadata_link">
+    <sys_metadata_link action="INSERT_OR_UPDATE">
+        <directory>update</directory>
+        <documentkey>9ff7a9b10fd95380723148dce1050e8e</documentkey>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_trigger">
+    <sys_trigger action="INSERT_OR_UPDATE">
+        <application/>
+        <calendar/>
+        <claimed_by/>
+        <document/>
+        <document_key/>
+        <error_count>1</error_count>
+        <job_context>#Thu May 03 14:22:33 PDT 2018
+fcScriptName=javascript\:GlideEventManager('x_xma_xmatters.data_sync.6').process();
+</job_context>
+        <job_id display_value="RunScriptJob">81c92ce9c0a8016400e5f0d2f784ea78</job_id>
+        <last_error>java.lang.NullPointerException : null</last_error>
+        <log>false</log>
+        <maintenance>false</maintenance>
+        <max_drift/>
+        <name>xm.data_processor.6</name>
+        <next_action>2018-05-03 21:22:59</next_action>
+        <parent/>
+        <priority>100</priority>
+        <processing_duration>9</processing_duration>
+        <repeat>1970-01-01 00:00:30</repeat>
+        <rollback_context_id/>
+        <run_count>1112754</run_count>
+        <run_dayofmonth/>
+        <run_dayofweek>1</run_dayofweek>
+        <run_month>1</run_month>
+        <run_time>1970-01-01 08:00:00</run_time>
+        <run_weekinmonth>1</run_weekinmonth>
+        <script/>
+        <state>0</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-04-06 19:47:11</sys_created_on>
+        <sys_id>9ff7a9b10fd95380723148dce1050e8e</sys_id>
+        <sys_mod_count>233856</sys_mod_count>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2018-05-03 21:22:33</sys_updated_on>
+        <system_id/>
+        <trigger_class>DEFAULT</trigger_class>
+        <trigger_type>10</trigger_type>
+        <upgrade_safe>false</upgrade_safe>
+    </sys_trigger>
+</record_update>
+]]></payload>
+        <sys_class_name>sys_metadata_link</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-04-13 15:39:15</sys_created_on>
+        <sys_id>3b5270c40f259780723148dce1050ef6</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>xm.data_processor.6</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_metadata_link_3b5270c40f259780723148dce1050ef6</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-05-03 21:22:57</sys_updated_on>
+        <tablename>sys_trigger</tablename>
+    </sys_metadata_link>
+</record_update>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Exclude Groups: when selected, excludes all Groups identified in the Groups Exclude/Include List when synchronizing Groups into xMatters. If this option is NOT selected, and the Exclude/Include List is populated, then only those Groups in the list are synchronized into xMatters.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.group.sync.exclude.list.boolean-DEPRECATED</name>
+        <read_roles/>
+        <suffix>xmatters.group.sync.exclude.list.boolean-DEPRECATED</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2015-02-09 22:02:38</sys_created_on>
+        <sys_id>f87f9d037b42f1008e0b707d784d4dde</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.group.sync.exclude.list.boolean-DEPRECATED</sys_name>
+        <sys_package display_value="Global" source="global">global</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_f87f9d037b42f1008e0b707d784d4dde</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2016-08-25 23:12:24</sys_updated_on>
+        <type>boolean</type>
+        <value>false</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=f87f9d037b42f1008e0b707d784d4dde"/>
+</record_update>
