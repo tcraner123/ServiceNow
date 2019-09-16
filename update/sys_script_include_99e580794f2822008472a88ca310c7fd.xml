@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>package_private</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersAjaxEngage</api_name>
+        <caller_access/>
         <client_callable>true</client_callable>
         <description/>
         <name>xMattersAjaxEngage</name>
@@ -40,24 +40,24 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 			var password = conf.XMAPI.password;
 
 			var isValid = true;
-			if( typeof hostname === 'undefined' || hostname === null || hostname.trim() === '' ) {
+			if(typeof hostname === 'undefined' || hostname === null || hostname.trim() === '') {
 				isValid = false;
-				customLog.push( 'Invalid hostname: ' + hostname );
+				customLog.push('Invalid hostname: ' + hostname);
 			}
-			if( typeof user === 'undefined' || user === null || user.trim() === '' ) {
+			if(typeof user === 'undefined' || user === null || user.trim() === '') {
 				isValid = false;
-				customLog.push( 'Invalid user: ' + user );
+				customLog.push('Invalid user: ' + user);
 			}
-			if( typeof password === 'undefined' || password === null || password.trim() === '') {
+			if(typeof password === 'undefined' || password === null || password.trim() === '') {
 				isValid = false;
-				customLog.push( 'Invalid password: ' + password );
+				customLog.push('Invalid password: ' + password);
 			}
-			if( isValid ) {
+			if(isValid) {
 				response = {
 					success: true,
 					data: {
 						host: hostname,
-						baseAuth: gs.base64Encode( user + ':' + password )
+						baseAuth: gs.base64Encode(user + ':' + password)
 					}
 				};
 			} else {
@@ -66,14 +66,14 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 					error: "Problems exist in the xMatters API configuration"
 				};
 			}
-		} catch( e ) {
+		} catch(e) {
 			response = {
 				success: false,
-				error: String( e )
+				error: String(e)
 			};
 		}
 		response.log = customLog;
-		return new global.JSON().encode( response );
+		return new global.JSON().encode(response);
 	},
 
 	/**
@@ -96,24 +96,23 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 				success: true,
 				data: conf.ENGAGE.EXTERNAL_BRIDGES
 			};
-		} catch( e ) {
+		} catch(e) {
 			response = {
 				success: false,
-				error: String( e )
+				error: String(e)
 			};
 		}
 		response.log = customLog;
-		return new global.JSON().encode( response );
+		return new global.JSON().encode(response);
 	},
 
     getActiveHostedConferenceBridges: function() {
         var response;
         var opts;
-        var activeConferenceBridgesData = {};
 
         try {
             var conf = new xMattersConfig();
-            var incidentId = this.getParameter( 'incident_id' );
+            var incidentId = this.getParameter('incident_id');
             opts = {
                 "method": "GET",
                 "path": "/api/xm/1/events?status=ACTIVE&sortBy=start_time&propertyName=sys_id%23" + conf.EVENTS.LANGUAGE + "&propertyValue=" + incidentId,
@@ -122,8 +121,8 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
                 }
             };
             var dataHelper = new xMattersDataHelper();
-            var apiResp = dataHelper.sendRequest( opts );
-            if( apiResp.status >= 200 && apiResp.status < 300 && apiResp.body ) {
+            var apiResp = dataHelper.sendRequest(opts);
+            if(apiResp.status >= 200 && apiResp.status < 300 && apiResp.body) {
                 var apiRespBody = JSON.parse(apiResp.body);
 
                 if (apiRespBody.data && Array.isArray(apiRespBody.data)) {
@@ -142,7 +141,7 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
                             data: activeConferenceBridgesResponse.data
                         };
 					} else {
-                    	return activeConferenceBridgesResponse;
+						return activeConferenceBridgesResponse;
 					}
                 }
 
@@ -153,14 +152,14 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
                     error: 'The call to xMatters was unsuccessful'
                 };
             }
-        } catch( e ) {
+        } catch(e) {
             response = {
                 success: false,
                 opts: opts,
-                error: String( e )
+                error: String(e)
             };
         }
-        return new global.JSON().encode( response );
+        return new global.JSON().encode(response);
 	},
 
     /**
@@ -175,7 +174,7 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
         var dataHelper = new xMattersDataHelper();
 
         try {
-        	for (var i = 0; i < conferenceBridgeIds.length; i++) {
+			for (var i = 0; i < conferenceBridgeIds.length; i++) {
                 opts = {
                     "method": "GET",
                     "path": "/api/xm/1/conferences/" + conferenceBridgeIds[i],
@@ -183,9 +182,9 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
                         "Content-Type": "application/json"
                     }
                 };
-                var apiResp = dataHelper.sendRequest( opts );
-                if( apiResp.status >= 200 && apiResp.status < 300 && apiResp.body) {
-                	var apiRespBody = JSON.parse(apiResp.body);
+                var apiResp = dataHelper.sendRequest(opts);
+                if(apiResp.status >= 200 && apiResp.status < 300 && apiResp.body) {
+					var apiRespBody = JSON.parse(apiResp.body);
                     if (apiRespBody.status && apiRespBody.status !== "INACTIVE") {
                         activeConferenceBridges.push(apiRespBody);
                     }
@@ -195,22 +194,22 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
                         api_response: apiResp,
                         error: 'The call to xMatters was unsuccessful'
                     };
-                    return new global.JSON().encode( response );
+                    return new global.JSON().encode(response);
                 }
             }
             response = {
                 success: true,
                 data: activeConferenceBridges
             };
-		} catch( e ) {
+		} catch(e) {
 			response = {
 				success: false,
 				opts: opts,
-				error: String( e )
+				error: String(e)
 			};
 		}
 
-        return new global.JSON().encode( response );
+        return new global.JSON().encode(response);
     },
 
 	/**
@@ -230,17 +229,21 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 		var response;
 		var opts;
 		try {
-			var search_term = this.getParameter( 'search_term' );
+			var search_term = this.getParameter('search_term');
+			// Read the Engage configuration to get the maximum number of suggestions to show in the recipient autosuggest dropdown.
+			var conf = new xMattersConfig();
+			var results_limit = conf.ENGAGE.MAX_RECIPIENT_RESULTS;
+
 			opts = {
 				"method": "GET",
-				"path": "/api/xm/1/people?search=" + search_term,
+				"path": "/api/xm/1/people?limit=" + results_limit + "&search=" + search_term,
 				"headers": {
 					"Content-Type": "application/json"
 				}
 			};
 			var dataHelper = new xMattersDataHelper();
-			var apiResp = dataHelper.sendRequest( opts );
-			if( apiResp.status >= 200 && apiResp.status < 300 ) {
+			var apiResp = dataHelper.sendRequest(opts);
+			if(apiResp.status >= 200 && apiResp.status < 300) {
 				response = {
 					success: true,
 					data: apiResp
@@ -252,14 +255,14 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 					error: 'The call to xMatters was unsuccessful'
 				};
 			}
-		} catch( e ) {
+		} catch(e) {
 			response = {
 				success: false,
 				opts: opts,
-				error: String( e )
+				error: String(e)
 			};
 		}
-		return new global.JSON().encode( response );
+		return new global.JSON().encode(response);
 	},
 
 	/**
@@ -279,17 +282,21 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 		var response;
 		var opts;
 		try {
-			var search_term = this.getParameter( 'search_term' );
+			var search_term = this.getParameter('search_term');
+			// Read the Engage configuration to get the maximum number of suggestions to show in the recipient autosuggest dropdown.
+			var conf = new xMattersConfig();
+			var results_limit = conf.ENGAGE.MAX_RECIPIENT_RESULTS;
+
 			var dataHelper = new xMattersDataHelper();
 			opts = {
 				"method": "GET",
-				"path": "/api/xm/1/groups?search=" + search_term,
+				"path": "/api/xm/1/groups?operand=AND&limit=" + results_limit + "&search=" + search_term,
 				"headers": {
 					"Content-Type": "application/json"
 				}
 			};
-			var apiResp = dataHelper.sendRequest( opts );
-			if( apiResp.status >= 200 && apiResp.status < 300 ) {
+			var apiResp = dataHelper.sendRequest(opts);
+			if(apiResp.status >= 200 && apiResp.status < 300) {
 				response = {
 					success: true,
 					data: apiResp
@@ -301,14 +308,14 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 					error: 'The call to xMatters was unsuccessful'
 				};
 			}
-		} catch( e ) {
+		} catch(e) {
 			response = {
 				success: false,
-				error: String( e )
+				error: String(e)
 			};
 		}
 		response.opts = opts;
-		return new global.JSON().encode( response );
+		return new global.JSON().encode(response);
 	},
 
 	/**
@@ -336,10 +343,10 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 	submitEngageWithXMatters: function() {
 		var response;
 		try {
-			var form_data = this.getParameter( 'form_data' );
-			var formData = new global.JSON().decode( form_data );
+			var form_data = this.getParameter('form_data');
+			var formData = new global.JSON().decode(form_data);
 
-			var engageRequest = new GlideRecord( 'x_xma_xmatters_engage_with_xmatters' );
+			var engageRequest = new GlideRecord('x_xma_xmatters_engage_with_xmatters');
 			engageRequest.initialize();
 			engageRequest.recipients = formData.recipients;
 			engageRequest.message = formData.message;
@@ -353,15 +360,15 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
 
 			response = {
 				success: true,
-				data: { sys_id: String( engageRequest.sys_id ) }
+				data: { sys_id: String(engageRequest.sys_id) }
 			};
-		} catch( e ) {
+		} catch(e) {
 			response = {
 				success: false,
-				error: String( e )
+				error: String(e)
 			};
 		}
-		return new global.JSON().encode( response );
+		return new global.JSON().encode(response);
 	},
 
     type: 'xMattersAjaxEngage'
@@ -371,13 +378,13 @@ xMattersAjaxEngage.prototype = Object.extendsObject(global.AbstractAjaxProcessor
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-07-11 17:18:47</sys_created_on>
         <sys_id>99e580794f2822008472a88ca310c7fd</sys_id>
-        <sys_mod_count>10</sys_mod_count>
+        <sys_mod_count>12</sys_mod_count>
         <sys_name>xMattersAjaxEngage</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_99e580794f2822008472a88ca310c7fd</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+        <sys_updated_on>2019-04-15 18:10:41</sys_updated_on>
     </sys_script_include>
 </record_update>

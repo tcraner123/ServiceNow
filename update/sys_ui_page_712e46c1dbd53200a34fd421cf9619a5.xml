@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_page">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
     <sys_ui_page action="INSERT_OR_UPDATE">
         <category>general</category>
         <client_script/>
@@ -226,7 +225,7 @@
 			<div class="row">
 				<div class="col-md-4">
 					<button class="btn btn-default xm-btn-default" ng-click="submit()">{{ 'INFORM_XM.BUTTON.SUBMIT' | translate }}</button>
-					<!--<button class="btn btn-default xm-btn-default xm-cancel-button" type="button" ng-click="cancel()"><span class="pull-right">${{ 'INFORM_XM.BUTTON.CANCEL' | translate }}</span></button>-->
+					<button class="btn btn-default xm-btn-default xm-cancel-button" type="button" ng-click="cancel()">{{ 'INFORM_XM.BUTTON.CANCEL' | translate }}</button>
 				</div>
 			</div>
 			
@@ -242,13 +241,13 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-03-02 22:22:40</sys_created_on>
         <sys_id>712e46c1dbd53200a34fd421cf9619a5</sys_id>
-        <sys_mod_count>103</sys_mod_count>
+        <sys_mod_count>101</sys_mod_count>
         <sys_name>xm_inform_with_xmatters_content</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_ui_page_712e46c1dbd53200a34fd421cf9619a5</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-11-21 17:41:00</sys_updated_on>
+        <sys_updated_on>2017-07-06 22:29:23</sys_updated_on>
     </sys_ui_page>
 </record_update>

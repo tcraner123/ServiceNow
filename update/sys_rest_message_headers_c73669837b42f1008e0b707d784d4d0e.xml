@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_rest_message_headers">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_rest_message_headers">
     <sys_rest_message_headers action="INSERT_OR_UPDATE">
         <name>Content-Type</name>
         <rest_message display_value="xMatters Properties">fa3669837b42f1008e0b707d784d4d31</rest_message>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Batch Sync Delete Users: If set to true, when users that do not match the include/exclude lists are updated in ServiceNow, or are otherwise changed so that they should not be synchronized, and then processed via batch  sync, the corresponding user in xMatters will be deleted.</description>

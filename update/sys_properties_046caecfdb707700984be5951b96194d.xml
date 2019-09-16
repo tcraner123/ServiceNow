@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Data Sync - Number of Queues: The number of data sync queues to route requests to. The integration supports a maximum of 6 out of the box.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.sync.numqueues</name>
+        <read_roles/>
+        <suffix>xmatters.sync.numqueues</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-04-18 17:49:17</sys_created_on>
+        <sys_id>046caecfdb707700984be5951b96194d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.sync.numqueues</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_046caecfdb707700984be5951b96194d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-04-18 17:49:17</sys_updated_on>
+        <type>integer</type>
+        <value>6</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=046caecfdb707700984be5951b96194d"/>
+</record_update>

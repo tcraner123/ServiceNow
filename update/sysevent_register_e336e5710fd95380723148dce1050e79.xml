@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sysevent_register">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sysevent_register">
     <sysevent_register action="INSERT_OR_UPDATE">
+        <caller_access/>
         <description>Used to asynchronously process the xMatters Data Sync</description>
         <event_name>x_xma_xmatters.data_sync.5</event_name>
         <fired_by/>

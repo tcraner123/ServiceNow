@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Excluded/Included Roles: a semicolon-separated list of roles, used in conjunction with the Exclude Users by Role check box to determine which users should be synchronized into xMatters. If this list is populated, and Exclude Users by Role is selected, then users belonging to the Roles specified in this list will not be synchronized into xMatters. If this list is populated and Exclude Users by Role is NOT selected, then ONLY the users specified in this list will be synchronized into xMatters.</description>

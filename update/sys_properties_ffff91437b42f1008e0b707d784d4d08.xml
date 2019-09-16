@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Delete Event Endpoint: specifies the REST endpoint to use when deleting events from xMatters; replace the placeholders in the URL with your xMatters company name and the xMatters On-Demand server identified by your xMatters enablement representative.</description>

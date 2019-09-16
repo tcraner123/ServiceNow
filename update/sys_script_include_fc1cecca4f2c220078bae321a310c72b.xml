@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersConfig</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <name>xMattersConfig</name>
@@ -25,7 +25,7 @@ xMattersConfig.prototype = {
         };
 
         this.XMAPI = {
-            hostname: gs.getProperty(prefix + '.xmatters.reb.hostname'),
+            hostname: gs.getProperty(prefix + '.xmatters.reb.hostname').replace(/\/$/, ''),
             password: gs.getProperty(prefix + '.xmatters.reb.password'),
             user: gs.getProperty(prefix + '.xmatters.reb.user'),
             baseURL: '/api/xm/1'
@@ -42,46 +42,42 @@ xMattersConfig.prototype = {
                 GROUP: gs.getProperty(prefix + '.xmatters.reb.incident.group.responses')
             },
             VALID_PRIORITIES: gs.getProperty(prefix + '.xmatters.incident.priority'),
-            INACTIVE_STATES: '6,7',
-            CRITICAL_PRIORITY: '1 - Critical', 
-            EVENT_QUEUE_BASE: prefix + '.incident.action',
+            INACTIVE_STATES: gs.getProperty(prefix + '.xmatters.incident.inactivestates'),
+            CRITICAL_PRIORITY: gs.getProperty(prefix + '.xmatters.incident.criticalpriority'), 
+            EVENT_QUEUE_BASE: prefix + gs.getProperty(prefix + '.xmatters.incident.queue.suffix'),
             TRIGGER_RULES: {
-                ASSIGNMENT: 'Assignment',
-                PRIORITY_UPGRADE: 'Priority Upgrade',
-                SLA_ALERT: 'SLA Alert',
-                REOPENED: 'Reopened',
-                DELETE: 'Delete'
+                ASSIGNMENT: gs.getProperty(prefix + '.xmatters.incident.trigger.assignment'),
+                PRIORITY_UPGRADE: gs.getProperty(prefix + '.xmatters.incident.trigger.priorityupgrade'),
+                SLA_ALERT: gs.getProperty(prefix + '.xmatters.incident.trigger.slaalert'),
+                REOPENED: gs.getProperty(prefix + '.xmatters.incident.trigger.reopened'),
+                DELETE: gs.getProperty(prefix + '.xmatters.incident.trigger.delete')
             },
-            // if true, events will be sent with the "configuration_item_list" property set
-            // ensure that Incident Properties have been synced before setting to true
-            SEND_CONFIGURATION_ITEM_LIST: false,
-            // if true, incidents will be suppressed when assigning to self
-            SUPPRESS_ASSIGN_SELF: true,
-            // if true, incidents will be suppressed when unable to find a Recipient
-            SUPPRESS_NO_RECIPIENT: false,
-            // if true, incidents will only be sent to users/groups who are synced to xMatters
-            SEND_TO_SYNCED_ONLY: true
+            SEND_CONFIGURATION_ITEM_LIST: gs.getProperty(prefix + '.xmatters.incident.sendconfigurationitemlist') == 'true',
+            SUPPRESS_ASSIGN_SELF: gs.getProperty(prefix + '.xmatters.incident.suppressassignself') == 'true',
+            SUPPRESS_NO_RECIPIENT: gs.getProperty(prefix + '.xmatters.incident.suppressnorecipient') == 'true',
+            SEND_TO_SYNCED_ONLY: gs.getProperty(prefix + '.xmatters.incident.sendtosyncedonly') == 'true'
         };
 
         this.PRIORITY = {
-            HIGH: 'high',
-            MEDIUM: 'medium',
-            LOW: 'low'
+            HIGH: gs.getProperty(prefix + '.xmatters.priority.high'),
+            MEDIUM: gs.getProperty(prefix + '.xmatters.priority.medium'),
+            LOW: gs.getProperty(prefix + '.xmatters.priority.low')
         };
 
         this.ENGAGE = {
-            ENABLED: gs.getProperty(prefix + '.xmatters.task.enable' ) == 'true',
+            MAX_RECIPIENT_RESULTS: parseInt(gs.getProperty(prefix + '.xmatters.reb.engage.maxrecipientresults')),
+            ENABLED: gs.getProperty(prefix + '.xmatters.task.enable') == 'true',
             FORM: {
-                CONFERENCE: gs.getProperty(prefix + '.xmatters.reb.task.conference.endpoint' ),
-                ENGAGE: gs.getProperty( prefix + '.xmatters.reb.task.endpoint' )
+                CONFERENCE: gs.getProperty(prefix + '.xmatters.reb.task.conference.endpoint'),
+                ENGAGE: gs.getProperty(prefix + '.xmatters.reb.task.endpoint')
             },
-			EXTERNAL_BRIDGES: gs.getProperty(prefix + '.xmatters.task.conference.bridges' )
+            EXTERNAL_BRIDGES: gs.getProperty(prefix + '.xmatters.task.conference.bridges')
         };
 
         this.EVENTS = {
             LANGUAGE: gs.getProperty(prefix + '.xmatters.reb.events.language'),
-            MAX_ATTEMPTS: 3,
-            MAX_FIELD_LENGTH: 2000
+            MAX_ATTEMPTS: parseInt(gs.getProperty(prefix + '.xmatters.events.maxattempts'), 10),
+            MAX_FIELD_LENGTH: parseInt(gs.getProperty(prefix + '.xmatters.events.maxfieldlength'), 10)
         };
 
         this.DEBUGGING = gs.getProperty(prefix + '.xmatters.debugging.enabled') ==  'true';
@@ -89,6 +85,8 @@ xMattersConfig.prototype = {
         // number of attempts to retry failing requests (if a "500 internal server error" occurs)
         this.MAX_REQUEST_ATTEMPTS = gs.getProperty(prefix + '.xmatters.max.request.attempts');
         this.MAX_REQUEST_ATTEMPTS = this.MAX_REQUEST_ATTEMPTS || 3;
+        // default rest request timeout in seconds for the Data Helper Script Include -- defaults to 60 seconds
+        this.REST_REQUEST_TIMEOUT_SECONDS = parseInt(gs.getProperty(prefix +'.xmatters.request.timeout.seconds'), 10) || 60;
 
         /*
          * Set the RESTMessageV2 log level to use in xMattersDataHelper
@@ -96,9 +94,9 @@ xMattersConfig.prototype = {
          * Replace the following to customize the logging level for outbound
          * REST calls. Valid values are: 'basic', 'elevated' and 'all'.
          */
-        this.REST_LOGLEVEL = 'elevated';
+        this.REST_LOGLEVEL = gs.getProperty(prefix + '.xmatters.loglevel.rest.normal');
         if (this.DEBUGGING) {
-            this.REST_LOGLEVEL = 'all';
+            this.REST_LOGLEVEL = gs.getProperty(prefix + '.xmatters.loglevel.rest.debugging');
         }
 
         this.ALLOWDUPLICATES = gs.getProperty(prefix + '.xmatters.group.sync.allow.duplicates');
@@ -112,13 +110,13 @@ xMattersConfig.prototype = {
         this.ROLE_PERSON_SUPERVISOR = gs.getProperty(prefix + '.xmatters.role.person.supervisor');
 
         this.EXTERNALLYOWNED = gs.getProperty(prefix + '.xmatters.sync.externally.owned');
-        this.OBSERVEDBYALL = true;
-        this.SHIFTNAME = '24x7';
+        this.OBSERVEDBYALL = gs.getProperty(prefix + '.xmatters.group.sync.observedbyall') == 'true';
+        this.SHIFTNAME = gs.getProperty(prefix + '.xmatters.group.sync.shiftname');
         this.SITE = gs.getProperty(prefix + '.xmatters.sync.site');
         this.SYNCABLEROLES = gs.getProperty(prefix + '.xmatters.sync.roles.list').split(';');
         this.USEDEFAULTDEVICES = gs.getProperty(prefix + '.xmatters.group.sync.use.default.devices');
-        this.USERNAMEFIELD = 'user_name';
-
+        this.USERNAMEFIELD = gs.getProperty(prefix + '.xmatters.user.sync.usernamefield');
+        
         this.SYNC_DYNAMICALLY = gs.getProperty(prefix + '.xmatters.sync.dynamically') == 'true';
 
         this.DEVICE_PROVIDERS = {
@@ -140,21 +138,21 @@ xMattersConfig.prototype = {
          * Batch syncing pseudo-constants
          */
         // Set to 0 or negative to use as many processes as possible (1 process per 8-9 users)
-        this.MAX_USER_PROCESSES = -1;
+        this.MAX_USER_PROCESSES = parseInt(gs.getProperty(prefix + '.xmatters.sync.maxuserprocesses'), 10);
 
         // The 'Background max events, jobs, etc limits' Quota
         // only allows 100 HTTP calls per process. Geneva
         // seems to have a lower threshold.
-        this.MAX_CALLS_PER_PROCESS = 40;
+        this.MAX_CALLS_PER_PROCESS = parseInt(gs.getProperty(prefix + '.xmatters.sync.calls.maxperprocess'), 10);
 
         // the max API calls for each of these
-        this.CALLS_PER_USER = 8;
-        this.CALLS_PER_USER_DELETE = 2;
-        this.CALLS_PER_GROUP = 10;
-        this.CALLS_PER_MEMBER_DELETE = 1;
-		
-		this.USE_PROGRESS_WORKERS = false;
-		this.NUM_DATA_SYNC_QUEUES = 6;
+        this.CALLS_PER_USER = parseInt(gs.getProperty(prefix + '.xmatters.sync.calls.peruser'), 10);
+        this.CALLS_PER_USER_DELETE = parseInt(gs.getProperty(prefix + '.xmatters.sync.calls.peruserdelete'), 10);
+        this.CALLS_PER_GROUP = parseInt(gs.getProperty(prefix + '.xmatters.sync.calls.pergroup'), 10);
+        this.CALLS_PER_MEMBER_DELETE = parseInt(gs.getProperty(prefix + '.xmatters.sync.calls.permemberdelete'), 10);
+        
+        this.USE_PROGRESS_WORKERS = gs.getProperty(prefix + '.xmatters.sync.useprogressworkers') == 'true';
+        this.NUM_DATA_SYNC_QUEUES = parseInt(gs.getProperty(prefix + '.xmatters.sync.numqueues'), 10);
     },
 
     type: 'xMattersConfig'
@@ -164,13 +162,13 @@ xMattersConfig.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-07-12 14:43:34</sys_created_on>
         <sys_id>fc1cecca4f2c220078bae321a310c72b</sys_id>
-        <sys_mod_count>29</sys_mod_count>
+        <sys_mod_count>33</sys_mod_count>
         <sys_name>xMattersConfig</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_fc1cecca4f2c220078bae321a310c72b</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+        <sys_updated_on>2019-08-21 21:27:34</sys_updated_on>
     </sys_script_include>
 </record_update>

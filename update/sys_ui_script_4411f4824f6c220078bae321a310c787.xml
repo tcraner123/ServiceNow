@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
         <description/>
@@ -102,6 +101,7 @@
 				startSearch( term, searchOpts.type );
 				var deferred = $q.defer();
 				glideSearch( searchOpts.method, term ).then( function( res ) {
+                    jslog( res );
 					if( res.success ) {
 						var results = [];
 						var data = JSON.parse( res.data.body );
@@ -189,14 +189,15 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-07-12 15:05:12</sys_created_on>
         <sys_id>4411f4824f6c220078bae321a310c787</sys_id>
-        <sys_mod_count>5</sys_mod_count>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>x_xma_xmatters.xm_mod_xmatters_service</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_ui_script_4411f4824f6c220078bae321a310c787</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-05-03 20:34:59</sys_updated_on>
+        <sys_updated_on>2018-07-30 23:03:23</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>false</use_scoped_format>
     </sys_ui_script>
 </record_update>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices>LOW,MEDIUM,HIGH</choices>
         <description>Priority Threshold: specifies the default Priority Threshold setting for synchronized Devices; possible values are LOW, MEDIUM, and HIGH.</description>

@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<database>
-    <element audit="true" extends="task" label="Engage with xMatters" max_length="40" name="x_xma_xmatters_engage_with_xmatters" sizeclass="74" type="collection">
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element audit="true" extends="task" label="Engage with xMatters" max_length="40" name="x_xma_xmatters_engage_with_xmatters" sizeclass="152" type="collection">
         <element attributes="edge_encryption_enabled=true" choice="1" label="Conference Bridge" max_length="40" name="conference_bridge" type="choice">
             <choice/>
         </element>
@@ -12,9 +11,9 @@
         <element label="Recipients" max_length="16777215" name="recipients" type="string"/>
         <element attributes="edge_encryption_enabled=true" choice="3" default="medium" label="Send Priority" max_length="40" name="send_priority" type="choice">
             <choice>
-                <element label="low" sequence="1" value="low"/>
-                <element label="medium" sequence="2" value="medium"/>
-                <element label="high" sequence="3" value="high"/>
+                <element inactive_on_update="false" label="low" sequence="1" value="low"/>
+                <element inactive_on_update="false" label="medium" sequence="2" value="medium"/>
+                <element inactive_on_update="false" label="high" sequence="3" value="high"/>
             </choice>
         </element>
     </element>

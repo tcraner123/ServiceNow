@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update sys_domain="global" table="sys_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script">
     <sys_script action="INSERT_OR_UPDATE">
         <abort_action>false</abort_action>
         <access>package_private</access>
@@ -13,7 +12,7 @@
         <change_fields>false</change_fields>
         <client_callable>false</client_callable>
         <collection>x_xma_xmatters_engage_with_xmatters</collection>
-        <condition/>
+        <condition>(new xMattersTask()).isUpdateValid(current, previous)</condition>
         <description/>
         <execute_function>true</execute_function>
         <filter_condition/>
@@ -30,25 +29,7 @@
         <role_conditions/>
         <script><![CDATA[function onAfter(current, previous) {
     //This function will be automatically called when this rule is processed.
-    var config = new xMattersConfig();
-    var log = new xMattersLogger(config.DEBUGGING, 'xMatters Task Terminate BR');
-
-    var timer = log.timer();
-    log.debug('Starting Business Rule (operation: ' + current.operation() + ')');
-    try {
-        if (!current.active) {
-            log.debug("Attempting to terminate events associated with incident " + current.number);
-            var xMattersTask = new xMattersTask();
-            xMattersTask.deleteTask(current);
-            log.debug("Events associated with incident " + current.number + " terminated.");
-        }
-
-        log.info('Business Rule finished (' + log.timer(timer) + 'ms elapsed)');
-
-    } catch (e) {
-        log.logException('', e);
-        throw e;
-    }
+    (new xMattersTask()).afterUpdate(current, previous);
 }
 ]]></script>
         <sys_class_name>sys_script</sys_class_name>
@@ -57,7 +38,7 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>621c52474fb4c2008472a88ca310c72e</sys_id>
-        <sys_mod_count>11</sys_mod_count>
+        <sys_mod_count>13</sys_mod_count>
         <sys_name>xMatters Task Terminate</sys_name>
         <sys_overrides/>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
@@ -65,7 +46,7 @@
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_621c52474fb4c2008472a88ca310c72e</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-08-18 21:30:17</sys_updated_on>
+        <sys_updated_on>2019-08-21 21:26:06</sys_updated_on>
         <template/>
         <when>after</when>
     </sys_script>

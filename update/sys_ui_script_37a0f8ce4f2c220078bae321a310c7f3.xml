@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
         <description/>
@@ -32,6 +31,7 @@ document.writeln('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax
         <sys_update_name>sys_ui_script_37a0f8ce4f2c220078bae321a310c7f3</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2016-08-24 21:06:01</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>false</use_scoped_format>
     </sys_ui_script>
 </record_update>

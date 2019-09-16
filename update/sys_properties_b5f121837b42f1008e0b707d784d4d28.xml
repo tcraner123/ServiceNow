@@ -1,27 +1,26 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>LDAP Domain: specifies the LDAP domain to use when authenticating Users in xMatters.</description>
         <ignore_cache>false</ignore_cache>
         <is_private>false</is_private>
-        <name>x_xma_xmatters.xmatters.user.sync.ldap.domain</name>
+        <name>x_xma_xmatters.xmatters.user.sync.ldap.domain-DEPRECATED</name>
         <read_roles/>
-        <suffix>xmatters.user.sync.ldap.domain</suffix>
+        <suffix>xmatters.user.sync.ldap.domain-DEPRECATED</suffix>
         <sys_class_name>sys_properties</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2015-02-09 22:13:33</sys_created_on>
         <sys_id>b5f121837b42f1008e0b707d784d4d28</sys_id>
-        <sys_mod_count>1</sys_mod_count>
-        <sys_name>x_xma_xmatters.xmatters.user.sync.ldap.domain</sys_name>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.user.sync.ldap.domain-DEPRECATED</sys_name>
         <sys_package display_value="Global" source="global">global</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_b5f121837b42f1008e0b707d784d4d28</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2015-03-10 18:09:40</sys_updated_on>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-08-31 20:42:10</sys_updated_on>
         <type>string</type>
-        <value>company.com</value>
+        <value/>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=b5f121837b42f1008e0b707d784d4d28"/>

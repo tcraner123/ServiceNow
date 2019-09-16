@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
         <description/>
@@ -114,7 +113,7 @@ angular.module('xm.config-category').service( 'configCategory', function configC
 		var propsToUpdate = [];
 		for( var i = 0; i < this.props.length; i++ ) {
 			var prop = this.props[i];
-			if( form[ prop.identifier ].$dirty ) {
+			if( form[ prop.identifier ] && form[ prop.identifier ].$dirty ) {
 				propsToUpdate.push( prop.getUpdatedProperty() );
 			}
 		}
@@ -130,7 +129,7 @@ angular.module('xm.config-category').service( 'configCategory', function configC
 					cat.saveLocalProperties();
 					form.$setPristine();
 				} else {
-                    jslog( response );
+					jslog( response );
                     jslog( 'A problem occurred while saving' );
 				}
 				cat.isSaving = false;
@@ -235,14 +234,15 @@ angular.module('xm.config-category').controller('ConfigModalCtlr', function ($sc
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-08-11 00:01:46</sys_created_on>
         <sys_id>abe144a30f4de2009ea83b8ce1050eba</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>4</sys_mod_count>
         <sys_name>x_xma_xmatters.xm_mod_config_category</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_ui_script_abe144a30f4de2009ea83b8ce1050eba</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-05-03 20:34:59</sys_updated_on>
+        <sys_updated_on>2018-07-30 23:03:30</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>false</use_scoped_format>
     </sys_ui_script>
 </record_update>

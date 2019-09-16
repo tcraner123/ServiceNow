@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersGroup</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <name>xMattersGroup</name>
@@ -13,6 +13,7 @@ gs.include('xMattersDataEvent');
 gs.include('xMattersDataHelper');
 gs.include('xMattersDevice');
 gs.include('xMattersSite');
+gs.include('xMattersUtil');
 
 /**
  * xMattersGroup model for mapping xMatters groups with ServiceNow groups
@@ -44,6 +45,7 @@ xMattersGroup.prototype = {
         } else {
             this.dataHelper = new xMattersDataHelper(this.config, this.log.getLogTraceId());
         }
+        this.util = new xMattersUtil();
     },
 
     /**
@@ -57,9 +59,9 @@ xMattersGroup.prototype = {
     syncGroupAsync: function (groupRec, previousRec, syncMembership) {
         var groupName = groupRec.name.getDisplayValue();
 		var logTraceId = this.log.getLogTraceId();
-        var previousValues = {};
+        var previousValues = null;
         if (previousRec) {
-            previousValues.name = previousRec.name.getDisplayValue();
+            previousValues = { name: previousRec.name.getDisplayValue() };
         }
 		if (this.config.USE_PROGRESS_WORKERS) {
 			var worker = new GlideScriptedHierarchicalWorker();
@@ -85,7 +87,7 @@ xMattersGroup.prototype = {
 			xde.queueSyncGroupEvent(groupRec, groupName, previousValues, syncMembership, false);
 		}
     },
-	
+
 	 /**
      * Remove a group from xMatters asynchronously
      *
@@ -171,13 +173,6 @@ xMattersGroup.prototype = {
             this.log.debug('syncGroup: Syncing group: "' + groupName + '" AND ' +
                 (syncMembership ? '' : 'NOT ') + 'syncing membership');
 
-            // sync the group's manager to xM in advance to ensure they exists and have the appropriate roles
-            var xmperson = new xMattersPerson(this.config, this.dataHelper, this.log.getLogTraceId());
-            var managerUsername = groupRec.manager ? xmperson.getxMattersUsername(groupRec.manager) : '';
-            if (managerUsername && xmperson.isSyncableUser(managerUsername)) {
-                xmperson.syncUser(managerUsername);
-            }
-
             // Get the group from xM. If name has changed, retrieved based on previous name
             var xMGroup = this.getGroupFromxM((previousValues) ? previousValues.name : groupName);
             var newGroup = ( xMGroup === null );
@@ -218,19 +213,6 @@ xMattersGroup.prototype = {
             throw e;
         }
     },
-
-  /**
-   * Given an array of supervisor JSON object array, fetch the list of supervisor UUIDs
-   * @param {Array} groupSupervisors array of objects for supervisors
-   * @returns {Array} of supervisor UUIDs
-   */
-  getSupervisorIds: function(groupSupervisors) {
-    var supervisorIds = [];
-    for (var i = 0; i < groupSupervisors.length; i++) {
-      supervisorIds.push(groupSupervisors[i].id);
-    }
-    return supervisorIds;
-  },
 
     /**
      * Map the fields from the sys_user_group rec to an xMatters group Obj
@@ -284,7 +266,7 @@ xMattersGroup.prototype = {
 
     var supervisorIds = [];
     if (group.supervisors && Array.isArray(group.supervisors.data)) {
-      supervisorIds = this.getSupervisorIds(group.supervisors.data);
+      supervisorIds = this.util.getSupervisorIds(group.supervisors.data);
         }
     group.supervisors = supervisorIds;
 
@@ -296,7 +278,7 @@ xMattersGroup.prototype = {
                 supervisorNames.push(managerName);
             }
         }
-		
+
         if (this.config.DEFAULTSUPERVISOR !== '') {
             supervisorNames.push(this.config.DEFAULTSUPERVISOR);
         }
@@ -305,7 +287,9 @@ xMattersGroup.prototype = {
            (new global.JSON()).encode(supervisorNames) + ']');
 
         for (var i = 0; i < supervisorNames.length; ++i) {
-            var supervisorId = xmperson.getSyncableSupervisorId(supervisorNames[i]);
+            // Because we are synchronizing a group, we know the supervisor should have the xM Group Supervisor role
+            // the Person Supervisor is not required, so getSyncableSupervisorId(name, false, true)
+            var supervisorId = xmperson.getSyncableSupervisorId(supervisorNames[i], false, true);
             if (supervisorId) {
                 group.supervisors.push(supervisorId);
 
@@ -314,7 +298,7 @@ xMattersGroup.prototype = {
                    groupName + '"');
             }
         }
-		
+
         return group;
     },
 
@@ -358,36 +342,30 @@ xMattersGroup.prototype = {
             groupRec.get('name', group);
         }
 
-        var groupName;
+        var groupName = groupRec ? groupRec.name.getDisplayValue() : groupRoleRec.group.name.getDisplayValue();
+        var isActive = false;
+        var groupHasXMattersRole = false;
+
         if (groupRec) {
-            groupName = groupRec.name.getDisplayValue();
-
-            if (!groupRec.active) {
-                this.log.debug('isSyncableGroup: Group: "' + groupName + '" is not active');
-                return false;
-            }
-
-            if (this.hasRole(groupRec.sys_id)) {
-                this.log.debug('isSyncableGroup: Group "' + groupName + '" has a syncable role');
-                return true;
-            }
-
-        } else {
-            groupName = groupRoleRec.group.name.getDisplayValue();
-
-            if (!groupRoleRec.group.active) {
-                this.log.debug('isSyncableGroup: Group "' + groupName + '" is not active');
-                return false;
-            }
-
-
-            if (this.hasRole(groupRoleRec.group.sys_id)) {
-                this.log.debug('isSyncableGroup: Group "' + groupName + '" has a syncable role');
-                return true;
-            }
+            isActive = groupRec.active;
+            groupHasXMattersRole = this.hasRole(groupRec.sys_id);
+        } else if (groupRoleRec) {
+            isActive = groupRoleRec.group.active;
+            groupHasXMattersRole = this.hasRole(groupRoleRec.getValue('group'));
         }
 
-        this.log.debug('isSyncableGroup: Group "' + groupName + '" does not have a syncable role');
+        if (isActive && groupHasXMattersRole) {
+            this.log.debug('isSyncableGroup: Group: "' + groupName + '" is active and has a syncable role.');
+            return true;
+        }
+
+        var reason = !isActive ? 'it is not active' : '';
+        if (!groupHasXMattersRole) {
+            reason += reason.length > 0 ? ' and ' : '';
+            reason += 'it does not have a syncable role';
+        }
+
+        this.log.debug('isSyncableGroup: Group "' + groupName + '" is not syncable because ' + reason + '.');
         return false;
     },
 
@@ -409,33 +387,33 @@ xMattersGroup.prototype = {
      * @returns {boolean}
      */
     isRemoveRequired: function (groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) {
-        var groupName;
+        var groupName = groupRec ? groupRec.name.getDisplayValue() : groupRoleRec.group.name.getDisplayValue();
+        var changesToInactive = false;
+        var groupHasXMattersRole = false;
+
         if (groupRec) {
-            groupName = groupRec.name;
-            if (groupRec.active.changesTo(false)) {
-                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (group is not active)');
+            groupHasXMattersRole = this.hasRole(groupRec.sys_id);
+            // a group with the xM role is being deleted
+            if (groupRec.operation() == 'delete' && groupHasXMattersRole) {
+                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (group deleted).');
                 return true;
             }
-
-            if (groupRec.operation() == "delete") {
-                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (group deleted)');
-                return true;
-            }
-
-        } else if (groupRoleRec && groupRoleRec.operation() == "delete") {
-            groupName = groupRoleRec.group.name;
-
-            if (!this.hasRole(groupRoleRec.group)) {
-                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (no syncable role)');
-
+            changesToInactive = groupRec.active.changesTo(false);
+        } else if (groupRoleRec) {
+            groupHasXMattersRole = this.hasRole(groupRoleRec.group);
+            // a group has one of its ROLEs removed, and the group does not have an xM role
+            if (groupRoleRec.operation() == 'delete' && !groupHasXMattersRole) {
+                this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (syncable role removed).');
                 return true;
             }
         }
 
-        if (groupName) {
-            this.log.debug('isRemoveRequired: No relevant change detected for group: "' + groupName + '"');
+        if (changesToInactive && groupHasXMattersRole) {
+            this.log.debug('isRemoveRequired: Removal required for group: "' + groupName + '" (group has syncable role and is not active).');
+            return true;
         }
 
+        this.log.debug('isRemoveRequired: No relevant changes detected for group: "' + groupName + '".');
         return false;
     },
 
@@ -532,14 +510,14 @@ xMattersGroup.prototype = {
 
         if (groupRec) {
             // check if any of the fields we sync changed
-            var changed = groupRec.name.changes() || groupRec.description.changes() || groupRec.manager.changes();
+            var changed = groupRec.name.changes() || groupRec.description.changes() || groupRec.manager.changes() || groupRec.active.changesTo(true);
 
             groupname = groupRec.name;
             this.log.debug('isChanged: ' + groupname + "'s data has changed: " + changed);
 
             return changed;
 
-        } else if (groupRoleRec) {
+        } else if (groupRoleRec && groupRoleRec.group.active) { // Only for active groups
             // check if role we track was added or deleted
             groupname = groupRoleRec.group;
             var role = groupRoleRec.role.name.getDisplayValue();
@@ -567,8 +545,8 @@ xMattersGroup.prototype = {
      * @returns {boolean}
      */
     isSyncRequired: function (groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) {
-        var syncable = this.isSyncableGroup(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev),
-            req = syncable || groupRoleRec ? this.isChanged(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) : false;
+        var syncable = this.isSyncableGroup(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev);
+		var req = (syncable || groupRoleRec) ? this.isChanged(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev) : false;
         if (!req && groupRec) {
             req = this.isRemoveRequired(groupRec, groupRec_prev, groupRoleRec, groupRoleRec_prev);
         }
@@ -620,13 +598,13 @@ xMattersGroup.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-04-27 16:18:01</sys_created_on>
         <sys_id>d6d8ed614f4712008472a88ca310c757</sys_id>
-        <sys_mod_count>84</sys_mod_count>
+        <sys_mod_count>89</sys_mod_count>
         <sys_name>xMattersGroup</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_d6d8ed614f4712008472a88ca310c757</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+        <sys_updated_on>2019-04-15 18:10:41</sys_updated_on>
     </sys_script_include>
 </record_update>

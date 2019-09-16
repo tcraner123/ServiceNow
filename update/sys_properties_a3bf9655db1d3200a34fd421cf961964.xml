@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Semicolon separated list of available services</description>
@@ -19,9 +18,9 @@
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_a3bf9655db1d3200a34fd421cf961964</sys_update_name>
         <sys_updated_by>tcrane</sys_updated_by>
-        <sys_updated_on>2018-03-21 23:06:01</sys_updated_on>
+        <sys_updated_on>2019-06-10 19:16:06</sys_updated_on>
         <type>string</type>
-        <value>Service1;Service2;Email;Chat;Support site;Peoplesoft</value>
+        <value>Service1;Service2;Email;Chat;Support site;Peoplesoft;Web Portal - Dashboard</value>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=a3bf9655db1d3200a34fd421cf961964"/>

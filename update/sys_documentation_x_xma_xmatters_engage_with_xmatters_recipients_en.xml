@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update>
+<?xml version="1.0" encoding="UTF-8"?><record_update>
     <sys_documentation element="recipients" label="Recipients" language="en" table="x_xma_xmatters_engage_with_xmatters">
         <sys_documentation action="INSERT_OR_UPDATE">
             <element>recipients</element>

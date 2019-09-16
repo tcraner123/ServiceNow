@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_page">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
     <sys_ui_page action="INSERT_OR_UPDATE">
         <category>general</category>
         <client_script><![CDATA[angular.module('AddRecipientsModule', ['sn.glideAjax'] )
@@ -28,15 +27,16 @@
 
 
 	function loadUsers() {
+
 		var ga = new GlideAjax( 'xMRecipientSelectAjax' );
 		ga.addParam( 'sysparm_name', 'getUsers' );
 		ga.getJSON( function ( response ) {
 
 			if ( !response ) {
-				console.log( 'ERROR in loadUsers()' );
+				jslog( 'ERROR in loadUsers()' );
 				return;
 			}
-			console.log( 'Response: ' + response );
+			jslog( 'Response: ' + response );
 			$scope.masterListU = response;
 			$scope.availableUsers  = $scope.masterListU.slice(0);
 
@@ -58,6 +58,8 @@
 
 			$scope.masterListG = response;
 			$scope.availableGroups  = $scope.masterListG.slice(0);
+
+
 		} );
 
 
@@ -98,7 +100,7 @@
 			$scope.availableGroups = [];
 
 			for( var g=0; g<$scope.masterListG.length; g++ ) {
-				console.log( 'Checking: "' + $scope.masterListG[g].name.toLowerCase() + '" with "' + $scope.searchG.toLowerCase() );
+				jslog( 'Checking: "' + $scope.masterListG[g].name.toLowerCase() + '" with "' + $scope.searchG.toLowerCase() );
 				if( $scope.masterListG[g].name.toLowerCase().indexOf( $scope.searchG.toLowerCase() ) > -1 ) {
 					$scope.availableGroups.push( $scope.masterListG[g] );
 				}
@@ -115,7 +117,7 @@
 			$scope.availableUsers = [];
 
 			for( var u=0; u<$scope.masterListU.length; u++ ) {
-				console.log( 'Checking: "' + $scope.masterListU[u].name.toLowerCase() + '" with "' + $scope.searchU.toLowerCase() );
+				jslog( 'Checking: "' + $scope.masterListU[u].name.toLowerCase() + '" with "' + $scope.searchU.toLowerCase() );
 				if( $scope.masterListU[u].name.toLowerCase().indexOf( $scope.searchU.toLowerCase() ) > -1 ||
 					$scope.masterListU[u].username.toLowerCase().indexOf( $scope.searchU.toLowerCase() ) > -1 )
 				$scope.availableUsers.push( $scope.masterListU[u] );
@@ -145,7 +147,7 @@
 		$scope.selectedGroups = [];
 		$scope.selectedUsers  = [];
 
-		console.log( 'Selected Recipients: ' + $scope.recipientUsers );
+		jslog( 'Selected Recipients: ' + $scope.recipientUsers );
 
 	};
 
@@ -354,13 +356,13 @@ angular.bootstrap($("AddRecipients"), ["AddRecipientsModule", "sn.glideAjax"]);
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-08-08 14:47:53</sys_created_on>
         <sys_id>724f2fea0f41e2009ea83b8ce1050e85</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>xm_add_recipients</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_ui_page_724f2fea0f41e2009ea83b8ce1050e85</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-05-03 20:34:59</sys_updated_on>
+        <sys_updated_on>2018-08-09 22:24:53</sys_updated_on>
     </sys_ui_page>
 </record_update>

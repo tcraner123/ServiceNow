@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="clone_cleanup_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="clone_cleanup_script">
     <clone_cleanup_script action="INSERT_OR_UPDATE">
         <name>xMatters Clone</name>
         <script><![CDATA[// reset xmatters app properties after a successful

@@ -1,10 +1,12 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_app">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_app">
     <sys_app action="INSERT_OR_UPDATE">
         <active>true</active>
+        <can_edit_in_studio>false</can_edit_in_studio>
         <enforce_license>log</enforce_license>
+        <guided_setup_guid/>
         <js_level>traditional</js_level>
         <licensable>true</licensable>
+        <license_category/>
         <license_model>fulfiller</license_model>
         <logo/>
         <menu/>
@@ -16,21 +18,21 @@
         <scoped_administration>false</scoped_administration>
         <short_description> With the certified xMatters Integration for ServiceNow, the appropriate technician can be notified directly via push messages, voice calls, SMS, email, pagers </short_description>
         <source>x_xma_xmatters</source>
-        <store_correlation_id>APP0008847</store_correlation_id>
+        <store_correlation_id>APP0013326</store_correlation_id>
         <store_url>https://tpp.servicenow.com/sn_appstore_s</store_url>
         <sys_class_name>sys_app</sys_class_name>
         <sys_code/>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2015-02-25 19:05:17</sys_created_on>
         <sys_id>5950d7444f2231000e9fa88ca310c78c</sys_id>
-        <sys_mod_count>166</sys_mod_count>
+        <sys_mod_count>191</sys_mod_count>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-05-03 21:24:46</sys_updated_on>
+        <sys_updated_on>2019-08-28 15:28:21</sys_updated_on>
         <template/>
         <trackable>true</trackable>
         <user_role/>
         <vendor/>
         <vendor_prefix/>
-        <version>5.0.1</version>
+        <version>5.4.1</version>
     </sys_app>
 </record_update>

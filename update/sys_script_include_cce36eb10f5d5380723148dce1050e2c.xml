@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>package_private</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersDataEvent</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <name>xMattersDataEvent</name>
@@ -27,6 +27,7 @@ xMattersDataEvent.prototype = {
       this.config = new xMattersConfig();
     }
     this.log = new xMattersLogger(this.config.DEBUGGING, 'xMattersDataEvent', logTraceId);
+    this.numAvailableQueues = this.config.NUM_DATA_SYNC_QUEUES || 6;
 
     var prefix = gs.getCurrentScopeName(); // 'x_xma_xmatters'
     this.TYPE = {
@@ -56,7 +57,7 @@ xMattersDataEvent.prototype = {
     eventParameters.logTraceId = this.getChildLogTraceId();
     var paramStr = global.JSON.stringify(eventParameters);
     // Dynamically get the full queue name
-    var queueNumber = Math.ceil(Math.random() * this.config.NUM_DATA_SYNC_QUEUES);
+    var queueNumber = Math.ceil(Math.random() * this.numAvailableQueues);
     var queueName = this.QUEUE_NAME + queueNumber;
     // Queue the event
     gs.eventQueue(queueName, record, type, paramStr, queueName);
@@ -291,13 +292,13 @@ xMattersDataEvent.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2018-04-07 00:09:06</sys_created_on>
         <sys_id>cce36eb10f5d5380723148dce1050e2c</sys_id>
-        <sys_mod_count>1</sys_mod_count>
+        <sys_mod_count>4</sys_mod_count>
         <sys_name>xMattersDataEvent</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_cce36eb10f5d5380723148dce1050e2c</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-07 00:09:11</sys_updated_on>
+        <sys_updated_on>2019-04-15 18:10:41</sys_updated_on>
     </sys_script_include>
 </record_update>

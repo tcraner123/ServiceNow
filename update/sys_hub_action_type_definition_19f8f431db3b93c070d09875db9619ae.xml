@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_hub_action_type_definition">
+    <sys_hub_action_type_definition action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <acls/>
+        <action_template/>
+        <active>true</active>
+        <annotation/>
+        <callable_by_client_api>false</callable_by_client_api>
+        <category/>
+        <copied_from/>
+        <copied_from_name/>
+        <description/>
+        <ih_action>false</ih_action>
+        <internal_name>xmatters</internal_name>
+        <label_cache>[{"name":"{{action.ah_incident}}","label":"action➛incident","type":"action","ref":"incident"},{"name":"{{action.ah_incident.assignment_group}}","label":"action➛incident➛Assignment group","type":"action","ref":"sys_user_group"},{"name":"{{action.ah_incident.priority}}","label":"action➛incident➛Priority","type":"action","ref":""},{"name":"{{action.ah_incident.short_description}}","label":"action➛incident➛Short description","type":"action","ref":""},{"name":"{{action.ah_incident.sys_id}}","label":"action➛incident➛Sys ID","type":"action","ref":""},{"name":"{{action.ah_incident.number}}","label":"action➛incident➛Number","type":"action","ref":""},{"name":"{{action.ah_incident.assigned_to}}","label":"action➛incident➛Assigned to","type":"action","ref":"sys_user"},{"name":"{{action.ah_incident.category}}","label":"action➛incident➛Category","type":"action","ref":""},{"name":"{{action.ah_incident.severity}}","label":"action➛incident➛Severity","type":"action","ref":""},{"name":"{{action.ah_incident.active}}","label":"action➛incident➛Active","type":"action","ref":""},{"name":"{{action.ah_incident.contact_type}}","label":"action➛incident➛Contact type","type":"action","ref":""},{"name":"{{action.ah_incident.sys_created_on}}","label":"action➛incident➛Created","type":"action","ref":""},{"name":"{{action.ah_incident.sys_created_by}}","label":"action➛incident➛Created by","type":"action","ref":""},{"name":"{{action.ah_incident.urgency}}","label":"action➛incident➛Urgency","type":"action","ref":""}]</label_cache>
+        <latest_snapshot>96fe91eadb8c230070d09875db96193a</latest_snapshot>
+        <master_snapshot/>
+        <name>xMatters</name>
+        <outputs/>
+        <state>draft</state>
+        <sys_class_name>sys_hub_action_type_definition</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-08-08 22:58:40</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>19f8f431db3b93c070d09875db9619ae</sys_id>
+        <sys_mod_count>66</sys_mod_count>
+        <sys_name>xMatters</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_hub_action_type_definition_19f8f431db3b93c070d09875db9619ae</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-12-07 18:21:14</sys_updated_on>
+        <system_level>false</system_level>
+        <type/>
+    </sys_hub_action_type_definition>
+    <sys_translated_text action="delete_multiple" query="documentkey=19f8f431db3b93c070d09875db9619ae"/>
+    <sys_variable_value action="delete_multiple" query="document_key=19f8f431db3b93c070d09875db9619ae"/>
+</record_update>

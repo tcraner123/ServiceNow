@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update sys_domain="global" table="sys_ui_application">
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_ui_application">
     <sys_ui_application action="INSERT_OR_UPDATE">
         <active>true</active>
         <hint/>
@@ -10,7 +9,7 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-03-07 17:59:31</sys_created_on>
         <sys_domain>global</sys_domain>
-        <sys_domain_path>/</sys_domain_path>
+        <sys_domain_path/>
         <sys_id>8f5307a2dbd1b200a34fd421cf9619f1</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_name>Integration - xMatters</sys_name>

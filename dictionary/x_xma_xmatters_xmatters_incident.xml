@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<database>
+<?xml version="1.0" encoding="UTF-8"?><database>
     <element extends="sys_import_set_row" label="xMatters Incident" max_length="40" name="x_xma_xmatters_xmatters_incident" type="collection">
         <element label="Assigned To" max_length="40" name="assigned_to" type="string"/>
         <element label="Incident State" max_length="40" name="incident_state" type="string"/>

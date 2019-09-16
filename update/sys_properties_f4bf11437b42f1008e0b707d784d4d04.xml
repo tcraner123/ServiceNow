@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Seed Only - Groups: when selected, indicates that Groups should only be created if they do not already exist in xMatters; modifying or removing existing Groups in Service-now will not affect Groups already in xMatters. When this option is NOT selected, updates and deletions to Groups in Service-now will be synchronized to xMatters.</description>

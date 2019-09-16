@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Externally Own Data: When selected, synchronized data can only be removed from xMatters by removing the user in ServiceNow.</description>
@@ -12,16 +11,16 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2015-02-09 22:02:53</sys_created_on>
         <sys_id>788fdd037b42f1008e0b707d784d4d52</sys_id>
-        <sys_mod_count>24</sys_mod_count>
+        <sys_mod_count>25</sys_mod_count>
         <sys_name>x_xma_xmatters.xmatters.sync.externally.owned</sys_name>
         <sys_package display_value="Global" source="global">global</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_788fdd037b42f1008e0b707d784d4d52</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-09-08 18:23:52</sys_updated_on>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2019-01-14 17:48:37</sys_updated_on>
         <type>boolean</type>
-        <value>true</value>
+        <value>false</value>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=788fdd037b42f1008e0b707d784d4d52"/>

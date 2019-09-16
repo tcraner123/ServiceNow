@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersProperties</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description>Script to help manage various properties in the ServiceNow engine in xMatters. </description>
         <name>xMattersProperties</name>

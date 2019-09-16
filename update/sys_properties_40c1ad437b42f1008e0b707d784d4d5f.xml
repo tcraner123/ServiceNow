@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Determines whether or not the user can be removed in the xMatters engine. If externally owned is set to true, the user can only be removed in xMatters by removing the user in Service-now.</description>

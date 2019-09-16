@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Individual Form Endpoint: The URL to use as the REST endpoint for the ServiceNow relevance engine's "individual" form. (Replace the placeholders in the URL with your xMatters Company Name and the xMatters on demand server supplied by your xMatters enablement representative.)</description>

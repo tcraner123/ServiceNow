@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Group Exclude/Include List: specifies a list of xMatters Group Names, separated by semi-colons (;), that identifies the Groups to exclude or include when synchronizing Groups with xMatters. This list is used in conjunction with the Exclude Groups check box. If this list is populated, and the Exclude Groups check box is selected, then the listed Groups will be excluded from the synchronization. If this list is populated and the Exclude Groups check box is NOT selected, then ONLY those Groups included in this list will be synchronized with xMatters.</description>

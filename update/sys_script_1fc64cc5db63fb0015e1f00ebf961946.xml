@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script">
+    <sys_script action="INSERT_OR_UPDATE">
+        <abort_action>false</abort_action>
+        <access>package_private</access>
+        <action_delete>true</action_delete>
+        <action_insert>false</action_insert>
+        <action_query>false</action_query>
+        <action_update>false</action_update>
+        <active>true</active>
+        <add_message>false</add_message>
+        <advanced>true</advanced>
+        <change_fields>false</change_fields>
+        <client_callable>false</client_callable>
+        <collection>sys_user_group</collection>
+        <condition>(new xMattersConfig()).SYNC_DYNAMICALLY &amp;&amp; (new xMattersGroup()).isRemoveRequired(current)</condition>
+        <description/>
+        <execute_function>false</execute_function>
+        <filter_condition/>
+        <is_rest>false</is_rest>
+        <message/>
+        <name>xMattersGroup_BeforeDelete</name>
+        <order>50</order>
+        <priority>100</priority>
+        <rest_method/>
+        <rest_method_text/>
+        <rest_service/>
+        <rest_service_text/>
+        <rest_variables/>
+        <role_conditions/>
+        <script><![CDATA[(function executeRule(current, previous /*null when async*/) {
+    var config = new xMattersConfig();
+    var log = new xMattersLogger(config.DEBUGGING, 'xMattersGroup_BeforeDelete[BR]');
+    var dataHelper = new xMattersDataHelper(config, log.getLogTraceId());
+
+    var timer = log.timer();
+    log.debug('Starting Business Rule (operation: ' + current.operation() + ')');
+    try {
+        var groupName = current.name.getDisplayValue();
+        var xmgroup = new xMattersGroup(config, dataHelper, log.getLogTraceId());
+
+        var action;
+        if (xmgroup.isRemoveRequired(current, previous)) {
+            log.debug('Removing group: "' + groupName + '"');
+            action = 'delete';
+            xmgroup.removeGroupAsync(current);
+        }
+
+        log.info('Business Rule finished for group: "' + groupName +
+            '" action: "' + action +
+            '" (' + log.timer(timer) + 'ms elapsed)');
+    } catch (e) {
+        log.logException('', e);
+        throw e;
+    }
+})(current, previous);]]></script>
+        <sys_class_name>sys_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-08-26 17:31:34</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>1fc64cc5db63fb0015e1f00ebf961946</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>xMattersGroup_BeforeDelete</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_1fc64cc5db63fb0015e1f00ebf961946</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-08-26 17:36:16</sys_updated_on>
+        <template/>
+        <when>before</when>
+    </sys_script>
+    <sys_translated_text action="delete_multiple" query="documentkey=1fc64cc5db63fb0015e1f00ebf961946"/>
+</record_update>

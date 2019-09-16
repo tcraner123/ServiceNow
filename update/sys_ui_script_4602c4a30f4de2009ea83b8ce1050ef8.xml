@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
         <description/>
@@ -92,6 +91,7 @@ angular.module( 'xm.custom-directives' ).directive( 'xmInputGroup', function() {
         <sys_update_name>sys_ui_script_4602c4a30f4de2009ea83b8ce1050ef8</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2017-06-23 22:24:43</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>false</use_scoped_format>
     </sys_ui_script>
 </record_update>

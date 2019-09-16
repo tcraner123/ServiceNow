@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_processor">
+    <sys_processor action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <class_name/>
+        <description>xMatters inbound REST based requests from Request notifications</description>
+        <interactive>false</interactive>
+        <name>xMattersRequestRESTProcessor</name>
+        <parameters/>
+        <params_endpoint/>
+        <path>xMattersRequestRESTProcessor</path>
+        <path_endpoint>x_xma_xmatters_xMattersRequestRESTProcessor</path_endpoint>
+        <require_csrf>false</require_csrf>
+        <roles/>
+        <script><![CDATA[gs.include("xMattersLogger");
+
+var appPrefix = gs.getCurrentScopeName();
+var log = new xMattersLogger(gs.getProperty( appPrefix + '.' + 'xmatters.logging.level'), 'xMattersRequestRESTProcessor' );
+
+/*
+ * Get the inbound REST 'mode'
+ * The mode determines what type of rest callback we are dealing with
+ */
+try
+{
+  //var urlParamList = g_request.getParameterNames();
+  var errorMessage = "";  
+  var inboundMode = g_request.getParameter( 'mode' );
+  log.debug( 'inboundMode: ' + inboundMode );
+  
+  /*
+  * Use ServiceNow libraries to covert the JSON string to an object
+  */
+  var parser = new global.JSON();
+  var response = buildResponse( g_request.getParameterNames() );
+  log.debug( 'response: ' + parser.encode( response ) );
+  //Added 1/19/2016 to convert note time from GST to MST
+  var date = new GlideDateTime();
+  date.setValueUTC( response.date, 'yy-mm-dd HH:mm:ss' );
+  response.date = date.getDisplayValue();
+  
+  
+  // Get the incident id
+  var eventProperties = response.eventProperties;
+  var req_sys_id = "";
+  
+  for(var key in eventProperties) {
+    if (eventProperties[key].request_id != null)
+      req_sys_id = eventProperties[key].request_id;
+  }
+  
+  log.debug( 'Request SysID: ' + req_sys_id );
+  
+  
+  if (req_sys_id == "" || req_sys_id == null) {
+    log.error("xMattersRequestRESTProcessor: ERROR the inbound REST callback did not contain the Request Sys ID (request_id)");
+    errorMessage = '{\n' +
+    'type":"REQUEST_ID_NOT_FOUND",\n' +
+    'message": "xMattersRESTProcessor the inbound REST callback did not contain the Request Sys ID (request_id)"\n' +
+    '}';
+  }
+  else
+    {
+    
+    log.debug("Received inbound " + inboundMode + " REST callback with xM with Request Sys ID (request_id) " + req_sys_id);
+    
+    
+    // Initialize the temporary table and the
+    // u_xmatters transform map will take care
+    // of the update
+    var requestRec = new GlideRecord( appPrefix + '_' + 'xm_request_temp');
+    requestRec.initialize();
+    requestRec.u_request_sys_id = req_sys_id;
+    
+    /*
+    * Process the inbound mode to deterine how to handle the REST callback.
+    */
+    if (inboundMode == "status") {
+      
+      requestRec.u_request_work_notes = "[xMatters] - xM event ID " + response.eventIdentifier + " has an updated status of " + response.status + " date " + response.date + "";
+      
+      // update the incident
+      requestRec.update();
+    } else if (inboundMode == "deliveryStatus")
+    {
+      
+      requestRec.u_request_work_notes = "[xMatters] - xM event ID " + response.eventIdentifier + " has a delivery status of " + response.deliveryStatus + " for recipient " + response.recipient + "(" + response.device + ") at " + response.date;
+      
+      // update the incident
+      requestRec.update();
+    } else if (inboundMode == "response")
+    {
+      
+      // Handle the different types of responses
+      // If you add a new response in the xM REB you will need to update this section
+      if ((response.response == "Acknowledge" || response.response == "Ack") &&
+		   requestRec.u_request_state != 3 && requestRec.u_request_state != 4 && requestRec.u_request_state != 7){
+        requestRec.u_request_assigned_to = response.recipient;
+        requestRec.u_request_state = "2";
+      }
+      
+      var notes = "[xMatters] - Received Response " + response.response;
+      
+      if ( !gs.nil( response.annotation ) && response.annotation != 'null' ) {
+        notes += " - '" + response.annotation + "'"; 
+      }
+      
+      notes += " by " + response.recipient + "(" + response.device + ") at " + response.date + "";
+          
+      requestRec.u_request_work_notes = notes;
+      
+      // update the request
+      requestRec.update();
+
+    } else {
+      log.error("xMattersRequestRESTProcessor: ERROR the inbound REST callback 'mode' did not match expected values");
+      errorMessage = '{\n' +
+      'type":"MODE_DID_NOT_MATCH_EXPECTED_VALUE",\n' +
+      'message": "xMattersRequestRESTProcessor the inbound REST callback mode did not match expected values"\n' +
+      '}';
+    }
+  }
+  
+  /*
+  * If we want to send information back to the client, we can
+  * do so through the writeOutput function on the processor
+  */
+  if (errorMessage != "") {
+    // REMOVED in Calgary Release
+    // xM does not currently handle error's in callbacks xMod 5.47
+    //g_response.setHeader("Content-Type", "application/json");
+    //g_response.setStatus(400);
+    g_response.setHeader("Content-Type", "application/json");
+    g_processor.writeOutput(errorMessage);
+  } else {
+    g_response.setHeader("Content-Type", "text/plain");
+    g_processor.writeOutput("OK");
+  }
+} catch (e) {
+  //g_response.setHeader("Content-Type", "application/json");
+  //g_response.setStatus(400);
+  g_processor.writeOutput(e.message);
+  log.error( 'Error: ' + e.message );
+}
+
+function buildResponse( names ) {
+  var obj = {};
+  var str = '';
+  for( var i in names ) {
+    str += '  buildResponse: ' + i + ': ' + names[i] + '\n';
+    obj[ names[i] ] = g_request.getParameter( names[i] );  
+  }
+  
+  log.debug( str );
+  return obj;
+}]]></script>
+        <sys_class_name>sys_processor</sys_class_name>
+        <sys_created_by>kakey</sys_created_by>
+        <sys_created_on>2016-03-31 01:27:19</sys_created_on>
+        <sys_id>19d95bec4faa5200f5f3d49f0310c763</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>xMattersRequestRESTProcessor</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_processor_19d95bec4faa5200f5f3d49f0310c763</sys_update_name>
+        <sys_updated_by>kakey</sys_updated_by>
+        <sys_updated_on>2016-04-06 05:46:43</sys_updated_on>
+        <type>script</type>
+    </sys_processor>
+</record_update>

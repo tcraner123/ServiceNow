@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="cmn_schedule">
+    <cmn_schedule action="INSERT_OR_UPDATE">
+        <calendar_name/>
+        <description/>
+        <document>cmn_rota_member</document>
+        <document_key>9baed77adb72230036e6dd30cf96199e</document_key>
+        <is_legacy_schedule>true</is_legacy_schedule>
+        <label/>
+        <name>Capacity Mgmt: Alissa Mountjoy: Primary</name>
+        <parent display_value="">87aedb3adb72230036e6dd30cf9619f0</parent>
+        <plural_label/>
+        <read_only>true</read_only>
+        <sys_class_name>cmn_schedule</sys_class_name>
+        <sys_created_by>tcrane</sys_created_by>
+        <sys_created_on>2019-01-08 16:44:59</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>57aed77adb72230036e6dd30cf9619a4</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Capacity Mgmt: Alissa Mountjoy: Primary</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>cmn_schedule_57aed77adb72230036e6dd30cf9619a4</sys_update_name>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2019-08-01 16:06:06</sys_updated_on>
+        <time_zone>US/Mountain</time_zone>
+        <type>rotation</type>
+    </cmn_schedule>
+</record_update>

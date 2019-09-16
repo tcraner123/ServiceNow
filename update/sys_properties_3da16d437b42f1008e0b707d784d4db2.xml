@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Exclude Users: when selected, excludes all Users identified in the Users Exclude/Include List when synchronizing Users into xMatters. If this option is NOT selected, and the Users Exclude/Include List is populated, then only those Users in the list are synchronized into xMatters.</description>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Language Suffix: Set the default language for the incident properties of the event sent to xMatters; for example, English is represented with "en". This suffix is added to property names and is required for specific event functions.</description>

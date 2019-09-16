@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update>
+<?xml version="1.0" encoding="UTF-8"?><record_update>
     <sys_documentation element="task_state" label="Task State" language="en" table="x_xma_xmatters_xm_task_temp">
         <sys_documentation action="INSERT_OR_UPDATE">
             <element>task_state</element>

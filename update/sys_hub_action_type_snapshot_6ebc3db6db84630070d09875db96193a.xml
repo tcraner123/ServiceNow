@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_hub_action_type_snapshot">
+    <sys_hub_action_type_snapshot action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <acls/>
+        <action_template/>
+        <annotation/>
+        <callable_by_client_api>false</callable_by_client_api>
+        <category/>
+        <copied_from/>
+        <copied_from_name/>
+        <description>Example Integration to xMatters</description>
+        <internal_name/>
+        <label_cache>[{"name":"{{action.ah_incident}}","label":"action➛incident","type":"action","ref":"incident"},{"name":"{{action.ah_incident.assignment_group}}","label":"action➛incident➛Assignment group","type":"action","ref":"sys_user_group"},{"name":"{{action.ah_incident.assigned_to}}","label":"action➛incident➛Assigned to","type":"action","ref":"sys_user"},{"name":"{{action.ah_incident.category}}","label":"action➛incident➛Category","type":"action","ref":""},{"name":"{{action.ah_incident.sys_id}}","label":"action➛incident➛Sys ID","type":"action","ref":""},{"name":"{{action.ah_incident.priority}}","label":"action➛incident➛Priority","type":"action","ref":""},{"name":"{{action.ah_incident.number}}","label":"action➛incident➛Number","type":"action","ref":""},{"name":"{{action.ah_incident.severity}}","label":"action➛incident➛Severity","type":"action","ref":""},{"name":"{{action.ah_incident.short_description}}","label":"action➛incident➛Short description","type":"action","ref":""}]</label_cache>
+        <master>false</master>
+        <name>Example Action</name>
+        <outputs/>
+        <parent_action display_value="Example Action">8597f136db84630070d09875db9619b8</parent_action>
+        <sys_class_name>sys_hub_action_type_snapshot</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-08-24 16:44:22</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_id>6ebc3db6db84630070d09875db96193a</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Example Action</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_hub_action_type_snapshot_6ebc3db6db84630070d09875db96193a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-08-24 16:44:22</sys_updated_on>
+        <system_level>false</system_level>
+        <type/>
+    </sys_hub_action_type_snapshot>
+    <sys_translated_text action="delete_multiple" query="documentkey=6ebc3db6db84630070d09875db96193a"/>
+    <sys_variable_value action="delete_multiple" query="document_key=6ebc3db6db84630070d09875db96193a"/>
+</record_update>

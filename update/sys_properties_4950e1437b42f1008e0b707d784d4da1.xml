@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Response Options for Groups: Define a list of the xMatters identifiers for the response options you want to be available on notifications to groups (separated by semi-colons). For the default integration, enter the UUIDs for Assign to me, Resolve, and Ignore.</description>
@@ -12,16 +11,16 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2015-02-09 22:06:22</sys_created_on>
         <sys_id>4950e1437b42f1008e0b707d784d4da1</sys_id>
-        <sys_mod_count>49</sys_mod_count>
+        <sys_mod_count>58</sys_mod_count>
         <sys_name>x_xma_xmatters.xmatters.reb.incident.group.responses</sys_name>
         <sys_package display_value="Global" source="global">global</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_4950e1437b42f1008e0b707d784d4da1</sys_update_name>
         <sys_updated_by>tcrane</sys_updated_by>
-        <sys_updated_on>2018-05-29 18:17:58</sys_updated_on>
+        <sys_updated_on>2019-05-27 19:30:18</sys_updated_on>
         <type>string</type>
-        <value>f65cc818-2619-447e-aa43-5c27a9c1aab9;c4ba24e3-403f-4ff9-8dd1-04df48519a96;7fa30412-7b80-49e0-8cfb-be504d17605f;96b8e8b1-bf8b-4421-90a0-623942c80606;ec7a54f4-d28f-4168-b46e-911dbb736999;9353d50f-4a7d-4100-bec9-9d9a04afc097;3c490449-fcc9-42a4-84d3-e3fae6c87233;5c2afd9b-d513-4b12-955e-6d7f08ac4ed7</value>
+        <value>99eccb12-00db-4228-a723-ca132a070b2d;d5ba3a7c-cef1-4829-a919-ce4fd9864002;23458ff8-2185-4dbd-b188-181e9381e90a;be67b37a-a37a-4c77-bff9-6bfd3f21f6c6;85838ff0-1ba3-42a1-891d-271a0df89034;963be64a-b4a9-4c51-b7ea-a399973703ba</value>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=4950e1437b42f1008e0b707d784d4da1"/>

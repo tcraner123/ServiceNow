@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Phone Extension Identifier: Specify the separator to be used to separate the base phone number and extension for synchronized phone devices.&#13;
@@ -13,16 +12,16 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-11-18 00:04:55</sys_created_on>
         <sys_id>e0083d534f43660078bae321a310c779</sys_id>
-        <sys_mod_count>16</sys_mod_count>
+        <sys_mod_count>17</sys_mod_count>
         <sys_name>x_xma_xmatters.xmatters.user.sync.phone.extension.identifier</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_e0083d534f43660078bae321a310c779</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-14 22:19:48</sys_updated_on>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-08-31 20:42:11</sys_updated_on>
         <type>string</type>
-        <value>x</value>
+        <value/>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=e0083d534f43660078bae321a310c779"/>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Configuration Item Query: A ServiceNow encoded query of cmdb_ci records to send to the configuration_item_list property in the ServiceNow engine in xMatters. An empty value will use all CIs. Caution: For large deployments this could cause performance issues.</description>

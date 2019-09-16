@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Group - Shift Name: The name of the shift to which group members are added in the data sync process. When creating new groups, the shift is created (if it is not the Default Shift added automatically); when updating groups, if this shift does not exist, new group members are added to the roster but not to a particular shift.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.group.sync.shiftname</name>
+        <read_roles/>
+        <suffix>xmatters.group.sync.shiftname</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-04-18 17:48:37</sys_created_on>
+        <sys_id>8a3cae03dbb0770015e1f00ebf9619b7</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.group.sync.shiftname</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_8a3cae03dbb0770015e1f00ebf9619b7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-04-25 00:08:49</sys_updated_on>
+        <type>string</type>
+        <value>24x7</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=8a3cae03dbb0770015e1f00ebf9619b7"/>
+</record_update>

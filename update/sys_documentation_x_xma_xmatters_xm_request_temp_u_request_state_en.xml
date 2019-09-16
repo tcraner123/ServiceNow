@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_documentation element="u_request_state" label="Request State" language="en" table="x_xma_xmatters_xm_request_temp">
+        <sys_documentation action="INSERT_OR_UPDATE">
+            <element>u_request_state</element>
+            <help/>
+            <hint/>
+            <label>Request State</label>
+            <language>en</language>
+            <name>x_xma_xmatters_xm_request_temp</name>
+            <plural>Request States</plural>
+            <sys_class_name>sys_documentation</sys_class_name>
+            <sys_created_by>kakey</sys_created_by>
+            <sys_created_on>2016-04-06 03:09:20</sys_created_on>
+            <sys_id>380bee264f2ed200f5f3d49f0310c73c</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_name>Request State</sys_name>
+            <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+            <sys_policy/>
+            <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+            <sys_update_name>sys_documentation_x_xma_xmatters_xm_request_temp_u_request_state_en</sys_update_name>
+            <sys_updated_by>kakey</sys_updated_by>
+            <sys_updated_on>2016-04-06 03:09:20</sys_updated_on>
+            <url/>
+            <url_target/>
+        </sys_documentation>
+    </sys_documentation>
+</record_update>

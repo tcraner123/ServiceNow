@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_xma_xmatters.xMattersRequest2</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Request SI</description>
+        <name>xMattersRequest2</name>
+        <script><![CDATA[// Include the xMattersRESTHelper Script Include for use in this script action
+
+//gs.include("xMattersRESTHelper");
+gs.include("xMattersLogger");
+//Additional includes files added by B.Walton 1-24-2017.  These are the files we need:
+gs.include("xMattersConfig");
+gs.include('xMattersDataHelper');
+gs.include("xMattersPerson");
+gs.include("xMattersGroup");
+
+var xMattersRequest2 = Class.create();
+
+xMattersRequest2.prototype = {
+
+	/* A.A. Initialization function using xMattersRESTHelper
+		initialize : function() {
+			this.appPrefix = gs.getCurrentScopeName();
+			this.restHelper = new xMattersRESTHelper();
+			this.log = new xMattersLogger(gs.getProperty(this.appPrefix + '.' + "xmatters.logging.level"), 'xMattersIncidentAlert' );
+		},
+	*/
+	
+initialize : function(config, dataHelper) {
+		this.appPrefix = gs.getCurrentScopeName();
+		this.restHelper = new xMattersDataHelper();
+		if (config && config.type == 'xMattersConfig') {
+			this.config = config;
+		} else {
+			this.config = new xMattersConfig();
+		}
+
+		this.log = new xMattersLogger(this.config.LOGLEVEL, 'xMattersRequest2');
+
+		if (dataHelper && dataHelper.type == 'xMattersDataHelper') {
+			this.log.debug('initialize using passed in dataHelper');
+			this.dataHelper = dataHelper;
+		} else {
+			this.log.debug('initialize creating own dataHelper');
+			this.dataHelper = new xMattersDataHelper();
+		}
+		this.json = new global.JSON();
+	  },	
+
+		// These following 2 functions GetPerson & GetGroup May not be required - BWalton 1-24-2017
+			  getXMPerson: function() {
+				if( typeof this.xmPerson === 'undefined' || this.xmPerson === null ) {
+				  this.xmPerson = new xMattersPerson( this.config, this.dataHelper );
+				}
+				return this.xmPerson;
+			  },
+
+			  getXMGroup: function() {
+				if( typeof this.xmGroup === 'undefined' || this.xmGroup === null ) {
+				  this.xmGroup = new xMattersGroup( this.config, this.dataHelper );
+				}
+				return this.xmGroup;
+			  },
+
+				
+	/**
+ 	* Handles request action(s)
+ 	* @param record current record
+ 	* @param parms an object describing actions to be performed
+ 	*/
+	handleRequestAction : function(record, parms) {
+		this.log.debug("handleRequestAction for request " + String(record.number) + " with parameters " + new global.JSON().encode(parms));
+		
+		var notes = [];
+
+		//Added passing of full parameters to the handlers in order to get passed through message B. Walton 4-27-2017
+	
+		if( parms.sendEvent ) {
+			var newNote = this.addRequest( record, parms.triggerRule, parms.userName, parms );
+			notes.push( newNote );
+
+		} else {
+			var updNote = this.addRequest( record, parms.triggerRule, parms.userName, parms );
+			notes.push ( updNote );
+		}
+		
+		if( parms.terminate ) {
+			notes.push( this.deleteRequest( record, parms.triggerRule ) );
+		}
+		
+		
+		this.log.debug( 'Notes: ' + notes );
+		
+		// create the final work notes if the notes array has items to be added to the work notes
+		if (notes.length > 0) {
+			//current.work_notes = notes.join("\n");
+			current.u_xm_responses = notes.join("\n");
+			current.update();
+		}
+
+	},
+	
+	/**
+ 	* Adds a request to the xMatters Engine
+ 	* @param record current record
+ 	* @param triggerRule String containing the trigger rule
+ 	* @param userName name of the current user
+ 	*/
+
+/**
+ * BWalton 1.27.2017 Builds the JSON object for a new Request Notification. We've added the Send Function at the Bottom of this Script
+ * OLD - Adds an incident to the xMatters (alarmpoint) Engine
+ * @param record current record
+ * @param triggerRule String containing the trigger rule
+ * @param userName name of the current user
+*/
+	addRequest : function(record, triggerRule, userName, parms) {
+		var recipients = this.getRecipients(record, userName);
+
+/*		
+		// Send the event to xMatters
+		this.log.debug( 'addRequest assignee: |' + record.assigned_to.user_name.getDisplayValue() + '| recipients: |' + recipients + '| current user: |' + userName + '| api.user: |' + gs.getProperty(this.appPrefix + '.' + "xmatters.api.user") + '|');
+		
+		if( recipients == record.assigned_to.user_name.getDisplayValue() && userName == gs.getProperty(this.appPrefix + '.' + "xmatters.api.user") ) {
+			// TODO: check notifying yourself setting here too
+			return "[xMatters] - Skipping request notification for '" + recipients + "'";
+		}
+*/		
+//		var endpoint = gs.getProperty(this.appPrefix + '.' + "xmatters.reb.request.endpoint");
+		
+// ENDPOINT FOR NEW INTEGRATION - USES INTEGRATION BUILDER 
+		var endpoint = 'https://demo-tc.xmatters.com/reapi/2015-04-01/forms/4d2617a2-b578-4463-9a48-3ac9caec2198/triggers';
+		
+		//var inboundProcessor    = this.appPrefix + '_' + 'xMattersRequestRESTProcessor.do';
+		var emitStatus          = gs.getProperty( this.appPrefix + '.' + 'xmatters.request.event.status.updates' );
+		var emitdDeliveryStatus = gs.getProperty( this.appPrefix + '.' + 'xmatters.request.event.delivery.status.updates' );
+		var emitResponse        = "true";
+		
+		//var callbacks = this.restHelper.callbackHelper( inboundProcessor, emitStatus, emitdDeliveryStatus, emitResponse );
+		var callbacks = [];
+		var responses = [];
+
+		/*var responses;
+		if( !gs.nil( record.assigned_to ) ) {
+			// If it is assigned to a group, use the group response options
+			responses = gs.getProperty( this.appPrefix + '.' + 'xmatters.reb.request.individual.responses' );
+		} else {
+			// Otherwise, use the individual response options
+			responses = gs.getProperty( this.appPrefix + '.' + 'xmatters.reb.request.group.responses' );
+		}
+		responses = ( gs.nil( responses ) ? [] : responses.split( ';' ) );
+		*/
+		
+		var priority;
+		{
+			if( record.priority.getDisplayValue() == '1 - Critical' || record.priority.getDisplayValue() == '2 - High') {
+				priority = 'HIGH';
+			}
+			
+			else if( record.priority.getDisplayValue() == '4 - Low' || record.priority.getDisplayValue() == '5 - Planning') {
+				priority = 'LOW';
+			}
+			else
+				priority = 'MEDIUM';
+		}
+		
+		var properties = {};
+		
+//REQUEST ALL PROPERTIES FROM THE TABLE - This is default until we can resolve the missing queries
+//		properties = this.addAllRequestProperties(record);
+		
+		
+		properties.number = String(record.number.getDisplayValue());
+		properties.request_id = String(record.sys_id);
+		properties.request_item = String(record.request_item.getDisplayValue());
+		properties.cat_item = String(record.request_item.cat_item.getDisplayValue());
+		properties.quantity = String(record.request_item.quantity);
+		properties.u_requested_for = String(record.u_requested_for.getDisplayValue());
+		properties.configuration_item = record.cmdb_ci.getDisplayValue();
+		if (record.priority.getDisplayValue() != ''){
+					   properties.priority = record.priority.getDisplayValue();
+		}
+		properties.u_expected_delivery_date = String(record.u_expected_delivery_date);
+		properties.assignment_group = record.assignment_group.getDisplayValue();
+		properties.assigned_to = ( record.assigned_to.getDisplayValue() == '' ? 'blank' : record.assigned_to.getDisplayValue() );
+		properties.state = record.state.getDisplayValue(); // state
+		properties.short_description = String(record.short_description);
+		properties.description = record.description.toString().substring(0,1995);
+		properties.trigger = String(triggerRule);
+		properties.servicenowurl = gs.getProperty('glide.servlet.uri') ;
+
+/*		
+		properties.xm_cat_item = String(record.request_item.cat_item.getDisplayValue());
+
+		this.log.info("---TEST XM_CAT_ITEM----: " + record.request_item.cat_item + "REQUEST_ITEM?" + record.request_item);
+		
+		properties.quantity = String(record.request_item.quantity);
+
+		this.log.info("---TEST QUANTITY----: " + properties.quantity);		
+
+		properties.number = String(record.number.getDisplayValue());
+		
+		this.log.info("---TEST NUMBER----: " + properties.number);	
+		
+		properties.request_id = String(record.sys_id);
+		
+		this.log.info("---TEST REQUEST_ID----: " + properties.request_id);			
+		
+		properties.request_item = String(record.request_item.request.sys_id.getDisplayValue());
+
+		this.log.info("---TEST REQUEST_ITEM----: " + properties.request_item);			
+
+		properties.cat_item = String(record.request_item.cat_item.getDisplayValue());
+		
+		this.log.info("---TEST CAT_ITEM----: " + properties.cat_item);	
+		
+		properties.request_item = String(record.request_item.getDisplayValue());
+
+// TESTING LINE BY LINE PROPERTIES BW 5-15-2017	
+		properties.quantity = String(record.request_item.quantity);
+		properties.u_requested_for = String(record.u_requested_for.getDisplayValue());
+		properties.configuration_item = record.cmdb_ci.getDisplayValue();
+		if (record.priority.getDisplayValue() != ''){
+			properties.priority = record.priority.getDisplayValue();
+		}
+		properties.request_item = String(record.request_item.request.sys_id.getDisplayValue());
+		properties.u_expected_delivery_date = String(record.u_expected_delivery_date);
+		properties.assignment_group = record.assignment_group.getDisplayValue();
+		properties.assigned_to = ( record.assigned_to.getDisplayValue() == '' ? 'blank' : record.assigned_to.getDisplayValue() );
+		properties.state = record.state.getDisplayValue(); // state
+		properties.short_description = String(record.short_description);
+		properties.description = String(record.description);
+		properties.trigger = String(triggerRule);
+		//properties.servicenowurl = gs.getProperty('glide.servlet.uri') ;
+		properties.xmatters_url = gs.getProperty( this.appPrefix + '.' + "xmatters.reb.events.endpoint" ).split("/reapi/")[0];
+*/
+		var eventRecipients = null;
+
+		//Send all events that are not targetting an assignee to the Failsafe Group
+		if (record.assigned_to.nil()) {  
+			recipients = "Failsafe";
+		}
+		
+		
+		if (recipients != "") {
+			var tmpArr = String(recipients).split(",");
+			eventRecipients = [];
+			for(var rec in tmpArr){
+				if(String(tmpArr[rec]) != "" ){
+
+					var tmp = {'targetName' : String(tmpArr[rec])};
+					eventRecipients.push(tmp);
+				}
+			}
+		
+		/* Old Script
+			eventRecipients = [];
+			
+			eventRecipients.push({'targetName' : recipients});
+		*/
+		}
+		this.log.info("Confirm this is coming from xMattersRequest (Update) Script Includes");
+			this.send( this.getEventBody( properties, eventRecipients, priority) );
+/*		
+		try {
+			this.log.debug("Attempting to inject an xMatters event for request " + properties.number + " " + triggerRule);
+			var id = this.eventHelper.send(properties, eventRecipients, null, priority, callbacks, responses, endpoint);
+			return; //"[xMatters] - Injected request " + request_item_task +  " notification with xM event ID " + id + " for " + triggerRule + (recipients != "" ? " targeting " + recipients : "");
+		} catch (e) {
+			//this.log.error("[xMatters] - Injected request notification event FAILED for incident " + properties.number + ": " + e);
+			return; //"[xMatters] - Injected request " + request_item_task + " notification event FAILED for " + triggerRule + (recipients != "" ? " targeting " + recipients : ", please refer to logs for more details");
+
+		}
+*/
+
+},
+	
+	/**
+ 	* Terminates a request in the xMatters (alarmpoint) Engine
+ 	* @param record current record
+ 	* @param triggerRule String containing the trigger rule
+ 	*/
+
+	deleteRequest : function(record, triggerRule) {
+    // Terminate the related events in xMatters
+    try {
+      (new xMattersEvent(this.config, this.dataHelper)).terminateEvents( 'number', 
+        String( record.number ) );
+      return "[xMatters] - Terminated existing events for this Request";
+    } catch (e) {
+      return "[xMatters] - Injected termination event FAILED for " + triggerRule;
+    }
+  },
+
+/*	
+	deleteRequest : function(record, triggerRule) {
+		// Terminate the related event in xMatters
+		try {
+			this.eventHelper.terminateEvent("number", record.number.toString());
+			return //"[xMatters] - Terminated existing events for this Request";
+		} catch (e) {
+			return //"[xMatters] - Injected request termination event for " + triggerRule;
+		}
+	
+*/
+	/**
+ 	* Unpacks the configuration items into a comma delimited string
+ 	* @param record current record
+ 	* @return String containing comma separated list of affected CIs
+ 	*/
+	getAffectedCIs : function(record) {
+		var gr = new GlideRecord("task_ci");
+		gr.addQuery("task.sys_id", record.sys_id);
+		gr.query();
+		
+		var affectedCI = "";
+		var first = true;
+		while(gr.next())
+			{
+			affectedCI += (first ? "" : ",") + gr.ci_item.name;
+			first = false;
+		}
+		return affectedCI;
+	},
+	
+	/**
+ 	* Figure out what the list of recipients should be set to based on the trigger rule
+ 	* @param record current record
+ 	* @param userName currently logged in user
+ 	* @return the list of recipients for that trigger rule
+ 	*/
+
+	getRecipients : function(record, userName)
+	{
+		//Default to User if available and Primary Group otherwise.
+		this.log.debug("Get Recipients for REQUEST - Is anybody home? " + record.assignment_group );
+		this.log.debug("Get Recipients for REQUEST - Is name home? " + record.assignment_group.name );
+
+		
+		var recipients = record.assigned_to.user_name;
+
+		if (recipients == "null" || recipients == "") {
+			recipients = record.assignment_group.name;
+		} 
+			this.log.debug("Get Recipients for REQUEST - CHECK CHECK CHECK: " + recipients);
+		return String(recipients);
+	},
+
+		
+// GET event Body
+/**
+ * Takes the properties We've just generated above and puts them in a JSON package to send to xMatters 
+ */
+	getEventBody: function(properties, eventRecipients, priority ) {
+		var RequestBody = {};
+		
+		RequestBody.properties = properties;
+		RequestBody.recipients = eventRecipients;
+		this.recipients = eventRecipients;
+		if (priority) {
+			RequestBody.priority   = priority;
+		}
+		
+		this.log.info("[xMatters] v3.7 EventBody: " + JSON.stringify(RequestBody) );
+		
+					  return RequestBody;
+	},	
+
+// Methods that interact with xMatters system via the Data Helper
+/**
+ * Sends the event -- will attempt a set number of times based on configured
+ * maximum attempts.
+ * @return {string} The id of the new event in xMatters
+ */
+	send : function( body ) {
+		var attempts = 0;
+		var isSuccess = false;
+		var message = '';
+		var eventId = null;
+		while( !isSuccess && attempts < this.config.EVENTS.MAX_ATTEMPTS ) {
+			attempts += 1;
+			try {
+				var resp = this.dataHelper.sendRequest( {
+					"method": "POST",
+					"endpoint": gs.getProperty(this.appPrefix + '.' + "xmatters.reb.request.endpoint"),
+					"path": gs.getProperty(this.appPrefix + '.' + "xmatters.reb.request.endpoint"), //added for logging
+					"headers": {
+						"Content-Type": "application/json"
+					},
+		
+					"body": body,
+				//	this.getEventBody()
+				} );
+				this.response = resp;
+				if( resp.status >= 200 && resp.status < 300 ) {
+					isSuccess = true;
+					eventId = this.json.decode( resp.body ).id;
+					message = "[xMatters] - created xMatters event with eventID " + eventId + " " + this.getTargetDescription();
+				} else {
+					if( this.recipients.length <= 0 && resp.status === 400 ) {
+						if( this.isResponseMissingRecipients( resp ) ) {
+							// there was no default recipient.
+							this.log.error( "[xMatters] - failed to create event " + this.getTargetDescription() + 
+								" | status: " + resp.status + " | body: " + resp.body + " This one is failing 1") ;
+							message = "[xMatters] - creation of xMatters event FAILED " + this.getTargetDescription() + 
+								" after " + attempts + " attempts, no recipients were specified. To avoid this error, set default recipients" +
+								" within xmatters. please refer to logs for more details";
+							break;
+						}
+					}
+					// if didn't break, catch errors through regular error handling
+					this.log.error( "[xMatters] - failed to create event " + this.getTargetDescription() + 
+						" | status: " + resp.status + " | body: " + resp.body + " This one is failing 2" );
+					
+				}
+			} catch( e ) {
+				this.log.error( "[xMatters] - failed to create event " + this.getTargetDescription() + 
+					" | error: " + String( e ) + " This one is failing 3" );
+			}
+		}
+		if( !isSuccess && message === '' ) {
+			message = "[xMatters] - creation of xMatters event FAILED " + this.getTargetDescription() + 
+				" after " + attempts + " attempts, please refer to logs for more details";
+		}
+		this.log.info( message );
+		this.xMattersId = eventId;
+		return eventId;
+	},	
+
+//Send Function Helpers
+	
+		getTargetDescription: function() {
+		var targStr = '';
+		if( this.recipients.length > 0 ) {
+			var targets = [];
+			for( var i = 0; i < this.recipients.length; i++ ) {
+				targets.push( this.recipients[i].targetName );
+			}
+			targStr = 'targeting (' + targets.join(', ') + ') ';
+		} else {
+			targStr = 'targeting default recipients ';
+		}
+		return targStr;
+	},
+	
+	getEventNotes: function() {
+		var msg = "[xMatters] - Injected notification";
+	    if( this.xMattersId !== null ) {
+	    	msg += " with xM event ID " + this.xMattersId + " " + this.getTargetDescription();
+	    } else {
+	    	msg += " event FAILED " + this.getTargetDescription();
+	    	if( this.eventRecipients.length <= 0 && this.response.status === 400 ) {
+				if( this.isResponseMissingRecipients( this.response ) ) {
+					msg += "; no default recipients configured";
+				}
+			}
+	    }
+	    return msg;
+	},
+
+	addAllRequestProperties: function( reqRecord ) {
+		this.log.debug( 'Adding all TASK record fields' );
+		var fields = new GlideRecord( 'sys_dictionary' );
+		fields.addEncodedQuery('name=sc_task^ORname=task');
+		fields.query();
+		var count = 0;
+		var properties = {};
+		while( fields.next() ) {
+			var fieldName = fields.element;
+			// this.log.debug( 'Trying to add ' + fieldName );
+			properties[fieldName] = this.addProperty( reqRecord.getElement( fieldName ) );
+			count++;
+		}
+		this.log.debug( 'Total properties added: ' + count );
+				return properties;
+	},
+	
+	addProperty: function( propValue ) {
+		// this.log.debug( propName + ' -- ' + typeof propValue + ' +++ ' + propValue);
+		// this.log.debug( 'Encoded: ' + this.json.encode( '' + propValue ) );
+		var strValue = '';
+		if( typeof propValue === 'undefined' || propValue === null) {
+			strValue = '';  
+		} else if( typeof propValue === 'string' ) {
+			strValue = propValue;
+		} else {
+			if( typeof propValue.getDisplayValue === 'function' ) {
+				strValue = propValue.getDisplayValue();
+			} else {
+				strValue = this.json.encode( String( propValue ) ); 
+			} 
+		}
+		if( strValue.length > 2000 ) {
+			this.log.debug( 'Truncating to 2000 characters' );
+			strValue = strValue.substr( 0, 2000 );
+		}
+		return strValue;
+	},
+	isResponseMissingRecipients: function( resp ) {
+		var isMissingRecipients = false;
+	    var data = this.json.decode( resp.respData );
+		if( data.type === 'DATA_VALIDATION_ERROR' ) {
+			for( var i = 0; i < data.errorDetails.length; i++ ) {
+				if( data.errorDetails[i].jsonPath === 'recipients/targetName' ) {
+					isMissingRecipients = true;
+					break;
+				}
+			}
+		}
+		return isMissingRecipients;
+	}
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>kakey</sys_created_by>
+        <sys_created_on>2016-03-31 01:10:50</sys_created_on>
+        <sys_id>5e2657ac4faa5200f5f3d49f0310c7ad</sys_id>
+        <sys_mod_count>75</sys_mod_count>
+        <sys_name>xMattersRequest2</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_include_5e2657ac4faa5200f5f3d49f0310c7ad</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-11-08 03:35:00</sys_updated_on>
+    </sys_script_include>
+</record_update>

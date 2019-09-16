@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_page">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
     <sys_ui_page action="INSERT_OR_UPDATE">
         <category>general</category>
         <client_script/>
@@ -22,19 +21,24 @@
         </div>
         <div ng-switch="systemProperty.getType()" class="xm-input" ng-class="systemProperty.getChildInputClasses();">
             <div ng-switch-when="password">
-                <div ng-if="systemProperty.showPassword"><!--  class="input-group"> -->
-                    <xm-input-group xm-property="systemProperty"
-                                    xm-icon="['fa','fa-eye']"
-                                    xm-tooltip="'Hide'"
-                                    xm-is-password="false"
-                                    xm-click="systemProperty.toggleShowPassword"/>
+                <div ng-if="systemProperty.isPasswordInputHidden">
+                    <button type="button" ng-click="systemProperty.makePasswordInputVisible(systemProperty)" ng-if="systemProperty.isPasswordInputHidden" class="btn btn-default xm-btn-default">Change password<i class="fa fa-lock xm-btn-icon"></i></button>
                 </div>
-                <div ng-if="!systemProperty.showPassword"><!--  class="input-group"> -->
-                    <xm-input-group xm-property="systemProperty"
-                                    xm-icon="['fa','fa-eye-slash']"
-                                    xm-tooltip="'Show'"
-                                    xm-is-password="true"
-                                    xm-click="systemProperty.toggleShowPassword"/>
+                <div ng-if="!systemProperty.isPasswordInputHidden">
+                    <div ng-if="systemProperty.showPassword">
+                        <xm-input-group xm-property="systemProperty"
+                                        xm-icon="['fa','fa-eye']"
+                                        xm-tooltip="'Hide'"
+                                        xm-is-password="false"
+                                        xm-click="systemProperty.toggleShowPassword"/>
+                    </div>
+                    <div ng-if="!systemProperty.showPassword">
+                        <xm-input-group xm-property="systemProperty"
+                                        xm-icon="['fa','fa-eye-slash']"
+                                        xm-tooltip="'Show'"
+                                        xm-is-password="true"
+                                        xm-click="systemProperty.toggleShowPassword"/>
+                    </div>
                 </div>
             </div>
             <div ng-switch-when="choicelist">
@@ -126,13 +130,13 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-08-11 00:00:21</sys_created_on>
         <sys_id>ab91cce70f0de2009ea83b8ce1050eae</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>7</sys_mod_count>
         <sys_name>xm_config_property_template</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_ui_page_ab91cce70f0de2009ea83b8ce1050eae</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-06-23 22:24:43</sys_updated_on>
+        <sys_updated_on>2018-07-30 23:03:23</sys_updated_on>
     </sys_ui_page>
 </record_update>

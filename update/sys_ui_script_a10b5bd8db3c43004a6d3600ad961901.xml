@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
         <description/>
@@ -25,6 +24,7 @@ return k({},n(this))}function Bc(){return n(this).overflow}function Cc(){return{
         <sys_update_name>sys_ui_script_a10b5bd8db3c43004a6d3600ad961901</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2017-08-21 19:45:42</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>false</use_scoped_format>
     </sys_ui_script>
 </record_update>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices>10, 25, 50,100, 200</choices>
+        <description>Maximum number of suggestions in recipient lists: Sets the maximum number of suggestions to display when searching for recipients.</description>
+        <ignore_cache>false</ignore_cache>
+        <is_private>false</is_private>
+        <name>x_xma_xmatters.xmatters.reb.engage.maxrecipientresults</name>
+        <read_roles/>
+        <suffix>xmatters.reb.engage.maxrecipientresults</suffix>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-01-15 17:40:52</sys_created_on>
+        <sys_id>e43ea701db4feb4015e1f00ebf9619af</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.reb.engage.maxrecipientresults</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_e43ea701db4feb4015e1f00ebf9619af</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-01-15 18:09:14</sys_updated_on>
+        <type>choicelist</type>
+        <value>50</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=e43ea701db4feb4015e1f00ebf9619af"/>
+</record_update>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_page">
+    <sp_page action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <css/>
+        <draft>false</draft>
+        <dynamic_title_structure/>
+        <id>xmatters_on_call</id>
+        <internal>false</internal>
+        <public>false</public>
+        <roles/>
+        <short_description/>
+        <sys_class_name>sp_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-11-30 22:17:41</sys_created_on>
+        <sys_id>68d43f9edb822300311164d748961909</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>xmatters_on_call</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sp_page_68d43f9edb822300311164d748961909</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-11-30 22:17:41</sys_updated_on>
+        <title>xMatters On-call - Test Page</title>
+    </sp_page>
+    <sys_translated_text action="delete_multiple" query="documentkey=68d43f9edb822300311164d748961909"/>
+</record_update>

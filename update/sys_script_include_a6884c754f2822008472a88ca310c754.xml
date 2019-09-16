@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersGroupCollection</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description>Helper to manage updates to a set of groups, typically used in a background batch process.</description>
         <name>xMattersGroupCollection</name>
@@ -170,6 +170,21 @@ xMattersGroupCollection.prototype = {
     },
 
     /**
+     * Get a groupRoles glide record with an "untriggered" query for groups that
+     * are active
+     * have a syncable role
+     * When using this function, you need to explicitly run the query (returnedGlideRecord.query())
+     * @returns {*} groupRoles glide record
+     */
+    getSyncableGroupsQuery: function () {
+        var groupRolesGR = new GlideRecord('sys_group_has_role');
+        groupRolesGR.addQuery('group.active', 'true');
+        groupRolesGR.addQuery('role.name', 'IN', this.config.SYNCABLEROLES.join());
+        groupRolesGR.orderBy('group.name');
+        return groupRolesGR;
+    },
+
+    /**
      * Get a list of syncable groups
      *
      * @returns {Array}
@@ -179,10 +194,7 @@ xMattersGroupCollection.prototype = {
 
         var syncableGroups = [];
 
-        var grGroupRoles = new GlideRecord('sys_group_has_role');
-        grGroupRoles.addQuery('group.active', 'true');
-        grGroupRoles.addQuery('role.name', 'IN', this.config.SYNCABLEROLES.join());
-        grGroupRoles.orderBy('group.name');
+        var grGroupRoles = this.getSyncableGroupsQuery();
         grGroupRoles.query();
 
         while (grGroupRoles.next()) {
@@ -206,13 +218,13 @@ xMattersGroupCollection.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-07-11 17:31:13</sys_created_on>
         <sys_id>a6884c754f2822008472a88ca310c754</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>7</sys_mod_count>
         <sys_name>xMattersGroupCollection</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_a6884c754f2822008472a88ca310c754</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+        <sys_updated_on>2019-04-15 18:10:41</sys_updated_on>
     </sys_script_include>
 </record_update>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties_category">
+    <sys_properties_category action="INSERT_OR_UPDATE">
+        <name>xMAdvancedProperties</name>
+        <sys_class_name>sys_properties_category</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-04-25 15:18:59</sys_created_on>
+        <sys_id>930d0ad1dbc17b0015e1f00ebf96197f</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>xMAdvancedProperties</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_category_930d0ad1dbc17b0015e1f00ebf96197f</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-04-25 15:18:59</sys_updated_on>
+        <title><![CDATA[<p>You probably won&#39;t need to change these System Properties (previously found in the xMattersConfig Script Include), but you might want to change a setting to customize the xMatters ServiceNow Application.</p>]]></title>
+    </sys_properties_category>
+    <sys_translated_text action="delete_multiple" query="documentkey=930d0ad1dbc17b0015e1f00ebf96197f"/>
+</record_update>

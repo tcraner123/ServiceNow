@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<database>
-    <element label="Inform with xMatters" max_length="40" name="x_xma_xmatters_inform_with_xmatters" type="collection">
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element audit="true" label="Inform with xMatters" max_length="40" name="x_xma_xmatters_inform_with_xmatters" type="collection">
         <element label="Business Impact" max_length="2000" name="business_impact" type="string"/>
         <element label="First Reported" max_length="40" name="first_reported" type="glide_date_time"/>
         <element label="Locations" max_length="1000" name="locations" type="string"/>

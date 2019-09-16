@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersTask</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description>Business level object to deal with sending tasks to the xMattersRESTHelper.sendAddTaskRESTMessage.</description>
         <name>xMattersTask</name>
@@ -112,10 +112,91 @@ xMattersTask.prototype = {
         try {
             var xMEvent = new xMattersEvent(this.config, this.dataHelper, this.log.getLogTraceId());
             xMEvent.terminateEvents('task_number', String(rec.number));
-            return "[xMatters] - Terminated existing events for this Incident";
+            return "[xMatters] - Terminated existing events for this Engage with xMatters request.";
 
         } catch (e) {
             return "[xMatters] - Termination of events failed: " + this.json.encode(e);
+        }
+    },
+
+    /**
+     * Handles task action(s)
+     * @param record current record
+     * @param parms an object describing actions to be performed
+     */
+    handleTaskAction: function (record, parms) {
+        var LOG_PREFIX = 'handleTaskAction: ';
+        try {
+            this.log.debug(LOG_PREFIX + 'Task ' + record.number + ' with parameters ' + this.json.encode(parms));
+            var notes = [];
+            if (parms.terminate) {
+                this.log.debug(LOG_PREFIX + 'In terminate event!');
+                notes.push(this.deleteTask(record, parms.triggerRule));
+            }
+            if (parms.sendEvent) {
+                this.log.debug(LOG_PREFIX + 'In send event!');
+                notes.push(this.addTask(record, parms.triggerRule));
+            }
+            this.log.debug(LOG_PREFIX + 'Notes: ' + notes);
+
+            // create the final work notes if the notes array has items to be added to the work notes
+            if (notes.length > 0) {
+                record.work_notes = notes.join("\n");
+                record.update();
+            }
+        } catch (e) {
+            this.log.logException('handleIncidentAction', e);
+            throw e;
+        }
+    },
+    /**
+     * The xM Task Terminate Business Rule should only run on task "Update"s
+     * @param  {GlideRecord} current the "current" engageTask glide record
+     * @param  {GlideRecord} prev the "previous" engageTask glide record
+     * @return {Boolean}     Whether or not the Business Rule should fire
+     */
+    isUpdateValid: function (current, prev) {
+        var shouldRun = false;
+        var reason = '';
+        if (!this.config.ENGAGE.ENABLED) {
+            reason = 'Engage with xMatters feature is disabled';
+        } else {
+            if (current.active.changesTo(false)) {
+                shouldRun = true;
+            }
+            reason = 'No update criteria were met.';
+        }
+        if (!shouldRun) {
+            this.log.debug('shouldUpdate: Bypassing Task Terminate Business Rule | Reason: ' + reason);
+        }
+        return shouldRun;
+    },
+    /**
+     * When a Task changes to an inactive state, attempt to terminate related xM events
+     * @param {*} current the "current" engageTask glide record
+     * @returns {void}
+     */
+    afterUpdate: function (current) {
+        var LOG_PREFIX = 'afterUpdate: ';
+        var timer = this.log.timer();
+        try {
+            if (current.active.changesTo(false)) {
+                this.log.debug(LOG_PREFIX + 'Task has changed to an "inactive" state');
+                // The Engage inserted script action has been modified to handle both inserts and updates
+                // it was not renamed in order to limit the amount of possible conflicts for customers
+                // migrating to the new version.
+                var eventName = 'x_xma_xmatters.engage.inserted';
+                var parms = {
+                    'sendEvent': false,
+                    'terminate': true,
+                    'triggerRule': 'Inactive'
+                };
+                gs.eventQueue(eventName, current, new global.JSON().encode(parms), 'terminateEvent');
+            }
+            this.log.info(LOG_PREFIX + 'Task Business Rule finished (' + this.log.timer(timer) + 'ms elapsed)');
+        } catch (e) {
+            this.log.logException('', e);
+            throw e;
         }
     }
 };
@@ -124,13 +205,13 @@ xMattersTask.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2015-02-09 19:57:33</sys_created_on>
         <sys_id>38d205cb7b02f1008e0b707d784d4dad</sys_id>
-        <sys_mod_count>41</sys_mod_count>
+        <sys_mod_count>42</sys_mod_count>
         <sys_name>xMattersTask</sys_name>
         <sys_package display_value="Global" source="global">global</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_38d205cb7b02f1008e0b707d784d4dad</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-06 19:35:58</sys_updated_on>
+        <sys_updated_on>2019-08-21 21:28:25</sys_updated_on>
     </sys_script_include>
 </record_update>

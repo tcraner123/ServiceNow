@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element label="xMatters Event Log" max_length="40" name="x_xma_xmatters_xmatters_event_log" type="collection">
+        <element attributes="edge_encryption_enabled=true" label="Assigned to" max_length="32" name="u_assigned_to" reference="sys_user" type="reference"/>
+        <element attributes="edge_encryption_enabled=true" label="Assignment group" max_length="32" name="u_assignment_group" reference="sys_user_group" type="reference"/>
+        <element label="Comment" max_length="256" name="u_comment" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Date" max_length="40" name="u_date" type="glide_date_time"/>
+        <element label="Delivery event type" max_length="256" name="u_delivery_event_type" type="string"/>
+        <element label="Delivery message" max_length="256" name="u_delivery_message" type="string"/>
+        <element label="Device" max_length="40" name="u_device" type="string"/>
+        <element label="Device delivery status" max_length="40" name="u_device_delivery_status" type="string"/>
+        <element label="Device ID" max_length="32" name="u_device_id" type="string"/>
+        <element label="Event ID" max_length="40" name="u_event_id" type="string"/>
+        <element label="Event status" max_length="40" name="u_event_status" type="string"/>
+        <element label="Event update type" max_length="40" name="u_event_update_type" type="string"/>
+        <element label="Form type" max_length="40" name="u_formtype" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Incident" max_length="32" name="u_incident_nbr" reference="incident" type="reference"/>
+        <element attributes="edge_encryption_enabled=true" label="Incident sys ID" max_length="32" name="u_incident_sys_id" reference="incident" type="reference"/>
+        <element attributes="edge_encryption_enabled=true" label="Recipient" max_length="32" name="u_recipient" reference="sys_user" type="reference"/>
+        <element label="Response" max_length="40" name="u_response" type="string"/>
+        <index name="index">
+            <element name="u_assigned_to"/>
+        </index>
+        <index name="index2">
+            <element name="u_incident_sys_id"/>
+        </index>
+        <index name="index3">
+            <element name="u_recipient"/>
+        </index>
+        <index name="index4">
+            <element name="u_assignment_group"/>
+        </index>
+        <index name="index5">
+            <element name="u_incident_nbr"/>
+        </index>
+    </element>
+</database>

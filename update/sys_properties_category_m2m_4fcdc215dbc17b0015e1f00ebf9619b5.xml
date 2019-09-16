@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties_category_m2m">
+    <sys_properties_category_m2m action="INSERT_OR_UPDATE">
+        <category display_value="xMAdvancedProperties">930d0ad1dbc17b0015e1f00ebf96197f</category>
+        <order>2700</order>
+        <property display_value="x_xma_xmatters.xmatters.sync.calls.maxperprocess" name="x_xma_xmatters.xmatters.sync.calls.maxperprocess">c54cee03dbb0770015e1f00ebf9619a5</property>
+        <sys_class_name>sys_properties_category_m2m</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2019-04-25 15:22:02</sys_created_on>
+        <sys_id>4fcdc215dbc17b0015e1f00ebf9619b5</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.sync.calls.maxperprocess.xMAdvancedProperties</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_properties_category_m2m_4fcdc215dbc17b0015e1f00ebf9619b5</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-08-21 21:20:52</sys_updated_on>
+    </sys_properties_category_m2m>
+</record_update>

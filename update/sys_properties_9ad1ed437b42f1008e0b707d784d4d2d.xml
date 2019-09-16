@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>This field holds a list of xMatters userID's separated by ";".  This field is used in combination with the "xmatters.user.sync.exclude.list.boolean".  If the boolean is set to be true the list will be used as a exclude list when synchronizing users into xMatters excluding all users in the list.  If it is set to false the list will be used as a include list to only allow those users to be synchronized into xMatters.</description>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update sys_domain="global" table="sys_ui_module">
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_ui_module">
     <sys_ui_module action="INSERT_OR_UPDATE">
         <active>true</active>
         <application display_value="Integration - xMatters">8f5307a2dbd1b200a34fd421cf9619f1</application>
@@ -13,7 +12,7 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-03-07 17:59:31</sys_created_on>
         <sys_domain>global</sys_domain>
-        <sys_domain_path>/</sys_domain_path>
+        <sys_domain_path/>
         <sys_id>875307a2dbd1b200a34fd421cf9619f2</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_name>Inform with xMatters</sys_name>

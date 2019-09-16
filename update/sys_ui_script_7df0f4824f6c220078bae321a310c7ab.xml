@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_script">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
     <sys_ui_script action="INSERT_OR_UPDATE">
         <active>true</active>
         <description/>
@@ -126,6 +125,7 @@ angular.module('xm.property-config').value( 'propertyConfig', {
         <sys_update_name>sys_ui_script_7df0f4824f6c220078bae321a310c7ab</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2016-11-18 00:12:26</sys_updated_on>
+        <ui_type>0</ui_type>
         <use_scoped_format>false</use_scoped_format>
     </sys_ui_script>
 </record_update>

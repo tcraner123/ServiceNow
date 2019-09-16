@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update sys_domain="global" table="sysevent_script_action">
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sysevent_script_action">
     <sysevent_script_action action="INSERT_OR_UPDATE">
         <active>true</active>
         <condition_script/>
@@ -10,35 +9,21 @@
         <script><![CDATA[gs.include("xMattersTask");
 gs.include("xMattersLogger");
 
+// The Engage inserted script action has been modified to handle both inserts and updates
+// it was not renamed in order to limit the amount of possible conflicts for customers
+// migrating to the new version.
+// Logic is based on the properties given to event.parm1 object, and implemented in xMattersTask handleTaskAction
 var appPrefix = gs.getCurrentScopeName();
-var log = new xMattersLogger(gs.getProperty(appPrefix + '.' + "xmatters.logging.level"), 'Script Action Engage Inserted' );
+var log = new xMattersLogger(gs.getProperty(appPrefix + '.' + "xmatters.logging.level"), 'Script Action Engage Inserted');
 
-if ( !gs.nil( event.parm1 ) &&  event.parm2.toString() == "taskInsert" ) {
-	log.debug("Entering script action with parm1: " + event.parm1.toString() );
-	handleTaskInsert();
+if (!gs.nil(event.parm1) &&
+	!gs.nil(event.parm2) && (
+		event.parm2.toString() == 'taskInsert' || event.parm2.toString() == 'terminateEvent'
+	)) {
+	log.debug('Entering script action with parm1: ' + event.parm1.toString());
+	new xMattersTask().handleTaskAction(current, new global.JSON().decode(event.parm1));
 } else {
 	log.debug("Entering xMatters Engage Inserted script action with null/empty parm1");
-}
-
-function handleTaskInsert() {
-	
-	var xmTask = new xMattersTask();
-	var json   = new global.JSON();
-	var parms  = json.decode( event.parm1 );
-	var notes = [];
-	
-	if( parms.sendEvent ) {
-		notes.push( xmTask.addTask( current, parms.triggerRule ) );
-        log.debug( 'Engage Notes1: ' + notes );
-	}
-	
-	log.debug( 'Engage Notes: ' + notes );
-	
-	// create the final work notes if the notes array has items to be added to the work notes
-	if (notes.length > 0) {
-		current.work_notes = notes.join("\n");
-		current.update();
-	}
 }
 ]]></script>
         <synchronous>false</synchronous>
@@ -48,7 +33,7 @@ function handleTaskInsert() {
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>989731484ffe42008472a88ca310c7cf</sys_id>
-        <sys_mod_count>8</sys_mod_count>
+        <sys_mod_count>9</sys_mod_count>
         <sys_name>xMatters Engage Inserted</sys_name>
         <sys_overrides/>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
@@ -56,6 +41,6 @@ function handleTaskInsert() {
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sysevent_script_action_989731484ffe42008472a88ca310c7cf</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2016-07-11 17:15:40</sys_updated_on>
+        <sys_updated_on>2019-08-21 21:30:58</sys_updated_on>
     </sysevent_script_action>
 </record_update>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Enable Dynamic Sync: When selected, the integration will dynamically sync users, groups, and group memberships to xMatters whenever they are changed in ServiceNow.</description>
@@ -19,7 +18,7 @@
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_34d0e5437b42f1008e0b707d784d4d9b</sys_update_name>
         <sys_updated_by>tcrane</sys_updated_by>
-        <sys_updated_on>2018-06-21 16:11:51</sys_updated_on>
+        <sys_updated_on>2018-08-31 20:42:09</sys_updated_on>
         <type>boolean</type>
         <value>true</value>
         <write_roles/>

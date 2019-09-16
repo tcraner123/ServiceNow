@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersPerson</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <name>xMattersPerson</name>
@@ -14,6 +14,7 @@ gs.include('xMattersDataHelper');
 gs.include('xMattersDevice');
 gs.include('xMattersGroupCollection');
 gs.include('xMattersSite');
+gs.include('xMattersUtil');
 
 
 /**
@@ -64,6 +65,7 @@ xMattersPerson.prototype = {
         } else {
             this.dataHelper = new xMattersDataHelper(config, this.log.getLogTraceId());
         }
+        this.util = new xMattersUtil();
     },
 
     /**
@@ -126,7 +128,7 @@ xMattersPerson.prototype = {
 			worker.putMethodArg('parentLogTraceId', parentLogTraceId);
 			worker.start();
 
-			return worker.getProgressID();	
+			return worker.getProgressID();
 		} else {
 			var xde = new xMattersDataEvent(this.config, parentLogTraceId);
 			xde.queueRemovePersonEvent(userRec, username);
@@ -383,35 +385,39 @@ xMattersPerson.prototype = {
         }
 
         // set any received roles in format supported in POST
-        user.roles = formatReceivedRoles(user.roles);
-
-        // determine if we need to set them as a group supervisor
-        if (username == this.config.DEFAULTSUPERVISOR) {
-            this.log.debug('buildPersonObject: ' + username + ' is the default supervisor. Adding ' + this.config.ROLE_GROUP_SUPERVISOR + ' role.');
-            user.roles.push(this.config.ROLE_GROUP_SUPERVISOR);
-
-        } else if (this.isManagerOfSyncableGroup(userRec.sys_id)) {
-            this.log.debug('buildPersonObject: ' + username + ' is the manager of a syncable group. Adding ' + this.config.ROLE_GROUP_SUPERVISOR + ' role.');
-            user.roles.push(this.config.ROLE_GROUP_SUPERVISOR);
-
-        } else {
-            this.log.debug(username + ' is neither the manager of a syncable group nor the default supervisor');
-        }
-
-        // determine if we need to set them as a person supervisor
-        if (username == this.config.DEFAULTSUPERVISOR) {
-            this.log.debug('buildPersonObject: ' + username + ' is the default supervisor. Adding ' + this.config.ROLE_PERSON_SUPERVISOR + ' role.');
-            user.roles.push(this.config.ROLE_PERSON_SUPERVISOR);
-
-        } else if (this.isManagerOfSyncableUser(userRec.sys_id)) {
-            this.log.debug('buildPersonObject: ' + username + ' is the manager of a syncable user. Adding ' + this.config.ROLE_PERSON_SUPERVISOR + ' role.');
-            user.roles.push(this.config.ROLE_PERSON_SUPERVISOR);
-
-        } else {
-            this.log.debug('buildPersonObject: ' + username + ' is neither the manager of a syncable user nor the default supervisor');
-        }
+        user.roles = user.roles ? formatReceivedRoles(user.roles) : [];
 
         var arrUtil = new global.ArrayUtil();
+        // First, check if the user is already flagged as a group or person supervisor in xMatters
+        var hasGroupSupervisorRoleInXM = arrUtil.contains(user.roles, this.config.ROLE_GROUP_SUPERVISOR);
+        var hasPersonSupervisorRoleInXM = arrUtil.contains(user.roles, this.config.ROLE_PERSON_SUPERVISOR);
+
+        // determine if user being sync'ed should be set as a group supervisor
+        if (!hasGroupSupervisorRoleInXM) {
+          if (username === this.config.DEFAULTSUPERVISOR) {
+            this.log.debug('buildPersonObject: ' + username + ' is the default supervisor. Adding ' + this.config.ROLE_GROUP_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_GROUP_SUPERVISOR);
+          } else if (this.isManagerOfSyncableGroup(userRec.sys_id)) {
+            this.log.debug('buildPersonObject: ' + username + ' is the manager of a syncable group. Adding ' + this.config.ROLE_GROUP_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_GROUP_SUPERVISOR);
+          } else {
+            this.log.debug(username + ' is neither the manager of a syncable group nor the default supervisor');
+          }
+        } 
+
+        // determine if user being sync'ed should be set as a person supervisor in xMatters
+        if (!hasPersonSupervisorRoleInXM) {
+          if (username == this.config.DEFAULTSUPERVISOR) {
+            this.log.debug('buildPersonObject: ' + username + ' is the default supervisor. Adding ' + this.config.ROLE_PERSON_SUPERVISOR + ' role.');
+            user.roles.push(this.config.ROLE_PERSON_SUPERVISOR);
+          } else if (this.isManagerOfSyncableUser(userRec.sys_id)) {
+              this.log.debug('buildPersonObject: ' + username + ' is the manager of a syncable user. Adding ' + this.config.ROLE_PERSON_SUPERVISOR + ' role.');
+              user.roles.push(this.config.ROLE_PERSON_SUPERVISOR);
+          } else {
+              this.log.debug('buildPersonObject: ' + username + ' is neither the manager of a syncable user nor the default supervisor');
+          }
+        }
+
         if (this.config.DEFAULTUSERROLES && this.config.DEFAULTUSERROLES[0] !== '') {
             user.roles = arrUtil.concat(user.roles, this.config.DEFAULTUSERROLES);
         }
@@ -425,16 +431,26 @@ xMattersPerson.prototype = {
             // sync this user's supervisors
             if (!user.supervisors) {
                 user.supervisors = [];
+            } else if (user.supervisors && Array.isArray(user.supervisors.data)) {
+                user.supervisors = this.util.getSupervisorIds(user.supervisors.data);
             }
+
+            var existingSupervisors = {};
+            user.supervisors.forEach(function(id) {
+                existingSupervisors[id] = true;
+            });
 
             var snSupervisors = this.buildSupervisors(userRec, user.id);
             for (var i = 0; i < snSupervisors.length; ++i) {
-                user.supervisors.push(snSupervisors[i].id);
+                var snSuperId = snSupervisors[i].id;
+                if (!existingSupervisors[snSuperId]) {
+                    user.supervisors.push(snSuperId);
+                }
 
                 // if we ended up creating the user as part of building the supervisors
                 // list (i.e. user is own supervisor), update the object with the retrieved ID
                 if (snSupervisors[i].username == username) {
-                    user.id = snSupervisors[i].id;
+                    user.id = snSuperId;
                 }
             }
         }
@@ -506,7 +522,7 @@ xMattersPerson.prototype = {
 
         this.log.debug('buildSupervisors: Supervisors for user: "' + username + '": [' + global.JSON.stringify(debugSupervisors) + ']');
         for (var i = 0; i < supervisorNames.length; ++i) {
-            var supervisorId = this.getSyncableSupervisorId(supervisorNames[i]);
+            var supervisorId = this.getSyncableSupervisorId(supervisorNames[i], true, false);
             if (supervisorId) {
                 supervisors.push({
                     id: supervisorId,
@@ -525,11 +541,11 @@ xMattersPerson.prototype = {
     /**
      * Gets the user from xMatters and returns the Person Object
      *
-     * @param username the is or targetName of the person to retrieve
+     * @param username the id or targetName of the person to retrieve
      * @returns {Object}
      */
     getPersonFromxM: function (username) {
-        var response = this.dataHelper.get('/people/' + encodeURIComponent(username) + '?embed=roles');
+        var response = this.dataHelper.get('/people/' + encodeURIComponent(username), {embed: 'roles,supervisors'});
         if (!this.dataHelper.isSucessfulResponse(response)) {
             if (response.status === 404) {
                 this.log.debug('getPersonFromxM: User: "' + username + '" not found (404)');
@@ -795,8 +811,10 @@ xMattersPerson.prototype = {
                 return true;
             }
 
-            if (!this.hasRole(userRec.sys_id)) {
-                this.log.debug('isRemoveRequired: Removal required for user: "' + username + '" (no syncable role)');
+            if (current.operation() === "delete") {
+                // We cannot validate that it used to have the role, so we must try to delete it
+                // unlike inactive cases or role removal situations
+                this.log.debug('isRemoveRequired: Removal required for user: "' + username + '" (user has been deleted)');
                 return true;
             }
 
@@ -805,7 +823,7 @@ xMattersPerson.prototype = {
 
             username = this.getxMattersUsername(userRoleRec.user);
             if (username.trim() === '') {
-                this.log.debug('isRemoveRequired: User: "' + userRoleRec.user.sys_id +
+                this.log.debug('isRemoveRequired: User: "' + userRoleRec.getValue('user') +
                     '" does not have a ' + this.config.USERNAMEFIELD +
                     ' and cannot be checked for removal');
                 return false;
@@ -816,7 +834,7 @@ xMattersPerson.prototype = {
                 return false;
             }
 
-            if (this.isManagerSyncEnabled() && this.isManagerOfSyncableGroup(userRoleRec.user.sys_id)) {
+            if (this.isManagerSyncEnabled() && this.isManagerOfSyncableGroup(userRoleRec.getValue('user'))) {
                 this.log.debug('isRemoveRequired: Removal not required for user: "' + username + '" (manager of syncable group)');
                 return false;
             }
@@ -1035,7 +1053,7 @@ xMattersPerson.prototype = {
             // check if role we track was added or deleted
             username = this.getxMattersUsername(userRoleRec.user);
             if (username.trim() === '') {
-                this.log.warn('isChanged: User: "' + userRoleRec.user.sys_id + '" has empty ' + this.config.USERNAMEFIELD);
+                this.log.warn('isChanged: User: "' + userRoleRec.getValue('user') + '" has empty ' + this.config.USERNAMEFIELD);
                 return false;
             }
 
@@ -1092,7 +1110,7 @@ xMattersPerson.prototype = {
     /**
      * Determine if we should sync Managers of groups that are syncable even if the
      * user itself is not marked as syncable based on its role
-     * 
+     *
      * @return {Boolean} True, if the feature is enabled and its dependency is also enabled
      */
     isManagerSyncEnabled: function() {
@@ -1107,11 +1125,9 @@ xMattersPerson.prototype = {
      */
     isManagerOfSyncableGroup: function (userSys_ID) {
         var groupCollection = new xMattersGroupCollection(this.config, this.dataHelper, this.log.getLogTraceId());
-        var syncableGroups = groupCollection.getSyncableGroups();
-
-        var groups = new GlideRecord('sys_user_group');
-        groups.addQuery('name', 'IN', syncableGroups.join(','));
-        groups.addQuery('manager', userSys_ID);
+        var groups = groupCollection.getSyncableGroupsQuery(); // Getting the Query here, not its results
+        groups.addQuery('group.manager', userSys_ID);
+        groups.setLimit(1); // if there is 1 match, the query doesn't need to run any longer
         groups.query();
 
         return groups.next();
@@ -1125,11 +1141,9 @@ xMattersPerson.prototype = {
      */
     isManagerOfSyncableUser: function (userSys_ID) {
         var personCollection = new xMattersPersonCollection(this.config, this.dataHelper, this.log.getLogTraceId());
-        var syncableUsers = personCollection.getSyncableUsers();
-
-        var users = new GlideRecord('sys_user');
-        users.addQuery('user_name', 'IN', syncableUsers.join(','));
-        users.addQuery('manager', userSys_ID);
+        var users = personCollection.getSyncableUsersQuery(); // Getting the Query here, not its results
+        users.addQuery('user.manager', userSys_ID); // in addition to the usual criteria, narrow it down to records whose manager is the current user
+        users.setLimit(1); // if there is 1 match, the query doesn't need to run any longer
         users.query();
 
         return users.next();
@@ -1170,19 +1184,16 @@ xMattersPerson.prototype = {
     },
 
     /**
-     * Retrieve and return a supervisor's xMatters ID, if syncable
-     *
-     * To make things a little more efficient for bulk operations,
-     * successful lookups will be cached and the cache-value returned
-     * on subsequent calls.
-     *
-     * TODO: Before attempting a full sync, try just retrieving user with embedded roles.
-     * The supervisor may already have necessary roles and not require updating.
-     *
-     * @param username
-     * @returns {int} supervisor's ID from xMatters
-     */
-    getSyncableSupervisorId: function (username) {
+    * Retrieve and return a supervisor's xMatters ID, if syncable
+    *
+    * To make things a little more efficient for bulk operations,
+    * successful lookups will be cached and the cache-value returned
+    * on subsequent calls.
+    *
+    * @param username
+    * @returns {int} supervisor's ID from xMatters
+    */
+    getSyncableSupervisorId: function (username, requiresPersonSupervisorRole, requiresGroupSupervisorRole) {
         if (!username) {
             return false;
         }
@@ -1201,9 +1212,35 @@ xMattersPerson.prototype = {
                 this.cachedSupervisors[username] = false;
 
             } else {
-                this.log.debug('getSyncableSupervisorId: Syncing supervisor: "' + username + '" to retrieve xMatters ID');
+                var supervisor;
+                var supervisorRequiresSync = false;
+                if (!requiresPersonSupervisorRole && !requiresGroupSupervisorRole) {
+                    // Defaulting to true if the getSyncableSupervisorId FN is called with only username
+                    supervisorRequiresSync = true;
+                } else {
+                    this.log.debug('getSyncableSupervisorId: Checking for supervisor: "' + username + '"');
 
-                var supervisor = this.syncUser(supervisorRec, null, {ignoreSupervisors: true});
+                    supervisor = this.getPersonFromxM(username);
+                    var roles = supervisor ? formatReceivedRoles(supervisor.roles) : [];
+                    var hasPersonSupervisorRole = false;
+                    var hasGroupSupervisorRole = false;
+                    for (var i = 0; i < roles.length; i++) {
+                        if (roles[i] === this.config.ROLE_PERSON_SUPERVISOR) {
+                            hasPersonSupervisorRole = true;
+                        }
+                        if (roles[i] === this.config.ROLE_GROUP_SUPERVISOR) {
+                            hasGroupSupervisorRole = true;
+                        }
+                    }
+                    supervisorRequiresSync = ((requiresPersonSupervisorRole && !hasPersonSupervisorRole)
+                        || (requiresGroupSupervisorRole && !hasGroupSupervisorRole));
+                }
+
+                if (supervisorRequiresSync) {
+                    this.log.debug('getSyncableSupervisorId: Syncing supervisor: "' + username + '" to retrieve xMatters ID');
+                    // this is going to do one extra call for now unless we modify the signature of syncUser to include the xMatters person body
+                    supervisor = this.syncUser(supervisorRec, null, { ignoreSupervisors: true });
+                }
 
                 // store xMatters id in cache (or false if sync failed)
                 if (supervisor !== null) {
@@ -1253,13 +1290,13 @@ xMattersPerson.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-04-26 19:31:51</sys_created_on>
         <sys_id>6188cd114f4312008472a88ca310c7dd</sys_id>
-        <sys_mod_count>80</sys_mod_count>
+        <sys_mod_count>84</sys_mod_count>
         <sys_name>xMattersPerson</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_6188cd114f4312008472a88ca310c7dd</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-04-06 19:35:59</sys_updated_on>
+        <sys_updated_on>2019-04-15 18:10:41</sys_updated_on>
     </sys_script_include>
 </record_update>

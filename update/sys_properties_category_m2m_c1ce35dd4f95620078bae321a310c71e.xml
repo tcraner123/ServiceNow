@@ -1,9 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties_category_m2m">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties_category_m2m">
     <sys_properties_category_m2m action="INSERT_OR_UPDATE">
-        <category display_value="xMSyncProperties">7b7931dd4f95620078bae321a310c7b7</category>
+        <category display_value="xMSyncProperties-DEPRECATED">7b7931dd4f95620078bae321a310c7b7</category>
         <order>700</order>
-        <property display_value="x_xma_xmatters.xmatters.user.sync.language" name="x_xma_xmatters.xmatters.user.sync.language">28e1ed437b42f1008e0b707d784d4d80</property>
+        <property display_value="x_xma_xmatters.xmatters.user.sync.language-DEPRECATED" name="x_xma_xmatters.xmatters.user.sync.language-DEPRECATED">28e1ed437b42f1008e0b707d784d4d80</property>
         <sys_class_name>sys_properties_category_m2m</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-08-16 19:36:17</sys_created_on>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element extends="sys_import_set_row" label="xM Request Temp" max_length="40" name="x_xma_xmatters_xm_request_temp" type="collection">
+        <element label="Request Assigned To" max_length="40" name="u_request_assigned_to" type="string"/>
+        <element label="Request State" max_length="40" name="u_request_state" type="string"/>
+        <element label="Request Sys ID" max_length="40" name="u_request_sys_id" type="string"/>
+        <element label="Request Work Notes" max_length="4000" name="u_request_work_notes" type="journal_input"/>
+    </element>
+</database>

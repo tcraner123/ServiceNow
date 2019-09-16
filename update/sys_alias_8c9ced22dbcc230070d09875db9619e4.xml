@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_alias">
+    <sys_alias action="INSERT_OR_UPDATE">
+        <connection_type>http_connection</connection_type>
+        <id>x_xma_xmatters.Example_Credential</id>
+        <multiple_connections>false</multiple_connections>
+        <name>Example_Credential</name>
+        <retry_policy/>
+        <sys_class_name>sys_alias</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-08-23 20:55:25</sys_created_on>
+        <sys_id>8c9ced22dbcc230070d09875db9619e4</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.Example_Credential</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_alias_8c9ced22dbcc230070d09875db9619e4</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-08-23 20:55:25</sys_updated_on>
+        <type>credential</type>
+    </sys_alias>
+</record_update>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_soap_message_parameters">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_soap_message_parameters">
     <sys_soap_message_parameters action="INSERT_OR_UPDATE">
         <name>deviceName</name>
         <soap_function display_value="AddPhoneDevice">069cf88b7b02f1008e0b707d784d4d3d</soap_function>

@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>false</active>
         <api_name>x_xma_xmatters.xMattersGroupMemberSync-DEPRECATED</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description>Helper class to manage the group member sync process to xMatters.</description>
         <name>xMattersGroupMemberSync-DEPRECATED</name>

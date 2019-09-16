@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_user_role_contains">
+    <sys_user_role_contains action="DELETE">
+        <contains display_value="x_xma_xmatters.xmatters_admin" name="x_xma_xmatters.xmatters_admin">637789de4f7462008472a88ca310c79f</contains>
+        <role display_value="x_xma_xmatters.onewayxmatters" name="x_xma_xmatters.onewayxmatters">6804da6b2fcd73002585f3ecf699b648</role>
+        <sys_class_name>sys_user_role_contains</sys_class_name>
+        <sys_created_by>tcrane</sys_created_by>
+        <sys_created_on>2019-05-02 15:35:57</sys_created_on>
+        <sys_id>a7145e6b2fcd73002585f3ecf699b6a8</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters_admin.x_xma_xmatters.onewayxmatters</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_user_role_contains_a7145e6b2fcd73002585f3ecf699b6a8</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2019-05-02 15:35:57</sys_updated_on>
+    </sys_user_role_contains>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</application>
+        <file_path/>
+        <instance_id>5b7dc9604fed1a0094ac220f0310c7bf</instance_id>
+        <instance_name>dev19431</instance_name>
+        <name>sys_user_role_contains_a7145e6b2fcd73002585f3ecf699b6a8</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_user_role_contains"><sys_user_role_contains action="INSERT_OR_UPDATE"><contains display_value="x_xma_xmatters.xmatters_admin" name="x_xma_xmatters.xmatters_admin">637789de4f7462008472a88ca310c79f</contains><role display_value="x_xma_xmatters.onewayxmatters" name="x_xma_xmatters.onewayxmatters">6804da6b2fcd73002585f3ecf699b648</role><sys_class_name>sys_user_role_contains</sys_class_name><sys_created_by>tcrane</sys_created_by><sys_created_on>2019-05-02 15:35:57</sys_created_on><sys_id>a7145e6b2fcd73002585f3ecf699b6a8</sys_id><sys_mod_count>0</sys_mod_count><sys_name>x_xma_xmatters.xmatters_admin.x_xma_xmatters.onewayxmatters</sys_name><sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package><sys_policy/><sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope><sys_update_name>sys_user_role_contains_a7145e6b2fcd73002585f3ecf699b6a8</sys_update_name><sys_updated_by>tcrane</sys_updated_by><sys_updated_on>2019-05-02 15:35:57</sys_updated_on></sys_user_role_contains></record_update>]]></payload>
+        <payload_hash>162536848</payload_hash>
+        <record_name>x_xma_xmatters.xmatters_admin.x_xma_xmatters.onewayxmatters</record_name>
+        <reverted_from/>
+        <source>8d20d791db25230036e6dd30cf961915</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>tcrane</sys_created_by>
+        <sys_created_on>2019-05-02 15:35:57</sys_created_on>
+        <sys_id>2f145e6b2fcd73002585f3ecf699b6ab</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>16a79301edc0000001</sys_recorded_at>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2019-05-02 15:35:57</sys_updated_on>
+        <type>Contained Role</type>
+        <update_guid>27145e6b5ecd73005b1e63ea97fe66ab</update_guid>
+        <update_guid_history>27145e6b5ecd73005b1e63ea97fe66ab:162536848</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>tcrane</sys_created_by>
+        <sys_created_on>2019-09-09 17:49:25</sys_created_on>
+        <sys_db_object display_value="" name="sys_user_role_contains">sys_user_role_contains</sys_db_object>
+        <sys_id>2d02078b98344fae988e2ffe57b08f24</sys_id>
+        <sys_metadata>a7145e6b2fcd73002585f3ecf699b6a8</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters_admin.x_xma_xmatters.onewayxmatters</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_scope_delete display_value="">5da81dea3aa5421088e88e902f9b0900</sys_scope_delete>
+        <sys_update_name>sys_user_role_contains_a7145e6b2fcd73002585f3ecf699b6a8</sys_update_name>
+        <sys_update_version display_value="sys_user_role_contains_a7145e6b2fcd73002585f3ecf699b6a8">2f145e6b2fcd73002585f3ecf699b6ab</sys_update_version>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2019-09-09 17:49:25</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

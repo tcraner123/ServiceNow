@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<database>
+<?xml version="1.0" encoding="UTF-8"?><database>
     <element audit="true" extends="sys_import_set_row" label="xM Task Temp" max_length="40" name="x_xma_xmatters_xm_task_temp" type="collection">
         <element label="Task Assigned To" max_length="40" name="task_assigned_to" type="string"/>
         <element label="Task State" max_length="40" name="task_state" type="string"/>

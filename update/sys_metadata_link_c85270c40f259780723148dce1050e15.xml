@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_metadata_link">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_metadata_link">
     <sys_metadata_link action="INSERT_OR_UPDATE">
         <directory>update</directory>
         <documentkey>e4f769b10fd95380723148dce1050e46</documentkey>
@@ -12,7 +11,7 @@
         <document/>
         <document_key/>
         <error_count>1</error_count>
-        <job_context>#Thu May 03 14:22:33 PDT 2018
+        <job_context>#Mon Jul 30 17:16:01 PDT 2018
 fcScriptName=javascript\:GlideEventManager('x_xma_xmatters.data_sync.4').process();
 </job_context>
         <job_id display_value="RunScriptJob">81c92ce9c0a8016400e5f0d2f784ea78</job_id>
@@ -21,13 +20,13 @@ fcScriptName=javascript\:GlideEventManager('x_xma_xmatters.data_sync.4').process
         <maintenance>false</maintenance>
         <max_drift/>
         <name>xm.data_processor.4</name>
-        <next_action>2018-05-03 21:22:59</next_action>
+        <next_action>2018-07-31 00:16:29</next_action>
         <parent/>
         <priority>100</priority>
-        <processing_duration>8</processing_duration>
+        <processing_duration>18</processing_duration>
         <repeat>1970-01-01 00:00:30</repeat>
         <rollback_context_id/>
-        <run_count>1112754</run_count>
+        <run_count>1112922</run_count>
         <run_dayofmonth/>
         <run_dayofweek>1</run_dayofweek>
         <run_month>1</run_month>
@@ -38,9 +37,9 @@ fcScriptName=javascript\:GlideEventManager('x_xma_xmatters.data_sync.4').process
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2018-04-06 19:47:00</sys_created_on>
         <sys_id>e4f769b10fd95380723148dce1050e46</sys_id>
-        <sys_mod_count>233858</sys_mod_count>
+        <sys_mod_count>234362</sys_mod_count>
         <sys_updated_by>system</sys_updated_by>
-        <sys_updated_on>2018-05-03 21:22:33</sys_updated_on>
+        <sys_updated_on>2018-07-31 00:16:01</sys_updated_on>
         <system_id/>
         <trigger_class>DEFAULT</trigger_class>
         <trigger_type>10</trigger_type>
@@ -52,14 +51,14 @@ fcScriptName=javascript\:GlideEventManager('x_xma_xmatters.data_sync.4').process
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2018-04-13 15:39:00</sys_created_on>
         <sys_id>c85270c40f259780723148dce1050e15</sys_id>
-        <sys_mod_count>5</sys_mod_count>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>xm.data_processor.4</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_metadata_link_c85270c40f259780723148dce1050e15</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2018-05-03 21:22:57</sys_updated_on>
+        <sys_updated_on>2018-07-31 00:16:14</sys_updated_on>
         <tablename>sys_trigger</tablename>
     </sys_metadata_link>
 </record_update>

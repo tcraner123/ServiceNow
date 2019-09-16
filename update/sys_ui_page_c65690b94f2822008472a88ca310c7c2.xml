@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_ui_page">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
     <sys_ui_page action="INSERT_OR_UPDATE">
         <category>general</category>
         <client_script/>
@@ -7,7 +6,7 @@
         <direct>false</direct>
         <endpoint>x_xma_xmatters_xm_engage_with_xmatters_content.do</endpoint>
         <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
-<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<j:jelly xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null" trim="false">
 <script src="x_xma_xmatters.angular.min.jsdbx"></script>
 <script src="x_xma_xmatters.angular-ui-bootstrap.min.jsdbx"></script>
 <script src="x_xma_xmatters.xm_app_engage_xmatters.jsdbx"></script>
@@ -17,7 +16,6 @@
 <script src="x_xma_xmatters.xm_mod_location_service.jsdbx"></script>
 <script src="x_xma_xmatters.xm_mod_options_provider.jsdbx"></script>
 <script src="x_xma_xmatters.ng-tags-input.min.jsdbx"></script>
-<script src="x_xma_xmatters.xm_recipient_template.jsdbx"></script>
 <script src="x_xma_xmatters.moment.min.jsdbx"></script>
 <link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css" rel="stylesheet"></link>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"></link>
@@ -38,7 +36,7 @@
 	}
 	a.xm-help {
 		margin-left: 5px;
-		display: inline-block !important;	
+		display: inline-block !important;
 	}
 	.ng-dirty .tags {
 		/**border-color: orange; **/
@@ -71,7 +69,7 @@
 	.xm-input-group-btn {
 		background-color: #f6f6f6;
 		border: solid 1px #cccccc;
-		width: 106px;
+		width: 106px !important;
 	}
 	.xm-left {
 	     float: left;
@@ -87,19 +85,19 @@
 	   font-size: 13px;
 	}
 	.xm-btn-default, .xm-btn-default:focus, .xm-btn-default:hover {
-	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
 	    color: #343d47;
 	    background-color: rgba(255, 255, 255, 0.45);
 	    border-color: #bdc0c4;
 	}
 	tags-input .tags .tag-item {
-	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
 	}
 	tags-input .tags .input {
-	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
 	}
 	tags-input .autocomplete .suggestion-item {
-	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;   
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
 	}
 	h4.xm-header {
 	     font-size: 21px;
@@ -127,6 +125,18 @@
 	.xm-cancel-button {
 		margin-left: 15px;
 	}
+    .compact tags-input .tags .input {
+        height: 16px;
+        font-size: 12px;
+    }
+	.compact tags-input .tags .tag-item {
+		height: 16px;
+		line-height: 15px;
+		font-size: 12px;
+	}
+	.compact .form-control-feedback {
+		line-height: 25px;
+	}
 </style>
 <div id="engage" ng-app="xm.engage-xm" class="container-fluid" ng-cloak="">
 	<div ng-controller="engageCtlr">
@@ -152,7 +162,7 @@
 							</ul>
 						</span>
 						<tags-input ng-model="recipients" id="recipients" name="recipients" required="required" template="x_xma_xmatters_xm_engage_recipient_template.do?sysparm_nostack=true">
-							<auto-complete source="activeRecipientType.typeahead($query)"></auto-complete>
+							<auto-complete source="activeRecipientType.typeahead($query)" max-results-to-show="200"></auto-complete>
 						</tags-input>
 					</div>
 					<span class="form-control-feedback xm-tag-feedback" ng-show="xm_search_state.isSearching">
@@ -187,7 +197,7 @@
 							<option ng-repeat="bridgeOpt in external_conference_bridge_options" value="{{bridgeOpt.value}}">{{ bridgeOpt.label | translate }}</option>
 						</optgroup>
 					</select>
-				</div>
+				</div> 
 			</div>
 			<div class="row">
 				<div class="form-group col-md-12" ng-class="engageXMForm.subject.$error.required ? 'is-required' : 'is-filled'">
@@ -217,7 +227,7 @@
 					<button class="btn btn-default xm-btn-default xm-cancel-button" type="button" ng-click="cancel()">{{ 'ENGAGE_XM.BUTTON.CANCEL' | translate }}</button>
 					<span class="pull-right"><button type="button" class="btn btn-default xm-btn-default" ng-disabled="!hasRelatedServices" ng-click="addCiGroups()">{{ 'ENGAGE_XM.BUTTON.ADD_CI_GROUPS' | translate }}</button></span>
 				</div>
-			</div>
+			</div> 
 		</form>
 		</div>
 		<div class="panel" ng-if="is_finished">
@@ -238,13 +248,13 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-07-11 18:30:00</sys_created_on>
         <sys_id>c65690b94f2822008472a88ca310c7c2</sys_id>
-        <sys_mod_count>11</sys_mod_count>
+        <sys_mod_count>15</sys_mod_count>
         <sys_name>xm_engage_with_xmatters_content</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_ui_page_c65690b94f2822008472a88ca310c7c2</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-11-06 15:51:49</sys_updated_on>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2019-09-16 14:43:07</sys_updated_on>
     </sys_ui_page>
 </record_update>

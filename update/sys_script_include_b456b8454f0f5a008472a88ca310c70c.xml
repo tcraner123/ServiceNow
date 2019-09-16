@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_script_include">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
         <api_name>x_xma_xmatters.xMattersDataHelper</api_name>
+        <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <name>xMattersDataHelper</name>
@@ -32,6 +32,7 @@ xMattersDataHelper.prototype = {
         this.baseURL = this.config.XMAPI.baseURL;
         this.username = this.config.XMAPI.user;
         this.password = this.config.XMAPI.password;
+        this.requestTimeoutSeconds = this.config.REST_REQUEST_TIMEOUT_SECONDS;
 
         this.callCount = 0;
     },
@@ -128,6 +129,10 @@ xMattersDataHelper.prototype = {
         var password = ( opts.password ? opts.password : this.password );
         // Allow override for integration urls
         var endpoint = (opts.endpoint ? opts.endpoint : hostname + opts.path);
+        
+        // Allow override of timeout
+        var requestTimeoutSeconds = ( opts.timeoutSeconds ? opts.timeoutSeconds : this.requestTimeoutSeconds );
+        
 
         // Build the RESTMessage.
         var restMessage = new sn_ws.RESTMessageV2();
@@ -135,6 +140,10 @@ xMattersDataHelper.prototype = {
         // method enums are defined in lowercase
         restMessage.setHttpMethod(opts.method.toLowerCase());
         restMessage.setEndpoint(endpoint);
+        
+        if (requestTimeoutSeconds && !isNaN(requestTimeoutSeconds)) {
+            restMessage.setHttpTimeout(requestTimeoutSeconds * 1000);
+        }
 
         debugDetails.push('Method: ' + opts.method.toUpperCase());
         debugDetails.push('Endpoint: ' + endpoint);
@@ -148,6 +157,7 @@ xMattersDataHelper.prototype = {
         if (this.config.MID_SERVER_ENABLED) {
             debugDetails.push('MID Server: ' + this.config.MID_SERVER_NAME);
             restMessage.setMIDServer(this.config.MID_SERVER_NAME);
+            restMessage.setEccParameter('skip_sensor', true);
         }
 
         if (opts.headers) {
@@ -169,6 +179,7 @@ xMattersDataHelper.prototype = {
         // If there is a body, check to see if it
         // needs stringifying, otherwise, just add it.
         if (opts.body) {
+            var body;
             if (typeof opts.body == 'object') {
                 body = new global.JSON().encode(opts.body);
             }
@@ -181,11 +192,23 @@ xMattersDataHelper.prototype = {
         this.callCount++;
 
         var status = response.getStatusCode();
-        var responseBody = response.haveError() ? response.getErrorMessage() + ' => ' : '';
-        responseBody += response.getBody();
-        debugDetails.push('Response: ' + response.getBody());
 
-        var resp = {"status": status, "body": responseBody, "respData": response.getBody()};
+        var responseBody = response.getBody();
+        if (response.haveError()) {
+          responseBody = response.getErrorMessage();
+          if (response.getBody()) {
+            responseBody += ' => ' + response.getBody();
+          }
+        }
+        debugDetails.push('Response: ' + responseBody);
+
+        var resp = {
+            "status": status,
+            "body": responseBody,
+            "respData": response.getBody(),
+            "error": response.haveError() ? response.getErrorMessage() : ''
+        };
+
 
         this.log.debug('sendRequest: ' + opts.method.toUpperCase() + ' ' + endpoint +
             (requestAttempt > 1 ? ' (requestAttempt=' + requestAttempt + ')' : '') +
@@ -299,14 +322,17 @@ xMattersDataHelper.prototype = {
     formatErrorMessage: function (response) {
         var decodedResponse = new global.JSON().decode(response.respData);
         var message = response.status;
-        if (decodedResponse.reason) {
-            message += ' ' + decodedResponse.reason;
+        if (decodedResponse) {
+            if (decodedResponse.reason) {
+                message += ' ' + decodedResponse.reason;
+            }
+            if (decodedResponse.message) {
+                message += ': ' + decodedResponse.message;
+            }
+        } else if (response.error) {
+            message = response.error;
         }
-        if (decodedResponse.message) {
-            message += ': ' + decodedResponse.message;
-        }
-
-        return '> ' + message;
+        return message ? '> ' + message : '';
     },
 
     type: 'xMattersDataHelper'
@@ -316,13 +342,13 @@ xMattersDataHelper.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2016-04-25 23:35:43</sys_created_on>
         <sys_id>b456b8454f0f5a008472a88ca310c70c</sys_id>
-        <sys_mod_count>24</sys_mod_count>
+        <sys_mod_count>26</sys_mod_count>
         <sys_name>xMattersDataHelper</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_script_include_b456b8454f0f5a008472a88ca310c70c</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-08-21 17:45:50</sys_updated_on>
+        <sys_updated_on>2019-08-21 21:28:04</sys_updated_on>
     </sys_script_include>
 </record_update>

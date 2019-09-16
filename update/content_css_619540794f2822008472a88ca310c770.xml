@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="content_css">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="content_css">
     <content_css action="INSERT_OR_UPDATE">
         <name>xm_config_css</name>
         <style>body {

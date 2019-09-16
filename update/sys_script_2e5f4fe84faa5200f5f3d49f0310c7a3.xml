@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script">
+    <sys_script action="INSERT_OR_UPDATE">
+        <abort_action>false</abort_action>
+        <access>package_private</access>
+        <action_delete>false</action_delete>
+        <action_insert>false</action_insert>
+        <action_query>false</action_query>
+        <action_update>true</action_update>
+        <active>true</active>
+        <add_message>false</add_message>
+        <advanced>true</advanced>
+        <change_fields>false</change_fields>
+        <client_callable>false</client_callable>
+        <collection>sc_task</collection>
+        <condition/>
+        <description>Creates notification when request task is updated</description>
+        <execute_function>true</execute_function>
+        <filter_condition/>
+        <is_rest>false</is_rest>
+        <message/>
+        <name>xMatters request events update</name>
+        <order>999</order>
+        <priority>100</priority>
+        <rest_method/>
+        <rest_method_text/>
+        <rest_service/>
+        <rest_service_text/>
+        <rest_variables/>
+        <role_conditions/>
+        <script><![CDATA[function onAfter(current, previous) {
+	
+	//This function will be automatically called when this rule is processed.
+	gs.include("xMattersRequest2");
+	gs.include("xMattersLogger");
+	
+	var appPrefix = gs.getCurrentScopeName();
+	var log = new xMattersLogger(gs.getProperty(appPrefix + '.' + "xmatters.logging.level"));
+	var json = new global.JSON();
+	var parms = null;
+	
+	var eventName = 'x_xma_xmatters.request.action';
+	
+	log.debug("xM SA - Priorities found/matched");
+	
+	var activeRequest = (current.state <= 2);
+	if ( activeRequest )
+		{
+		log.debug("xM SA - Active request: ");
+		/*if ((previous.state > 2) && (current.state <= 2))
+			{
+			log.debug("xM SA - Scenario Reopened");
+			parms = {
+				"terminate": true,
+				"sendEvent": true,
+				"triggerRule": "Reopened",
+				"userName": gs.getUserName()
+			};
+			
+		}*/
+		if (!current.assigned_to.nil() && (current.assigned_to.changes()) && (current.updated_by != "smxmatters") && (current.updated_by != "system") && (current.assigned_to.getDisplayValue() != gs.getUserDisplayName()))
+			
+		{
+			log.debug("xM SA - Scenario Reassigned to User");
+			
+			parms = {
+				"terminate": false,
+				"sendEvent": true,
+				"triggerRule": "Assigned to",
+				"userName": gs.getUserName()
+			};
+			
+			log.debug("Sending Assignment notification");
+		}
+		else if (!current.assignment_group.nil() && (previous.assignment_group != "") && ((current.assignment_group.changes() && current.assigned_to == "") || (current.assigned_to.changes() && current.assigned_to == "")))
+			{
+			log.debug("xM SA - Reassigned to Group");
+			log.debug("Sending Group Assignment notification");
+			
+			parms = {
+				"terminate": false,
+				"sendEvent": true,
+				"triggerRule": "Group",
+				"userName": gs.getUserName()
+			};
+			
+		}
+		
+	} // End if active request
+		
+	/*else // this will never work because tasks are never reopened. We can add this code to active tickets if we need to terminate events as they work the ticket in SN instead of acking in XM
+		{
+		log.debug("xM SA - Not active Request");
+		if (current.state.changes())
+			{
+			log.debug("xM SA - Inactive Request");
+			parms = {
+				"terminate": false,
+				"sendEvent": false,
+				"triggerRule": "Delete Inactive",
+				"userName": gs.getUserName()
+			};
+			
+		}
+		
+	} // End non active request
+	*/
+	if( parms != null ) {
+		log.debug("Queuing event from request update business rule, parms: " + json.encode( parms ) );
+		gs.eventQueue( getEventName( current.number, eventName ), current, json.encode( parms ), 'requestUpdate');
+	}
+}
+
+
+
+function getEventName( number, eventBase ) {
+	
+	number = String( number );
+	var last = number.slice( number.length-1 );
+	
+	map = {
+		"0": "A", "1": "A",
+		"2": "A", "3": "B",
+		"4": "B", "5": "B",
+		"6": "C", "7": "C",
+		"8": "C", "9": "C"
+	};
+	
+	return eventBase + '.' + map[ last ];
+}
+]]></script>
+        <sys_class_name>sys_script</sys_class_name>
+        <sys_created_by>kakey</sys_created_by>
+        <sys_created_on>2016-03-31 00:43:32</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>2e5f4fe84faa5200f5f3d49f0310c7a3</sys_id>
+        <sys_mod_count>22</sys_mod_count>
+        <sys_name>xMatters request events update</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_script_2e5f4fe84faa5200f5f3d49f0310c7a3</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2018-11-08 03:53:57</sys_updated_on>
+        <template/>
+        <when>after</when>
+    </sys_script>
+    <sys_translated_text action="delete_multiple" query="documentkey=2e5f4fe84faa5200f5f3d49f0310c7a3"/>
+</record_update>

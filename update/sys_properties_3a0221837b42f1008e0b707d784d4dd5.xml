@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>Phone Expression: specifies the regular expression used to parse a phone number. The default regular expression is the standard format for North American numbers in a ten-digit format (area code plus seven-digit phone number), followed by an extension.</description>

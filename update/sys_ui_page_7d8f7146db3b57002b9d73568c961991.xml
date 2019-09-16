@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description/>
+        <direct>false</direct>
+        <endpoint>x_xma_xmatters_xm_contact_support.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly xmlns:j="jelly:core"
+	xmlns:g="glide"
+	xmlns:j2="null"
+	xmlns:g2="null"
+	trim="false">
+	<div class="container">
+		<h1>
+			Contact xMatters Support
+		</h1>
+		<div class="container">
+			<table class="table-sm table-responsive borderless">
+				<tr>
+					<td>
+						<h4>
+							Need some help with your xMatters integration? Visit our support site for the latest news and product updates, helpful articles, and additional documentation, or to contact our Client Assistance team. <br/>
+							Join the community at&#160;<a rel="noopener noreferrer nofollow" target="_blank" href="https://support.xmatters.com">https://support.xmatters.com</a>
+						</h4>
+					</td>
+				</tr>
+			</table>
+		</div>
+	</div>
+</j:jelly>]]></html>
+        <name>xm_contact_support</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-08-09 22:45:42</sys_created_on>
+        <sys_id>7d8f7146db3b57002b9d73568c961991</sys_id>
+        <sys_mod_count>13</sys_mod_count>
+        <sys_name>xm_contact_support</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_ui_page_7d8f7146db3b57002b9d73568c961991</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2019-04-15 18:10:41</sys_updated_on>
+    </sys_ui_page>
+</record_update>

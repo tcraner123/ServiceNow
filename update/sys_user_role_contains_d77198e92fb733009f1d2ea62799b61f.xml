@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_user_role_contains">
+    <sys_user_role_contains action="INSERT_OR_UPDATE">
+        <contains display_value="x_xma_xmatters.xmatters" name="x_xma_xmatters.xmatters">5746ded44f7ca20078bae321a310c75b</contains>
+        <role display_value="x_xma_xmatters.bcm" name="x_xma_xmatters.bcm">8ab31fe72f9333009f1d2ea62799b6ac</role>
+        <sys_class_name>sys_user_role_contains</sys_class_name>
+        <sys_created_by>tcrane</sys_created_by>
+        <sys_created_on>2019-09-09 17:50:03</sys_created_on>
+        <sys_id>d77198e92fb733009f1d2ea62799b61f</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.xmatters.x_xma_xmatters.bcm</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sys_user_role_contains_d77198e92fb733009f1d2ea62799b61f</sys_update_name>
+        <sys_updated_by>tcrane</sys_updated_by>
+        <sys_updated_on>2019-09-09 17:50:03</sys_updated_on>
+    </sys_user_role_contains>
+</record_update>

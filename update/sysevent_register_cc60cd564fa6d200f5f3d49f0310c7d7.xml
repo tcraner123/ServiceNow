@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sysevent_register">
+    <sysevent_register action="INSERT_OR_UPDATE">
+        <caller_access/>
+        <description>Used for Requests ending in 0, 1 or 2</description>
+        <event_name>x_xma_xmatters.request.action.A</event_name>
+        <fired_by/>
+        <queue>x_xma_xmatters.request.action.A</queue>
+        <suffix>request.action.A</suffix>
+        <sys_class_name>sysevent_register</sys_class_name>
+        <sys_created_by>kakey</sys_created_by>
+        <sys_created_on>2016-04-05 00:46:11</sys_created_on>
+        <sys_id>cc60cd564fa6d200f5f3d49f0310c7d7</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_xma_xmatters.request.action.A</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sysevent_register_cc60cd564fa6d200f5f3d49f0310c7d7</sys_update_name>
+        <sys_updated_by>kakey</sys_updated_by>
+        <sys_updated_on>2016-04-05 00:46:11</sys_updated_on>
+        <table/>
+    </sysevent_register>
+</record_update>

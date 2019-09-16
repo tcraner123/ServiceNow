@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<record_update table="sys_properties">
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
     <sys_properties action="INSERT_OR_UPDATE">
         <choices/>
         <description>ServiceNow API Password: Enter the password for the ServiceNow API user.</description>
@@ -12,16 +11,16 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2015-03-19 03:56:23</sys_created_on>
         <sys_id>b6b469594f95620078bae321a310c749</sys_id>
-        <sys_mod_count>39</sys_mod_count>
+        <sys_mod_count>42</sys_mod_count>
         <sys_name>x_xma_xmatters.xmatters.api.password</sys_name>
         <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
         <sys_policy/>
         <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
         <sys_update_name>sys_properties_b6b469594f95620078bae321a310c749</sys_update_name>
         <sys_updated_by>tcrane</sys_updated_by>
-        <sys_updated_on>2018-06-21 16:13:34</sys_updated_on>
+        <sys_updated_on>2018-12-04 00:54:10</sys_updated_on>
         <type>password</type>
-        <value>{{dflt-gpaes}}M0ejMVF0xqmH8HcqT7L+QQ==</value>
+        <value>{{gpaes}}pAGMFNZCWxiy1nB98rrhqQ==</value>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=b6b469594f95620078bae321a310c749"/>

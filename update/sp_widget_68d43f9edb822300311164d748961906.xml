@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[function($filter) {
+	
+	var c = this;
+	
+	c.groupName = c.options.default_group;
+	
+  var yesterday = new Date();
+  c.today     = new Date();
+  yesterday.setDate( c.today.getDate() - 1 );
+  c.dt = c.today;
+	c.dtFormatted = formatDate( c.dt );
+
+	c.dateOptions = {
+    formatYear: 'yy',
+    minDate: yesterday,
+    startingDay: 1
+  };
+
+  c.openCal = function() {
+    c.calPopup.opened = true;
+  };
+
+  c.calPopup = {
+    opened: false
+  };
+	
+	if( c.data.onCallData ) {
+		c.groupNameSubmitted = c.options.default_group;
+		c.dtFormatted        = formatDate( c.dt );
+		
+		groupData            = c.data.onCallData.data[0];
+		c.data.members       = groupData.members.data;
+	}
+
+	c.getGroups = function( query ) {
+
+		console.log( 'Query: ' + query );
+		return c.server.get( { q: query, action: 'groupSearch' }).then( function( response ){
+
+			return $filter('filter')( response.data.groupResults, query );
+		});
+
+	};
+
+	c.getOnCall = function( groupName ) {
+		c.groupNameSubmitted = groupName;
+		console.log( 'Looking for on-call for ' + groupName + ' at: ' + c.dt.toISOString() );
+		c.server.get( { groupName: groupName, dt: c.dt.toISOString(), action: 'getOnCall' } ).then( function( response ) {
+
+			// The API call retrieves a list of the results,
+			// but we're only sending one, so we'll take the
+			// first. 
+			groupData = response.data.onCallData.data[0];
+			c.data.members   = groupData.members.data;
+
+		});
+
+	}
+	
+  c.dateChange = function() {
+		c.dtFormatted = formatDate( c.dt );
+		// The date changed, so let's go get the new info
+		var groupName = ( c.groupName ? c.groupName : c.options.default_group );
+		if( !groupName ) 
+			return;
+		
+		c.getOnCall( groupName );
+	}
+	
+	function formatDate( date ) {
+		 return "" + (date.getMonth()+1) + "/" + (date.getDate());
+	}
+
+}]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.hline {
+  border: 1px solid #ccc;
+  width: 235px;
+  height: 0px;
+}
+
+</css>
+        <data_table>sp_instance</data_table>
+        <demo_data>{ 
+	"data": {
+		"onCallData": {"count":1,"total":1,"data":[{"group":{"id":"c3701e28-487e-4edc-97f6-8332b9d5a04f","targetName":"Database","recipientType":"GROUP","links":{"self":"/api/xm/1/groups/c3701e28-487e-4edc-97f6-8332b9d5a04f"}},"shift":{"id":"5b9c9c22-b9b6-421b-b495-73e7b6da2b21","name":"24x7","links":{"self":"/api/xm/1/groups/c3701e28-487e-4edc-97f6-8332b9d5a04f/shifts/5b9c9c22-b9b6-421b-b495-73e7b6da2b21"}},"members":{"count":7,"total":7,"data":[{"position":1,"delay":0,"escalationType":"NONE","member":{"id":"ea6eaf21-6ff3-4e61-af72-8e6d83ce2d98","targetName":"allie.pumphrey","recipientType":"PERSON","externallyOwned":true,"externalKey":"allie.pumphrey","links":{"self":"/api/xm/1/people/ea6eaf21-6ff3-4e61-af72-8e6d83ce2d98"},"firstName":"Allie","lastName":"Pumphrey","language":"en","timezone":"US/Pacific","webLogin":"allie.pumphrey","site":{"id":"a5dc8b9f-5494-2f0b-611d-4ad66e293646","name":"Default Site","links":{"self":"/api/xm/1/sites/a5dc8b9f-5494-2f0b-611d-4ad66e293646"}},"status":"ACTIVE"}},{"position":2,"delay":0,"escalationType":"NONE","member":{"id":"2e6f8123-d4c5-481f-969f-669ce36de3bf","targetName":"dreich","recipientType":"PERSON","externallyOwned":false,"links":{"self":"/api/xm/1/people/2e6f8123-d4c5-481f-969f-669ce36de3bf"},"firstName":"Daniel","lastName":"Reich","language":"en","timezone":"US/Pacific","webLogin":"dreich","site":{"id":"a5dc8b9f-5494-2f0b-611d-4ad66e293646","name":"Default Site","links":{"self":"/api/xm/1/sites/a5dc8b9f-5494-2f0b-611d-4ad66e293646"}},"status":"ACTIVE"}},{"position":3,"delay":0,"escalationType":"NONE","member":{"id":"9d6f1eb7-bbdc-40d2-90d7-cbfcf80a475a","targetName":"Network","recipientType":"GROUP","status":"ACTIVE","externallyOwned":false,"allowDuplicates":false,"useDefaultDevices":false,"observedByAll":true,"description":"","site":{"id":"a5dc8b9f-5494-2f0b-611d-4ad66e293646","name":"Default Site","links":{"self":"/api/xm/1/sites/a5dc8b9f-5494-2f0b-611d-4ad66e293646"}},"links":{"self":"/api/xm/1/groups/9d6f1eb7-bbdc-40d2-90d7-cbfcf80a475a"}}},{"position":4,"delay":0,"escalationType":"NONE","member":{"id":"114e5039-af8b-4d35-9b08-ae52df0c91b1","name":"Android Phone","accountId":"64471e6d1b6cd6e20b772fa946509115","registrationId":"APA91bFYzYcB4hPDYXJM9Kmm6yGxCyUGYyRJwLJJwge0cSrbpuNyzK-xTzjcG05IKVk75Scd11o1Um-UYjWvDZXmV-QNOo1ysN4HsvLJ_nScFmTiP9znO_7uiH15fVvbBwrWMbIQ5yd2","targetName":"tdepuy|Android Phone","deviceType":"ANDROID_PUSH","description":"Travis' Android Phone","testStatus":"UNTESTED","externallyOwned":false,"defaultDevice":false,"priorityThreshold":"LOW","sequence":2,"delay":0,"owner":{"id":"bad26b14-70ef-be32-33b8-85da989d950e","targetName":"tdepuy","firstName":"Travis","lastName":"Depuy","recipientType":"PERSON","links":{"self":"/api/xm/1/people/bad26b14-70ef-be32-33b8-85da989d950e"}},"links":{"self":"/api/xm/1/devices/114e5039-af8b-4d35-9b08-ae52df0c91b1"},"recipientType":"DEVICE","status":"ACTIVE","provider":{"id":"(x)Matters Google Cloud Messaging"}}},{"position":5,"delay":0,"escalationType":"NONE","member":{"id":"c44a6dc5-170f-40b8-a986-f62635765161","targetName":"My Dynamic Team","recipientType":"DYNAMIC_TEAM","externallyOwned":false,"useEmergencyDevice":false,"links":{"self":"/api/xm/1/dynamic-teams/c44a6dc5-170f-40b8-a986-f62635765161"}}},{"position":6,"delay":5,"escalationType":"NONE","member":{"id":"138da635-8176-40a8-ae91-da8849bf097d","targetName":"barcode","recipientType":"PERSON","externallyOwned":false,"links":{"self":"/api/xm/1/people/138da635-8176-40a8-ae91-da8849bf097d"},"firstName":"barcode","lastName":"user","language":"en","timezone":"US/Pacific","webLogin":"barcode","site":{"id":"a5dc8b9f-5494-2f0b-611d-4ad66e293646","name":"Default Site","links":{"self":"/api/xm/1/sites/a5dc8b9f-5494-2f0b-611d-4ad66e293646"}},"status":"ACTIVE"}},{"position":7,"delay":15,"escalationType":"NONE","member":{"id":"e45ceef8-356f-4318-833d-0c344cb4aace","targetName":"dummy","recipientType":"PERSON","externallyOwned":false,"links":{"self":"/api/xm/1/people/e45ceef8-356f-4318-833d-0c344cb4aace"},"firstName":"dummy","lastName":"dummy","language":"en","timezone":"US/Pacific","webLogin":"dummy","site":{"id":"a5dc8b9f-5494-2f0b-611d-4ad66e293646","name":"Default Site","links":{"self":"/api/xm/1/sites/a5dc8b9f-5494-2f0b-611d-4ad66e293646"}},"status":"ACTIVE"}}],"links":{"self":"/api/xm/1/groups/c3701e28-487e-4edc-97f6-8332b9d5a04f/shifts/5b9c9c22-b9b6-421b-b495-73e7b6da2b21/occurrences/2018-11-30T00:00:00.000Z/members?offset=0&amp;limit=15"}},"start":"2018-11-30T00:00:00Z","end":"2018-12-01T00:00:00Z"}],"links":{"self":"/api/xm/1/on-call?groups=Database&amp;at=2018-11-30T23%3A19%3A25Z&amp;membersPerShift=15&amp;offset=0&amp;limit=100"}}
+	}
+}</demo_data>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>xmatters_on-call</id>
+        <internal>false</internal>
+        <link/>
+        <name>xMatters On-call</name>
+        <option_schema>[{"name":"default_group","section":"other","default_value":"","label":"Default Group","type":"string"},{"name":"max_members_to_show","section":"other","default_value":"10","label":"Max Members to Show","type":"string"}]</option_schema>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+	gs.include( 'xMattersDataHelper' );
+
+	var dataHelper = new xMattersDataHelper();
+	var response;
+
+	var membersPerShift = (options.max_members_to_show ? options.max_members_to_show : 10 );
+		
+	
+	data.groupResults = [];
+	if( input && input.q && input.action == 'groupSearch' ){
+
+		// Go make an API call for group `q`.
+		response = dataHelper.get('/groups/', { search: input.q });
+		var respData = JSON.parse( response.body );		
+
+		data.groupResults = respData.data.map( function( group ) { return group.targetName } );
+
+	}
+
+	if( input && input.groupName && input.action == 'getOnCall'  ){
+		var opts = { 
+			groups: input.groupName, 
+			membersPerShift: membersPerShift, 
+			at: input.dt 
+		};
+		
+		response = dataHelper.get('/on-call/', opts);
+		data.onCallData = JSON.parse( response.body );
+		if( data.onCallData.code ) {
+			gs.error( 'on-call API call failed: ' + JSON.stringify( data.onCallData ) );
+			data.onCallData = {};
+		}
+
+	}
+
+	if( !input && options.default_group ){
+
+
+		var groupName = options.default_group;
+		response = dataHelper.get('/on-call/', { groups: groupName, membersPerShift: membersPerShift });
+
+		data.onCallData = JSON.parse( response.body );
+		if( data.onCallData.code ) {
+			gs.error( 'on-call API call failed: ' + JSON.stringify( data.onCallData ) );
+			data.onCallData = {};
+		}
+
+	}
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2018-11-30 22:17:41</sys_created_on>
+        <sys_id>68d43f9edb822300311164d748961906</sys_id>
+        <sys_mod_count>230</sys_mod_count>
+        <sys_name>xMatters On-call</sys_name>
+        <sys_package display_value="xMatters" source="x_xma_xmatters">5950d7444f2231000e9fa88ca310c78c</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</sys_scope>
+        <sys_update_name>sp_widget_68d43f9edb822300311164d748961906</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2018-12-05 20:50:10</sys_updated_on>
+        <template><![CDATA[<link rel="stylesheet" type="text/css" href="/styles/retina_icons/retina_icons.css">
+<div class="panel panel-{{::options.color}} b">
+  <div class="panel-heading">
+    <h2 class="h4 panel-title">${xMatters On-Call}<span ng-show="c.groupNameSubmitted"> for {{c.groupNameSubmitted}} on {{c.dtFormatted}}</span></h2>
+  </div>
+
+
+
+  <div class="panel-body"> 
+    
+    <!-- Docs: https://angular-ui.github.io/bootstrap/#!#typeahead -->
+    <p class="input-group">
+
+
+      <input placeholder="Group Name" class="form-control" ng-model="c.groupName"
+             autocomplete="off"
+             uib-typeahead="group for group in c.getGroups($viewValue)"
+             ahead-loading="loadingGroups" 
+             typeahead-no-results="noResults"
+             typeahead-min-length="3"
+             typeahead-on-select="c.getOnCall( $item )"
+             /> 
+
+      <input type="text" class="form-control" 
+             uib-datepicker-popup="{{format}}" 
+             ng-model="c.dt" 
+             is-open="c.calPopup.opened"
+             datepicker-options="c.dateOptions" 
+             ng-required="true"  
+             close-text="Close"
+             popup-placement="right-bottom"
+             ng-show="false"
+             ng-change="c.dateChange()"
+             show-weeks="false"/>
+      <span class="input-group-btn">
+        <button type="button" class="btn btn-default" ng-click="c.openCal()">
+          <i class="glyphicon glyphicon-calendar"></i>
+        </button>
+      </span>
+    </p>
+    <i ng-show="loadingGroups" class="glyphicon glyphicon-refresh"></i>
+    <div ng-show="noResults">
+      <i class="glyphicon glyphicon-remove"></i> No Results Found
+    </div>
+    
+    <br/>
+    <div ng-repeat="member in c.data.members">
+      <div ng-if="member.delay>0">
+        <span class="icon-stop-watch"></span> &nbsp;&nbsp;Wait for <strong>{{member.delay}}</strong> minutes and then escalate
+        <div class="hline"></div>
+      </div>
+
+      <span class="icon-user"          ng-if="member.member.recipientType=='PERSON'"></span>
+      <span class="icon-user-group"    ng-if="member.member.recipientType=='GROUP'"></span>
+      <span class="icon-user-group"    ng-if="member.member.recipientType=='DYNAMIC_TEAM'"></span>
+      <span class="icon-mobile"        ng-if="member.member.recipientType=='DEVICE' && member.member.deviceType=='ANDROID_PUSH'"></span>
+      <span class="icon-mobile"        ng-if="member.member.recipientType=='DEVICE' && member.member.deviceType=='APPLE_PUSH'"></span>
+      <span class="icon-envelope-open" ng-if="member.member.recipientType=='DEVICE' && member.member.deviceType=='EMAIL'"></span>
+      <span class="icon-phone"         ng-if="member.member.recipientType=='DEVICE' && member.member.deviceType=='TEXT_PHONE'"></span>
+      <span class="icon-phone"         ng-if="member.member.recipientType=='DEVICE' && member.member.deviceType=='VOICE'"></span>
+      &nbsp;&nbsp;
+
+
+      <span ng-if="member.member.recipientType=='PERSON'">
+        {{member.member.firstName}} {{member.member.lastName}} (<strong>{{member.member.targetName}}</strong>)
+      </span>
+      <span ng-if="member.member.recipientType!='PERSON'">
+        <strong>{{member.member.targetName}}</strong>
+      </span>
+
+
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>
